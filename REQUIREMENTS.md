@@ -1,0 +1,620 @@
+# Requisitos - Mus Sin Fronteras
+
+> Documento generado el 06/05/2026. Revisado y refinado en sesión colaborativa a partir del documento original `MVP_Mus_App.docx`.
+
+---
+
+## 1. Visión y Objetivo
+
+App móvil para jugadores de mus en España que permite encontrar contrincantes y organizar partidas puntuales (día/hora/lugar). **No incluye lógica del juego.**
+
+### Decisiones clave
+- **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
+- **Alcance geográfico MVP**: España completa
+- **Plataformas**: Android e iOS desde el primer lanzamiento
+- **Idioma MVP**: Español. Preparado para i18n en fases posteriores.
+
+---
+
+## 2. Alcance y Fases de Desarrollo
+
+El desarrollo se organiza en tres fases para que sea viable para un único desarrollador:
+
+| Fase | Contenido | Descripción |
+|---|---|---|
+| **Fase 1 - Core** | Auth, Perfil, Partidas, Descubrir | Lo mínimo para que la app sea funcional |
+| **Fase 2 - Resultados** | Notificaciones, Resultados, Reportes | Ciclo de vida completo de una partida |
+| **Fase 3 - Admin** | Panel admin, Analíticas, Disputas | Herramientas de gestión y moderación |
+
+### Fuera del alcance total
+- Ligas y clasificaciones
+- Chat interno
+- Geolocalización GPS
+- Modo offline
+- Reputación y valoraciones
+- Integración con redes sociales
+- Verificación de teléfono por SMS
+- Compartir partida en redes sociales
+
+---
+
+## 3. Roles de Usuario
+
+Solo dos roles en el MVP:
+
+| Rol | Capacidades |
+|---|---|
+| **`user`** | Crear, editar y cancelar sus partidas; unirse y abandonar partidas; ver teléfonos de participantes de sus partidas; editar su perfil; recibir notificaciones |
+| **`admin`** | Todo lo anterior + gestionar reportes, bloquear/desactivar usuarios, eliminar partidas y resultados |
+
+- **Sin invitados**: registro obligatorio para cualquier acción
+- Los privilegios de creador de partida se gestionan por el campo `creator_id` (no es un rol separado)
+- El admin opera via Supabase Studio en Fase 1 y 2. El panel visual admin se desarrolla en Fase 3.
+
+---
+
+## 4. Funcionalidades
+
+### F1 - Autenticación (Fase 1)
+- Login con Google
+- Login con Apple ID (obligatorio por requisitos de App Store)
+- Login con email y contraseña
+- Registro con aceptación de términos y política de privacidad
+- Recuperación de contraseña para usuarios de email
+- Gestión de sesiones con JWT y refresh tokens (gestionado por Supabase Auth)
+- Estado de sesión persistente entre cierres de la app
+
+### F2 - Perfil de usuario (Fase 1)
+- Nombre a mostrar (obligatorio)
+- Teléfono (obligatorio, validación formato E.164, ej: `+34612345678`)
+- Localidad/pueblo (opcional, informativo)
+- Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
+- Preferencias de notificación: email y/o push
+- **El teléfono solo es visible para participantes de la misma partida confirmada**
+- Opción de ocultar ubicación exacta a no participantes
+
+### F3 - Ubicaciones (Fase 1)
+- Lista de municipios de España (fuente: INE, JSON estático, filtrado local)
+- No requiere GPS ni permisos de ubicación
+- Opción "lugar por definir" en el campo de lugar de la partida
+- Posibilidad de ocultar ubicación exacta a no participantes
+
+### F4 - Partidas (Fase 1 + 2)
+
+**Crear partida (Fase 1)**
+- Modalidad fija: 2vs2 (4 jugadores total, equipos A y B)
+- Campos: título, descripción, fecha/hora (UTC internamente), ciudad/pueblo, lugar (o "por definir"), duración en juegos (1-6, primer equipo que llegue a X), visibilidad (pública/con enlace), notas opcionales
+
+**Gestión (Fase 1)**
+- Solo el creador puede editar o cancelar una partida
+- Cualquier usuario registrado puede unirse a una partida pública o con enlace si hay plaza
+- Cualquier participante puede abandonar antes de que empiece
+- Cambio de equipo permitido solo si la partida está en estado `planned` y hay hueco
+
+**Estados de partida**
+- `planned` → `in_progress` (automático al llegar `start_at`, Fase 2)
+- `in_progress` → recordatorio a las 5h si sigue en curso (Fase 2)
+- `in_progress` → `finished_no_result` a las 12h si no hay resultado registrado (Fase 2)
+- `in_progress` → `finished` cuando hay `MatchResult` confirmado sin disputas (Fase 2)
+- En Fase 1, los estados se actualizan manualmente o al registrar resultado
+
+**Historial (Fase 1)**
+- Cada usuario tiene acceso a su historial de partidas pasadas
+
+### F5 - Descubrir y filtrar (Fase 1)
+- Listado de partidas públicas ordenado por fecha
+- Filtros: fecha, ciudad/pueblo, plazas libres, visibilidad, estado
+- Búsqueda por texto en el campo título
+- Paginación de 20 elementos por página
+- Cache de respuestas con TanStack Query (5 minutos)
+- Las partidas `visibility: link` no aparecen en el listado general
+
+### F6 - Comunicación (Fase 1)
+- Sin chat interno
+- El teléfono del participante solo es visible para los demás participantes de la misma partida confirmada
+- La coordinación se delega a medios externos (WhatsApp, llamada)
+
+### F7 - Notificaciones y resultados
+
+**Notificaciones básicas (Fase 2)**
+- Push + email cuando alguien se une a tu partida
+- Push + email cuando la partida es editada o cancelada
+- Push + email al ser expulsado o cuando alguien abandona
+
+**Notificaciones automáticas (Fase 2)**
+- Recordatorio 24h y 2h antes de la partida
+- Aviso a las 5h si la partida sigue en curso (para registrar resultado)
+- A las 12h sin resultado: estado → `finished_no_result` (con aviso)
+
+**Resultados (Fase 2)**
+- Cualquier participante puede introducir el resultado
+- Al menos un integrante del equipo rival debe validarlo para confirmarlo
+- Si hay disputa: estado `resultado en revisión` + reporte automático
+- Cola de notificaciones robusta con reintentos (tabla `NotificationQueue`)
+
+### F8 - Reportes y moderación
+
+**Formulario de reporte (Fase 2)**
+- Cualquier usuario registrado puede reportar: usuarios, partidas o resultados
+- Motivo seleccionable de una lista + campo de comentario libre
+- El reporte es anónimo para el usuario reportado
+
+**Panel de gestión (Fase 3)**
+- Interfaz de admin para ver y gestionar reportes abiertos
+- Acciones: bloquear/desactivar usuario, eliminar partida/resultado
+- Registro de auditoría de todas las acciones administrativas
+
+### F9 - Analítica y panel (Fase 1 + 3)
+
+**Analytics de comportamiento (Fase 1)**
+- PostHog integrado desde el inicio (sin panel custom)
+- Captura eventos de usuario: registro, login, creación de partida, unirse, etc.
+
+**Panel de métricas admin (Fase 3)**
+- MAU (usuarios activos mensuales), partidas creadas, partidas con resultado
+- % con disputa, tiempo medio hasta registrar resultado
+- Gráficas: serie temporal semanal, barras por ciudad, distribución por estado
+- Ranking de usuarios por número de partidas
+- Acceso solo para administradores
+
+---
+
+## 5. Stack Tecnológico e Infraestructura
+
+### Frontend
+| Tecnología | Versión | Propósito |
+|---|---|---|
+| React Native | 0.73+ | Framework base para apps móviles |
+| Expo | SDK 51+ | Abstracción de iOS/Android, builds y publicación |
+| Expo Router | v3+ | Navegación basada en sistema de archivos |
+| TypeScript | 5+ | Tipado estático |
+| Zustand | última | Estado global local (usuario autenticado, UI) |
+| TanStack Query | v5 | Cache y sincronización de datos del servidor |
+| React Hook Form | v7 | Gestión de formularios y validaciones |
+
+### Backend
+| Tecnología | Propósito |
+|---|---|
+| Supabase | BaaS: base de datos, auth, storage, edge functions, realtime |
+| PostgreSQL | Base de datos relacional (vía Supabase) |
+| Supabase Auth | Autenticación (Google, Apple, email) con JWT |
+| Supabase Storage | Fotos de perfil con transformaciones automáticas |
+| Supabase Edge Functions | Lógica del servidor, cron jobs, disparador de notificaciones |
+| `pg_cron` | Jobs programados para transiciones automáticas de estado |
+
+### Servicios externos
+| Servicio | Propósito | Tier gratuito |
+|---|---|---|
+| Expo EAS Build | Builds automatizados para iOS y Android | Sí (limitado) |
+| Expo EAS Submit | Publicación automática en Google Play y App Store | Sí |
+| Expo Push Notifications | Servicio proxy para FCM (Android) y APNs (iOS) | Sí |
+| Sentry | Crash reporting y performance monitoring | Sí |
+| PostHog | Analytics de comportamiento de usuario | Sí |
+| GitHub | Control de versiones + GitHub Actions para CI/CD | Sí |
+
+### Lista de municipios
+- Fuente: INE (Instituto Nacional de Estadística), España
+- Formato: JSON estático incluido en el bundle de la app
+- Filtrado: local, sin llamadas de red
+
+---
+
+## 6. Modelo de Datos
+
+Todos los IDs son **UUID v4** (generados por Supabase).
+
+### Fase 1 — Tablas activas
+
+```sql
+-- Extiende auth.users de Supabase (sincronizado via trigger)
+CREATE TABLE profiles (
+  id          UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT NOT NULL,
+  phone_e164  TEXT NOT NULL,              -- Formato: +34612345678
+  city        TEXT,
+  photo_url   TEXT,
+  notify_email BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_push  BOOLEAN NOT NULL DEFAULT TRUE,
+  role        TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+  status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE matches (
+  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title                 TEXT NOT NULL,
+  description           TEXT,
+  start_at              TIMESTAMPTZ NOT NULL,
+  city                  TEXT NOT NULL,
+  place_text            TEXT,
+  place_defined         BOOLEAN NOT NULL DEFAULT TRUE,
+  location_privacy      TEXT NOT NULL DEFAULT 'public_city_only'
+                          CHECK (location_privacy IN ('public_city_only', 'participants_only')),
+  duration_target_games INT NOT NULL CHECK (duration_target_games BETWEEN 1 AND 6),
+  visibility            TEXT NOT NULL DEFAULT 'public'
+                          CHECK (visibility IN ('public', 'link')),
+  creator_id            UUID NOT NULL REFERENCES profiles(id),
+  status                TEXT NOT NULL DEFAULT 'planned'
+                          CHECK (status IN ('planned', 'in_progress', 'finished', 'finished_no_result')),
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE match_participants (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id   UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  user_id    UUID NOT NULL REFERENCES profiles(id),
+  team       TEXT NOT NULL CHECK (team IN ('A', 'B')),
+  state      TEXT NOT NULL DEFAULT 'confirmed' CHECK (state IN ('confirmed', 'left')),
+  joined_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  left_at    TIMESTAMPTZ,
+  UNIQUE (match_id, user_id)  -- Un usuario solo puede estar una vez por partida
+);
+
+-- Constraint: máximo 2 confirmados por equipo (gestionado via trigger o check)
+```
+
+### Fase 2 — Tablas añadidas
+
+```sql
+CREATE TABLE match_results (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id            UUID NOT NULL REFERENCES matches(id),
+  team_a_games        INT NOT NULL,
+  team_b_games        INT NOT NULL,
+  submitted_by_team   TEXT NOT NULL CHECK (submitted_by_team IN ('A', 'B')),
+  submitted_by_user_id UUID NOT NULL REFERENCES profiles(id),
+  submitted_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status              TEXT NOT NULL DEFAULT 'pending_validation'
+                        CHECK (status IN ('pending_validation', 'confirmed', 'disputed', 'void'))
+);
+
+CREATE TABLE result_confirmations (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_result_id  UUID NOT NULL REFERENCES match_results(id),
+  user_id          UUID NOT NULL REFERENCES profiles(id),
+  team             TEXT NOT NULL CHECK (team IN ('A', 'B')),
+  decision         TEXT NOT NULL CHECK (decision IN ('approve', 'dispute')),
+  comment          TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE reports (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  target_type  TEXT NOT NULL CHECK (target_type IN ('user', 'match', 'result')),
+  target_id    UUID NOT NULL,
+  reason       TEXT NOT NULL,
+  notes        TEXT,
+  reporter_id  UUID NOT NULL REFERENCES profiles(id),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status       TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+  action_taken TEXT,
+  resolved_at  TIMESTAMPTZ,
+  resolved_by  UUID REFERENCES profiles(id)
+);
+
+CREATE TABLE notification_queue (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID NOT NULL REFERENCES profiles(id),
+  type           TEXT NOT NULL,
+  title          TEXT NOT NULL,
+  body           TEXT NOT NULL,
+  payload_json   JSONB,
+  scheduled_for  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  attempts       INT NOT NULL DEFAULT 0,
+  status         TEXT NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending', 'sent', 'failed')),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sent_at        TIMESTAMPTZ
+);
+
+CREATE TABLE match_state_transitions (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  match_id      UUID NOT NULL REFERENCES matches(id),
+  from_status   TEXT NOT NULL,
+  to_status     TEXT NOT NULL,
+  triggered_by  TEXT NOT NULL CHECK (triggered_by IN ('user', 'system')),
+  user_id       UUID REFERENCES profiles(id),
+  reason        TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Fase 3 — Tablas añadidas
+
+```sql
+CREATE TABLE audit_logs (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_user_id UUID REFERENCES profiles(id),
+  action       TEXT NOT NULL,
+  target_type  TEXT NOT NULL,
+  target_id    UUID,
+  ip_address   TEXT,
+  user_agent   TEXT,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  metadata_json JSONB
+);
+```
+
+### Índices de rendimiento
+
+```sql
+-- Búsquedas principales de partidas
+CREATE INDEX idx_matches_search ON matches (city, start_at, status);
+CREATE INDEX idx_matches_user_history ON matches (creator_id, created_at DESC);
+
+-- Participantes
+CREATE INDEX idx_participants_match_team ON match_participants (match_id, team, state);
+CREATE INDEX idx_participants_user ON match_participants (user_id, joined_at DESC);
+
+-- Administración (Fase 3)
+CREATE INDEX idx_reports_status ON reports (status, created_at DESC);
+CREATE INDEX idx_audit_logs_search ON audit_logs (target_type, target_id, created_at DESC);
+
+-- Notificaciones (Fase 2)
+CREATE INDEX idx_notifications_pending ON notification_queue (status, scheduled_for)
+  WHERE status = 'pending';
+```
+
+---
+
+## 7. Arquitectura de la Aplicación
+
+### Estructura de carpetas
+
+```
+src/
+├── app/                    # Rutas con Expo Router (basado en sistema de archivos)
+│   ├── (auth)/             # Pantallas sin autenticar
+│   │   ├── login.tsx
+│   │   ├── register.tsx
+│   │   └── forgot-password.tsx
+│   ├── (tabs)/             # Navegación con tabs (requiere autenticación)
+│   │   ├── matches/        # Listado, detalle y creación de partidas
+│   │   │   ├── index.tsx   # Listado y filtros
+│   │   │   ├── [id].tsx    # Detalle de partida
+│   │   │   └── create.tsx  # Formulario de creación
+│   │   └── profile/        # Perfil y configuración
+│   │       ├── index.tsx
+│   │       └── edit.tsx
+│   └── admin/              # Panel admin (Fase 3, acceso restringido)
+├── components/             # Componentes UI reutilizables
+│   ├── ui/                 # Primitivos: Button, Input, Card, Badge
+│   └── matches/            # MatchCard, ParticipantList, TeamSlot
+├── lib/                    # Configuración de servicios externos
+│   ├── supabase.ts         # Cliente Supabase + tipos generados
+│   └── sentry.ts           # Configuración Sentry
+├── hooks/                  # Custom hooks
+│   ├── useAuth.ts          # Estado de autenticación
+│   ├── useMatches.ts       # Queries de partidas (TanStack Query)
+│   ├── useProfile.ts       # Query y mutations de perfil
+│   └── useNotifications.ts # Registro de push notifications
+├── services/               # Lógica de negocio (llamadas a Supabase)
+│   ├── matches.service.ts
+│   ├── profiles.service.ts
+│   └── results.service.ts  # Fase 2
+├── types/                  # Tipos TypeScript
+│   └── database.types.ts   # Generado por Supabase CLI
+├── utils/                  # Helpers
+│   ├── formatters.ts       # Fechas, teléfonos
+│   ├── validators.ts       # Validación E.164, etc.
+│   └── municipalities.ts   # Lista de municipios del INE
+├── constants/              # Enums y configuración
+└── assets/                 # Imágenes, iconos, fuentes
+```
+
+### Gestión de estado
+
+| Herramienta | Para qué | Ejemplo de uso |
+|---|---|---|
+| **Zustand** | Estado global local (sesión, preferencias UI) | `useAuthStore()` — quién está logueado |
+| **TanStack Query** | Cache y sincronización de datos del servidor | `useMatches()` — listado con cache de 5min |
+| **React Hook Form** | Estado y validación de formularios | Formulario de creación de partida |
+
+### Flujo de datos
+
+```
+Pantalla (Expo Router)
+    ↓ acción usuario
+Custom Hook (useMatches, useAuth...)
+    ↓ query / mutation
+TanStack Query (cache, loading, error states)
+    ↓ llamada al servidor
+Service (matches.service.ts)
+    ↓ SDK de Supabase
+Supabase (PostgreSQL + Auth + Storage)
+```
+
+---
+
+## 8. Requisitos No Funcionales
+
+### Performance
+- Arranque en frío < 2 segundos en dispositivo de gama media
+- Scroll fluido a 60 fps en listados con virtualización
+- Respuestas de API p95 < 500ms en operaciones principales
+- Paginación de 20 elementos en todos los listados
+- Cache del lado cliente con TanStack Query (5 minutos por defecto)
+
+### Disponibilidad
+- 99.5% uptime en MVP (ofrecido por Supabase en tier Pro)
+- Backups automáticos diarios de base de datos (incluidos en Supabase)
+- Migraciones versionadas con Supabase CLI
+
+### Seguridad
+- OAuth2/OIDC para Google y Apple
+- Contraseñas con Argon2 (gestionado por Supabase Auth)
+- TLS extremo a extremo
+- JWT con expiración corta + refresh tokens
+- Rate limiting por IP y usuario (Supabase + Edge Functions)
+- Protección CSRF/XSS/SSRF, validación exhaustiva de inputs
+- Row Level Security (RLS) de PostgreSQL para aislar datos por usuario
+
+### Privacidad (RGPD)
+- Consentimiento explícito en el registro
+- Derecho de supresión completa (borrado de cuenta y todos sus datos)
+- Minimización de datos: teléfono visible solo para participantes de la misma partida
+- Política de privacidad y términos visibles en la app
+- DPA agreements con servicios externos (Supabase, PostHog, Sentry)
+
+### Observabilidad
+- Crash reporting: Sentry (errores automáticos + performance)
+- Analytics: PostHog (comportamiento de usuario)
+- Alertas: errores 5xx, latencia alta, caídas de servicio
+- Health checks: Edge Functions críticas cada 5 minutos (Fase 2)
+
+### Accesibilidad
+- Dynamic Type (texto adaptable al tamaño del sistema)
+- Labels accesibles para lectores de pantalla (VoiceOver / TalkBack)
+- Contraste de color mínimo WCAG 2.1 AA
+
+### Internacionalización
+- Idioma MVP: Español
+- Arquitectura preparada para i18n (cadenas externalizadas)
+
+### Distribución
+- Google Play y App Store desde el primer lanzamiento
+- Gestión de builds con Expo EAS Build
+- Publicación automática con Expo EAS Submit
+
+---
+
+## 9. Criterios de Aceptación
+
+### Fase 1 — Core
+
+**Autenticación**
+- CA_AUTH1: Un usuario puede registrarse con email/contraseña y recibe email de confirmación
+- CA_AUTH2: Un usuario puede autenticarse con Google
+- CA_AUTH3: Un usuario puede autenticarse con Apple ID
+- CA_AUTH4: Un usuario puede recuperar su contraseña por email
+- CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
+- CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
+
+**Perfil**
+- CA_PROF1: El teléfono se valida en formato E.164 antes de guardar
+- CA_PROF2: La foto de perfil se redimensiona automáticamente a ≤ 500KB al subir
+- CA_PROF3: El teléfono solo aparece visible para participantes de la misma partida confirmada
+
+**Partidas**
+- CA_MATCH1: Solo el creador puede editar o cancelar una partida
+- CA_MATCH2: No es posible superar 2 jugadores confirmados por equipo (A o B)
+- CA_MATCH3: Una partida cancelada no admite nuevas inscripciones
+- CA_MATCH4: Las partidas `visibility: link` no aparecen en el listado general
+- CA_MATCH5: El historial muestra todas las partidas pasadas del usuario autenticado
+- CA_MATCH6: El listado implementa paginación de 20 elementos
+
+**Performance**
+- CA_PERF1: Arranque en frío < 2 segundos en dispositivo de gama media
+- CA_PERF2: Scroll en listados sin lags visibles (60 fps)
+- CA_PERF3: Respuestas de API p95 < 500ms en operaciones principales
+- CA_PERF4: TanStack Query cachea respuestas de API durante 5 minutos
+
+### Fase 2 — Resultados y notificaciones
+
+**Notificaciones**
+- CA_NOTIF1: El creador recibe push cuando alguien se une a su partida
+- CA_NOTIF2: Los participantes reciben push si la partida es editada o cancelada
+- CA_NOTIF3: Recordatorio automático 24h y 2h antes de la partida
+- CA_NOTIF4: El usuario puede desactivar notificaciones push y/o email desde el perfil
+
+**Resultados**
+- CA_RES1: Cualquier participante puede introducir el resultado de su partida
+- CA_RES2: Al menos un integrante del equipo rival debe validar el resultado para confirmarlo
+- CA_RES3: Si hay disputa, el estado cambia a `resultado en revisión` y se genera reporte automático
+- CA_RES4: Un resultado puede introducirse manualmente incluso si la partida está en `finished_no_result`
+
+### Fase 3 — Admin y analíticas
+
+**Moderación**
+- CA_MOD1: Los errores se reportan automáticamente a Sentry
+- CA_MOD2: El panel admin muestra reportes abiertos con filtros por tipo y estado
+- CA_MOD3: El admin puede bloquear un usuario y todos sus accesos quedan revocados inmediatamente
+
+**Monitorización**
+- CA_MON1: Los health checks verifican servicios críticos cada 5 minutos
+- CA_MON2: Las métricas de performance se capturan en cliente (Sentry) y servidor (Supabase logs)
+
+---
+
+## 10. Funcionalidades Pospuestas
+
+Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para versiones futuras:
+
+| Funcionalidad | Motivo del aplazamiento |
+|---|---|
+| Ligas y clasificaciones | Alta complejidad (calendario, brackets, puntuaciones) |
+| Chat interno | Requiere moderación constante; se delega en WhatsApp |
+| Geolocalización GPS exacta | Sacrifica privacidad sin aportar valor suficiente en el MVP |
+| Autenticación con Apple ID | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store) |
+| Soporte multilenguaje completo (i18n) | No prioritario hasta tener masa crítica de usuarios |
+| Notificaciones personalizadas avanzadas | Fase 3 cubre lo básico; personalización avanzada es complejidad extra |
+| Sistema de reputación y valoraciones | Necesita masa crítica de usuarios para ser útil |
+| Integración con redes sociales | No crítico para el MVP |
+| Modo offline/sincronización | Alta complejidad de sincronización; conexión asumida |
+| Verificación de teléfono por SMS | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2 |
+| Compartir partida en redes sociales | Útil para crecimiento orgánico; valorar en Fase 2 o 3 |
+
+---
+
+## 11. Metodología de Desarrollo
+
+### Herramientas
+
+| Área | Herramienta |
+|---|---|
+| Control de versiones | Git + GitHub |
+| Gestión de tareas | `TASKS.md` en el repositorio (actualizado cada sesión) |
+| CI/CD | GitHub Actions + Expo EAS Build + EAS Submit |
+| Linting y formato | ESLint + Prettier |
+| Commits | Conventional Commits (`feat(scope): descripción`) |
+| Quality gates | Husky (pre-commit: lint + type-check) |
+| Testing | Jest (solo lógica crítica: validaciones, servicios) |
+| Migraciones DB | Supabase CLI (`supabase db diff` + `supabase db push`) |
+
+### GitFlow (estructura de ramas)
+
+Se utilizará **GitFlow** como estrategia de branching:
+
+- **Ramas permanentes**
+  - **`main`**: rama de producción. Cada release se etiqueta (ej. `v0.1.0`).
+  - **`develop`**: integración continua de lo que entrará en el próximo release.
+
+- **Ramas temporales**
+  - **`feature/<nombre>`**: nace desde `develop`, se mergea a `develop`.
+  - **`release/<version>`**: nace desde `develop`, se mergea a `main` y luego se mergea de vuelta a `develop`.
+  - **`hotfix/<version-o-bug>`**: nace desde `main`, se mergea a `main` y luego a `develop`.
+
+Reglas operativas:
+- No se desarrolla directamente sobre `main`.
+- Todo desarrollo va a `feature/*` desde `develop`.
+- El código en `main` siempre debe ser desplegable/publicable.
+
+### Estrategia de testing
+Cobertura mínima en lógica crítica:
+- Validaciones de datos (teléfono E.164, campos de partida)
+- Reglas de negocio (límite de participantes, cambios de estado)
+- Servicios de Supabase (mocks)
+
+No se escriben tests de componentes UI en las fases iniciales.
+
+### Conventional Commits
+Formato: `tipo(scope): descripción en imperativo`
+
+Tipos: `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `ci`
+
+Ejemplos:
+```
+feat(matches): add join match functionality
+fix(auth): handle Google token expiry on cold start
+chore(deps): update Expo SDK to 52
+docs(readme): add local setup instructions
+```
+
+### Flujo de trabajo por sesión
+1. Revisar y actualizar `TASKS.md`
+2. Seleccionar tarea del backlog de la fase actual
+3. Implementar con commits atómicos (Conventional Commits)
+4. Pasar quality gates (Husky)
+5. Al finalizar la sesión: actualizar `TASKS.md` con progreso y reorganizar pendientes
