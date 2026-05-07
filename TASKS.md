@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 06/05/2026
+> Actualizado: 07/05/2026
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -28,7 +28,8 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Configurar Expo Router
 - [ ] Configurar ESLint + Prettier
 - [ ] Configurar Husky + pre-commit hooks (lint + type-check)
-- [ ] Crear repositorio en GitHub y primer commit
+- [x] Crear repositorio en GitHub y primer commit
+  - Nota: repo `Japegomez/musApp` creado y ramas GitFlow base (`main`, `develop`) configuradas y protegidas en GitHub.
 - [ ] Configurar GitHub Actions básico (lint + type-check en cada PR)
 
 ### Setup Supabase
