@@ -29,7 +29,7 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [["expo-router", { "root": "src" }]],
+    "plugins": [["expo-router", { "root": "src/app" }]],
     "experiments": {
       "typedRoutes": true
     }
