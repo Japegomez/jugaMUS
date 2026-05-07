@@ -7,11 +7,11 @@
 
 ## Estado del proyecto
 
-| Fase | Estado | Descripción |
-|---|---|---|
-| Fase 1 - Core | Pendiente | Auth, Perfil, Partidas, Descubrir |
+| Fase                | Estado    | Descripción                          |
+| ------------------- | --------- | ------------------------------------ |
+| Fase 1 - Core       | Pendiente | Auth, Perfil, Partidas, Descubrir    |
 | Fase 2 - Resultados | Pendiente | Notificaciones, Resultados, Reportes |
-| Fase 3 - Admin | Pendiente | Panel admin, Analíticas, Disputas |
+| Fase 3 - Admin      | Pendiente | Panel admin, Analíticas, Disputas    |
 
 ---
 
@@ -24,26 +24,30 @@ _Ninguna tarea en progreso actualmente._
 ## Fase 1 — Core
 
 ### Setup inicial del proyecto
-- [ ] Inicializar proyecto Expo con TypeScript: `npx create-expo-app musapp --template blank-typescript`
-- [ ] Configurar Expo Router
-- [ ] Configurar ESLint + Prettier
-- [ ] Configurar Husky + pre-commit hooks (lint + type-check)
+
+- [x] Inicializar proyecto Expo con TypeScript: `npx create-expo-app musapp --template blank-typescript`
+- [x] Configurar Expo Router
+- [x] Configurar ESLint + Prettier
+- [x] Configurar Husky + pre-commit hooks (lint + type-check)
 - [x] Crear repositorio en GitHub y primer commit
   - Nota: repo `Japegomez/musApp` creado y ramas GitFlow base (`main`, `develop`) configuradas y protegidas en GitHub.
-- [ ] Configurar GitHub Actions básico (lint + type-check en cada PR)
+- [x] Configurar GitHub Actions básico (lint + type-check en cada PR)
+  - Nota: workflow `ci.yml` creado (lint + type-check).
+  - Pendiente: validar que corre en PRs (checks verdes) en el siguiente PR.
 
 ### Setup Supabase
-- [ ] Crear proyecto en Supabase (supabase.com)
-- [ ] Instalar Supabase CLI localmente
+
+- [ ] Crear proyecto en Supabase (vía MCP)
 - [ ] Crear tabla `profiles` con migración versionada
 - [ ] Crear tabla `matches` con migración versionada
 - [ ] Crear tabla `match_participants` con migración versionada
 - [ ] Configurar Row Level Security (RLS) en las tres tablas
 - [ ] Crear trigger para sincronizar `auth.users` → `profiles`
-- [ ] Crear índices de rendimiento (idx_matches_search, idx_matches_user_history, idx_participants_*)
-- [ ] Generar tipos TypeScript con `supabase gen types`
+- [ ] Crear índices de rendimiento (idx*matches_search, idx_matches_user_history, idx_participants*\*)
+- [ ] Generar tipos TypeScript (vía MCP)
 
 ### F1 - Autenticación
+
 - [ ] Instalar y configurar SDK de Supabase en la app
 - [ ] Pantalla de login con email/contraseña
 - [ ] Pantalla de registro con aceptación de términos y política de privacidad
@@ -55,6 +59,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Hook `useAuth.ts` con Zustand para estado global de sesión
 
 ### F2 - Perfil de usuario
+
 - [ ] Pantalla de perfil (vista propia)
 - [ ] Pantalla de edición de perfil
 - [ ] Campo de teléfono con validación E.164 (formato `+34XXXXXXXXX`)
@@ -63,11 +68,13 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
 
 ### F3 - Ubicaciones
+
 - [ ] Integrar JSON estático de municipios del INE
 - [ ] Componente de selector de municipio con búsqueda local
 - [ ] Campo "lugar por definir" en formulario de partida
 
 ### F4 - Partidas (Core)
+
 - [ ] Pantalla de creación de partida (formulario completo)
   - [ ] Título, descripción
   - [ ] Fecha y hora (selector nativo)
@@ -89,6 +96,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Historial de partidas del usuario (pestaña en perfil o pantalla separada)
 
 ### F5 - Descubrir y filtrar
+
 - [ ] Pantalla principal con listado de partidas públicas
 - [ ] Ordenación por fecha (próximas primero)
 - [ ] Filtros: ciudad/pueblo, fecha, plazas libres, estado
@@ -98,6 +106,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Estado vacío (sin partidas que coincidan con filtros)
 
 ### Servicios externos (Fase 1)
+
 - [ ] Instalar y configurar Sentry (crash reporting básico)
 - [ ] Instalar y configurar PostHog (analytics básico)
 - [ ] Configurar Expo EAS Build (primer build de prueba en Android)
@@ -108,6 +117,7 @@ _Ninguna tarea en progreso actualmente._
 ## Fase 2 — Resultados y Notificaciones
 
 ### Migraciones de base de datos
+
 - [ ] Crear tabla `match_results`
 - [ ] Crear tabla `result_confirmations`
 - [ ] Crear tabla `reports`
@@ -116,6 +126,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Añadir índices correspondientes (idx_notifications_pending)
 
 ### F7 - Notificaciones
+
 - [ ] Configurar Expo Push Notifications (registro de tokens)
 - [ ] Guardar token de push en `profiles`
 - [ ] Supabase Edge Function: disparar notificación al unirse alguien a tu partida
@@ -129,6 +140,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Gestión de reintentos en `NotificationQueue` (max 3 intentos)
 
 ### F7 - Resultados
+
 - [ ] Pantalla/modal de introducción de resultado
 - [ ] Lógica de validación por equipo rival
 - [ ] Pantalla/modal de confirmación o disputa de resultado
@@ -136,11 +148,13 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Reporte automático generado al abrir una disputa
 
 ### F8 - Reportes (formulario)
+
 - [ ] Pantalla/modal de reporte (usuario, partida o resultado)
 - [ ] Lista de motivos predefinidos + comentario libre
 - [ ] Guardar reporte como anónimo para el reportado
 
 ### CI/CD Fase 2
+
 - [ ] Configurar EAS Submit para publicación automática en Google Play
 - [ ] Configurar EAS Submit para publicación automática en App Store
 - [ ] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
@@ -150,16 +164,19 @@ _Ninguna tarea en progreso actualmente._
 ## Fase 3 — Admin y Analíticas
 
 ### Migraciones de base de datos
+
 - [ ] Crear tabla `audit_logs`
 - [ ] Añadir índices de auditoría
 
 ### F8 - Panel de moderación
+
 - [ ] Pantalla de lista de reportes abiertos (solo admin)
 - [ ] Filtros por tipo de reporte y estado
 - [ ] Acciones: resolver reporte, bloquear usuario, eliminar partida/resultado
 - [ ] Registro automático en `audit_logs` de cada acción admin
 
 ### F9 - Panel de analíticas
+
 - [ ] Pantalla de métricas para admin:
   - [ ] MAU (usuarios activos mensuales)
   - [ ] Partidas creadas (total y por semana)
@@ -170,6 +187,7 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Ranking de usuarios por número de partidas
 
 ### Observabilidad avanzada
+
 - [ ] Health checks cada 5 minutos para Edge Functions críticas
 - [ ] Alertas en Sentry para errores 5xx y latencia alta
 - [ ] Dashboard de performance en Sentry
@@ -192,7 +210,12 @@ _Ninguna tarea en progreso actualmente._
 
 ## Completadas
 
-_Ninguna tarea completada aún._
+- [x] Inicializar proyecto Expo con TypeScript
+- [x] Configurar Expo Router
+  - Nota: corregido root a `src/app` y añadida ruta `/` (redirect a login) para evitar "Unmatched Route" en web.
+- [x] Configurar ESLint + Prettier
+- [x] Configurar Husky + pre-commit hooks (lint + type-check)
+- [x] Configurar GitHub Actions básico (lint + type-check en cada PR)
 
 ---
 
