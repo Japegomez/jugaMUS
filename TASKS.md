@@ -37,18 +37,23 @@ _Ninguna tarea en progreso actualmente._
 
 ### Setup Supabase
 
-- [ ] Crear proyecto en Supabase (vía MCP)
-- [ ] Crear tabla `profiles` con migración versionada
-- [ ] Crear tabla `matches` con migración versionada
-- [ ] Crear tabla `match_participants` con migración versionada
-- [ ] Configurar Row Level Security (RLS) en las tres tablas
-- [ ] Crear trigger para sincronizar `auth.users` → `profiles`
-- [ ] Crear índices de rendimiento (idx*matches_search, idx_matches_user_history, idx_participants*\*)
-- [ ] Generar tipos TypeScript (vía MCP)
+- [x] Crear proyecto en Supabase (vía MCP)
+  - Proyecto: `musApp`, ref `gnseokumiqtdtdzyrldk`, región `eu-west-1`.
+- [x] Crear tabla `profiles` con migración versionada
+- [x] Crear tabla `matches` con migración versionada
+- [x] Crear tabla `match_participants` con migración versionada
+- [x] Configurar Row Level Security (RLS) en las tres tablas
+- [x] Crear trigger para sincronizar `auth.users` → `profiles`
+- [x] Crear índices de rendimiento (idx*matches_search, idx_matches_user_history, idx_participants*\*)
+- [x] Generar tipos TypeScript (vía MCP)
+  - SQL versionado también en `supabase/migrations/` (reproducible), incl. `005` (revokes RPC en triggers + endurecimiento `search_path`).
+  - Pendiente: rotar clave `anon` si se expuso fuera del equipo; `.env.local` en cada máquina (no versionado).
 
 ### F1 - Autenticación
 
-- [ ] Instalar y configurar SDK de Supabase en la app
+- [x] Instalar y configurar SDK de Supabase en la app
+  - Cliente en `src/lib/supabase.ts` + `EXPO_PUBLIC_*` en `.env.local` / `.env.example`.
+  - Pendiente: cablear `useAuth` a `supabase.auth` (sesión real).
 - [ ] Pantalla de login con email/contraseña
 - [ ] Pantalla de registro con aceptación de términos y política de privacidad
 - [ ] Pantalla de recuperación de contraseña
