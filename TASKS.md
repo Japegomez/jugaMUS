@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 07/05/2026
+> Actualizado: 09/05/2026
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -53,15 +53,20 @@ _Ninguna tarea en progreso actualmente._
 
 - [x] Instalar y configurar SDK de Supabase en la app
   - Cliente en `src/lib/supabase.ts` + `EXPO_PUBLIC_*` en `.env.local` / `.env.example`.
-  - Pendiente: cablear `useAuth` a `supabase.auth` (sesión real).
-- [ ] Pantalla de login con email/contraseña
-- [ ] Pantalla de registro con aceptación de términos y política de privacidad
-- [ ] Pantalla de recuperación de contraseña
-- [ ] Login con Google (OAuth via Supabase)
-- [ ] Login con Apple ID (OAuth via Supabase)
-- [ ] Persistencia de sesión entre cierres de la app
-- [ ] Redirección automática: usuarios autenticados → pantalla principal, no autenticados → login
-- [ ] Hook `useAuth.ts` con Zustand para estado global de sesión
+  - `useAuthStore` / `useAuth` cableados a `supabase.auth` (`initializeAuth`, `onAuthStateChange`).
+- [x] Pantalla de login con email/contraseña
+- [x] Pantalla de registro con aceptación de términos y política de privacidad
+  - Textos legales placeholder en `src/app/(auth)/terms.tsx` y `privacy.tsx` (sustituir antes de release).
+- [x] Pantalla de recuperación de contraseña
+- [x] Login con Google (OAuth via Supabase)
+  - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
+- [x] Login con Apple ID (OAuth via Supabase)
+  - iOS: `signInWithIdToken` + `expo-apple-authentication`. Requiere MANUAL-3 y MANUAL-4.
+- [x] Persistencia de sesión entre cierres de la app
+  - `AsyncStorage` + `persistSession: true` en `src/lib/supabase.ts`.
+- [x] Redirección automática: usuarios autenticados → pantalla principal, no autenticados → login
+  - Guardia en `src/app/_layout.tsx` tras `initialized`.
+- [x] Hook `useAuth.ts` con Zustand para estado global de sesión
 
 ### F2 - Perfil de usuario
 
