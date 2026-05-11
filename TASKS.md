@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 11/05/2026
+> Actualizado: 11/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -77,17 +77,20 @@ _Ninguna tarea en progreso actualmente._
 
 ### F2 - Perfil de usuario
 
-- [ ] Pantalla de perfil (vista propia)
-- [ ] Pantalla de edición de perfil
-- [ ] Campo de teléfono con validación E.164 (formato `+34XXXXXXXXX`)
-- [ ] Subida de foto de perfil a Supabase Storage (con compresión a ≤ 500KB)
-- [ ] Preferencias de notificación (email y push)
+- [x] Pantalla de perfil (vista propia)
+- [x] Pantalla de edición de perfil
+- [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
+- [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
+- [x] Preferencias de notificación (email y push)
 - [ ] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
+  - Pendiente: usar RPC `get_profile_with_phone` en detalle de partida / listados de participantes (F4).
 
 ### F3 - Ubicaciones
 
-- [ ] Integrar JSON estático de municipios del INE
-- [ ] Componente de selector de municipio con búsqueda local
+- [x] Integrar JSON estático de municipios del INE
+  - `npm run sync:municipalities` → `src/data/municipalities.json` (~8k municipios; fuente por defecto CSV codeforspain alineado INE).
+- [x] Componente de selector de municipio con búsqueda local
+  - `MunicipalityPicker` en edición de perfil; **pendiente**: mismo selector en formulario de creación/edición de partida (F4).
 - [ ] Campo "lugar por definir" en formulario de partida
 
 ### F4 - Partidas (Core)
@@ -222,18 +225,3 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
 - [ ] README de desarrollo con instrucciones de setup local
 - [ ] Documentación de variables de entorno (`.env.example`)
-
----
-
-## Completadas
-
-- [x] Inicializar proyecto Expo con TypeScript
-- [x] Configurar Expo Router
-  - Nota: corregido root a `src/app` y añadida ruta `/` (redirect a login) para evitar "Unmatched Route" en web.
-- [x] Configurar ESLint + Prettier
-- [x] Configurar Husky + pre-commit hooks (lint + type-check)
-- [x] Configurar GitHub Actions básico (lint + type-check en cada PR)
-
----
-
-> **Instrucciones de actualización:** Al final de cada sesión de trabajo, mover las tareas completadas a la sección "Completadas", actualizar el estado del proyecto y reorganizar las tareas en progreso si es necesario.

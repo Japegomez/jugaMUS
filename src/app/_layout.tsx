@@ -1,6 +1,16 @@
 import { useEffect } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { useAuthStore } from '@/hooks/useAuth'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+})
 
 export default function RootLayout() {
   const { session, initialized } = useAuthStore()
@@ -23,5 +33,9 @@ export default function RootLayout() {
     }
   }, [session, initialized, segments, router])
 
-  return <Stack screenOptions={{ headerShown: false }} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </QueryClientProvider>
+  )
 }

@@ -70,7 +70,7 @@ Solo dos roles en el MVP:
 ### F2 - Perfil de usuario (Fase 1)
 
 - Nombre a mostrar (obligatorio)
-- Teléfono (obligatorio, validación formato E.164, ej: `+34612345678`)
+- Teléfono (obligatorio, validación formato E.164; en la app: selector de prefijo por país + validación genérica ITU-T, ej. `+34612345678` u otros países del listado)
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
 - Preferencias de notificación: email y/o push
