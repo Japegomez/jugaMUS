@@ -1,12 +1,15 @@
-import { makeRedirectUri } from 'expo-auth-session'
+import * as Linking from 'expo-linking'
 
 /**
- * Redirect URI for Supabase OAuth (must match allowed URLs in Supabase + provider consoles).
- * Uses the `musapp` scheme from app.json.
+ * URL de retorno OAuth (debe coincidir con "Redirect URLs" en Supabase Auth).
+ *
+ * Expo Go (iPhone/Android): genera `exp://192.168.x.x:PORT/--/auth/callback`
+ * Build standalone:          genera `musapp://auth/callback`
+ *
+ * En Supabase → Auth → URL Configuration → Redirect URLs añade:
+ *   exp://**                  (wildcard para Expo Go)
+ *   musapp://auth/callback    (para builds de producción/desarrollo nativo)
  */
 export function getOAuthRedirectUrl(): string {
-  return makeRedirectUri({
-    scheme: 'musapp',
-    path: 'auth/callback',
-  })
+  return Linking.createURL('auth/callback')
 }
