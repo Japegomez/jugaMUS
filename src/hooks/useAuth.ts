@@ -9,6 +9,18 @@ import { supabase } from '@/lib/supabase'
 
 let authSubscription: { unsubscribe: () => void } | null = null
 
+/** Supabase Auth devuelve 429 si hay demasiados signUp / emails / login desde la misma IP. */
+function userFacingAuthError(error: { message: string; status?: number }): Error {
+  const msg = error.message ?? ''
+  const st = typeof error.status === 'number' ? error.status : undefined
+  if (st === 429 || /429|rate limit|too many requests|too_many|over_email_send/i.test(msg)) {
+    return new Error(
+      'Límite temporal alcanzado (demasiadas peticiones). Espera 1–2 minutos, no pulses repetir varias veces, o prueba otra red. En cuentas de prueba, desactivar la confirmación por email en Supabase reduce estos límites.'
+    )
+  }
+  return new Error(msg)
+}
+
 async function enforceProfileNotSuspended(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('profiles')
@@ -93,7 +105,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithPassword: async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      return { error: new Error(error.message) }
+      return { error: userFacingAuthError(error) }
     }
     if (data.user) {
       const suspendedMsg = await enforceProfileNotSuspended(data.user.id)
@@ -117,7 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       },
     })
     if (error) {
-      return { error: new Error(error.message) }
+      return { error: userFacingAuthError(error) }
     }
     return { error: null }
   },
@@ -131,7 +143,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const redirectTo = getOAuthRedirectUrl()
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     if (error) {
-      return { error: new Error(error.message) }
+      return { error: userFacingAuthError(error) }
     }
     return { error: null }
   },
@@ -139,8 +151,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithGoogle: () => signInWithOAuthProvider('google'),
 
   signInWithApple: async () => {
+    if (Platform.OS === 'web') {
+      return signInWithOAuthProvider('apple')
+    }
+
     if (Platform.OS !== 'ios') {
-      return { error: new Error('Sign in with Apple solo está disponible en iOS') }
+      return { error: new Error('Sign in with Apple solo está disponible en iOS y en la web') }
     }
 
     const available = await AppleAuthentication.isAvailableAsync()
@@ -166,7 +182,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       })
 
       if (error) {
-        return { error: new Error(error.message) }
+        return { error: userFacingAuthError(error) }
       }
 
       const userId = appleData.user?.id ?? appleData.session?.user?.id
