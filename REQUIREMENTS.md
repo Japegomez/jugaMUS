@@ -70,7 +70,7 @@ Solo dos roles en el MVP:
 ### F2 - Perfil de usuario (Fase 1)
 
 - Nombre a mostrar (obligatorio)
-- Teléfono (obligatorio, validación formato E.164, ej: `+34612345678`)
+- Teléfono (obligatorio, validación formato E.164, ej: `+34612345678`; en la app: selector de prefijo por país y validación E.164 genérica en cliente)
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
 - Preferencias de notificación: email y/o push
@@ -79,7 +79,7 @@ Solo dos roles en el MVP:
 
 ### F3 - Ubicaciones (Fase 1)
 
-- Lista de municipios de España (fuente: INE, JSON estático, filtrado local)
+- Lista de municipios de España (fuente: INE, JSON estático, filtrado local; generación: `npm run sync:municipalities` → `src/data/municipalities.json`, CSV por defecto alineado con códigos INE)
 - No requiere GPS ni permisos de ubicación
 - Opción "lugar por definir" en el campo de lugar de la partida
 - Posibilidad de ocultar ubicación exacta a no participantes

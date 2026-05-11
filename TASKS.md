@@ -1,17 +1,17 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 11/05/2026
+> Actualizado: 11/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado    | Descripción                          |
-| ------------------- | --------- | ------------------------------------ |
-| Fase 1 - Core       | Pendiente | Auth, Perfil, Partidas, Descubrir    |
-| Fase 2 - Resultados | Pendiente | Notificaciones, Resultados, Reportes |
-| Fase 3 - Admin      | Pendiente | Panel admin, Analíticas, Disputas    |
+| Fase                | Estado    | Descripción                                                                                                                     |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Fase 1 - Core       | En curso  | Auth listo; F2 perfil listo salvo visibilidad teléfono en partidas; F3 datos + selector en perfil; pendiente partidas/descubrir |
+| Fase 2 - Resultados | Pendiente | Notificaciones, Resultados, Reportes                                                                                            |
+| Fase 3 - Admin      | Pendiente | Panel admin, Analíticas, Disputas                                                                                               |
 
 ---
 
@@ -77,17 +77,19 @@ _Ninguna tarea en progreso actualmente._
 
 ### F2 - Perfil de usuario
 
-- [ ] Pantalla de perfil (vista propia)
-- [ ] Pantalla de edición de perfil
-- [ ] Campo de teléfono con validación E.164 (formato `+34XXXXXXXXX`)
-- [ ] Subida de foto de perfil a Supabase Storage (con compresión a ≤ 500KB)
-- [ ] Preferencias de notificación (email y push)
+- [x] Pantalla de perfil (vista propia)
+- [x] Pantalla de edición de perfil
+- [x] Campo de teléfono con validación E.164 (prefijo por país + número; validación genérica `+` y 7–15 dígitos)
+- [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en Hermes)
+- [x] Preferencias de notificación (email y push)
 - [ ] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
+  - Pendiente: usar RPC `get_profile_with_phone` en detalle/listado de partida (F4), no en vista propia de perfil.
 
 ### F3 - Ubicaciones
 
-- [ ] Integrar JSON estático de municipios del INE
-- [ ] Componente de selector de municipio con búsqueda local
+- [x] Integrar JSON estático de municipios del INE
+  - `npm run sync:municipalities` → `src/data/municipalities.json` (~8k municipios; CSV por defecto codeforspain; admite `--input` CSV INE).
+- [x] Componente de selector de municipio con búsqueda local
 - [ ] Campo "lugar por definir" en formulario de partida
 
 ### F4 - Partidas (Core)
@@ -224,16 +226,3 @@ _Ninguna tarea en progreso actualmente._
 - [ ] Documentación de variables de entorno (`.env.example`)
 
 ---
-
-## Completadas
-
-- [x] Inicializar proyecto Expo con TypeScript
-- [x] Configurar Expo Router
-  - Nota: corregido root a `src/app` y añadida ruta `/` (redirect a login) para evitar "Unmatched Route" en web.
-- [x] Configurar ESLint + Prettier
-- [x] Configurar Husky + pre-commit hooks (lint + type-check)
-- [x] Configurar GitHub Actions básico (lint + type-check en cada PR)
-
----
-
-> **Instrucciones de actualización:** Al final de cada sesión de trabajo, mover las tareas completadas a la sección "Completadas", actualizar el estado del proyecto y reorganizar las tareas en progreso si es necesario.
