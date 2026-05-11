@@ -8,6 +8,10 @@ export default function RootLayout() {
   const router = useRouter()
 
   useEffect(() => {
+    useAuthStore.getState().initializeAuth()
+  }, [])
+
+  useEffect(() => {
     if (!initialized) return
 
     const inAuthGroup = segments[0] === '(auth)'
