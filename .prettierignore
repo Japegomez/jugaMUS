@@ -3,3 +3,4 @@ node_modules/
 dist/
 web-build/
 *.lock
+src/data/municipalities.json
