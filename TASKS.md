@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 09/05/2026
+> Actualizado: 11/05/2026
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -54,19 +54,26 @@ _Ninguna tarea en progreso actualmente._
 - [x] Instalar y configurar SDK de Supabase en la app
   - Cliente en `src/lib/supabase.ts` + `EXPO_PUBLIC_*` en `.env.local` / `.env.example`.
   - `useAuthStore` / `useAuth` cableados a `supabase.auth` (`initializeAuth`, `onAuthStateChange`).
+  - Migraciones `006`/`007` en repo: RLS sin recursión en `match_participants` + backfill `profiles` desde `auth.users` (evitar 500 tras login).
 - [x] Pantalla de login con email/contraseña
+  - Mensajes claros si Supabase devuelve 429 (rate limit por IP en plan gratuito).
 - [x] Pantalla de registro con aceptación de términos y política de privacidad
   - Textos legales placeholder en `src/app/(auth)/terms.tsx` y `privacy.tsx` (sustituir antes de release).
+  - En Supabase está **desactivada la confirmación por email** (dev / pruebas); **reactivar en producción** (proveedor Email + plantillas + URLs).
 - [x] Pantalla de recuperación de contraseña
 - [x] Login con Google (OAuth via Supabase)
   - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
+  - Redirects típicos: `exp://**` (Expo Go), `musapp://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
 - [x] Login con Apple ID (OAuth via Supabase)
-  - iOS: `signInWithIdToken` + `expo-apple-authentication`. Requiere MANUAL-3 y MANUAL-4.
+  - iOS: `signInWithIdToken` + `expo-apple-authentication`. Web: OAuth Supabase.
+  - **Pendiente manual:** Manual-3 y Manual-4 del plan (Apple Developer y Supabase provider).
 - [x] Persistencia de sesión entre cierres de la app
-  - `AsyncStorage` + `persistSession: true` en `src/lib/supabase.ts`.
+  - `persistSession: true`; `src/lib/authStorage.ts` (web: `localStorage`, nativo: AsyncStorage compatible Expo Go).
 - [x] Redirección automática: usuarios autenticados → pantalla principal, no autenticados → login
   - Guardia en `src/app/_layout.tsx` tras `initialized`.
+  - Tabs: rutas `matches/index`, `profile/index`, etc. en `(tabs)/_layout.tsx` (Expo Router web).
 - [x] Hook `useAuth.ts` con Zustand para estado global de sesión
+- [x] Cerrar sesión desde pantalla de perfil
 
 ### F2 - Perfil de usuario
 
