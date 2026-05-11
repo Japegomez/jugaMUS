@@ -123,7 +123,7 @@ export default function LoginScreen() {
           style={styles.btn}
         />
 
-        {Platform.OS === 'ios' ? (
+        {Platform.OS === 'ios' || Platform.OS === 'web' ? (
           <Button
             title="Continuar con Apple"
             variant="outline"
