@@ -15,6 +15,9 @@ import { useRouter } from 'expo-router'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
+import { useUserMatches } from '@/hooks/useMatches'
+import { MATCH_STATUS } from '@/constants'
+import type { UserMatchSummary } from '@/services/matches.service'
 
 function AvatarCircle({ uri, name }: { uri: string | null; name: string }) {
   const initials = name
@@ -39,6 +42,7 @@ export default function ProfileScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading, isError } = useProfile(sessionUserId)
+  const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
   const [signingOut, setSigningOut] = useState(false)
 
   const onSignOut = async () => {
@@ -100,6 +104,24 @@ export default function ProfileScreen() {
         <NotifRow label="Push" value={profile.notify_push} />
       </View>
 
+      {/* Match history */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Mis partidas</Text>
+        {matchesLoading ? (
+          <ActivityIndicator size="small" color="#1a5f4a" style={styles.matchesLoader} />
+        ) : !userMatches || userMatches.length === 0 ? (
+          <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
+        ) : (
+          userMatches.map((m) => (
+            <MatchHistoryRow
+              key={m.id}
+              match={m}
+              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+            />
+          ))
+        )}
+      </View>
+
       {/* Actions */}
       <Pressable
         style={styles.editButton}
@@ -117,6 +139,50 @@ export default function ProfileScreen() {
         textStyle={styles.signOutLabel}
       />
     </ScrollView>
+  )
+}
+
+function matchStatusLabel(status: string): { text: string; color: string } {
+  switch (status) {
+    case MATCH_STATUS.PLANNED:
+      return { text: 'Planificada', color: '#1a5f4a' }
+    case MATCH_STATUS.IN_PROGRESS:
+      return { text: 'En curso', color: '#c07000' }
+    case MATCH_STATUS.FINISHED:
+      return { text: 'Finalizada', color: '#555' }
+    case MATCH_STATUS.FINISHED_NO_RESULT:
+      return { text: 'Sin resultado', color: '#999' }
+    default:
+      return { text: status, color: '#888' }
+  }
+}
+
+function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
+  const status = matchStatusLabel(match.status)
+  const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.matchRow, pressed && styles.matchRowPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={match.title}>
+      <View style={styles.matchRowMain}>
+        <Text style={styles.matchTitle} numberOfLines={1}>
+          {match.title}
+        </Text>
+        <Text style={styles.matchMeta}>
+          {dateStr} · {match.city}
+        </Text>
+      </View>
+      <View style={[styles.matchBadge, { borderColor: status.color }]}>
+        <Text style={[styles.matchBadgeText, { color: status.color }]}>{status.text}</Text>
+      </View>
+    </Pressable>
   )
 }
 
@@ -255,4 +321,31 @@ const styles = StyleSheet.create({
   signOutLabel: {
     color: '#b42318',
   },
+  matchesLoader: { marginVertical: 12 },
+  matchesEmpty: {
+    fontSize: 14,
+    color: '#999',
+    paddingVertical: 12,
+    textAlign: 'center',
+  },
+  matchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#eee',
+    gap: 10,
+  },
+  matchRowPressed: { opacity: 0.7 },
+  matchRowMain: { flex: 1 },
+  matchTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
+  matchMeta: { fontSize: 12, color: '#888', marginTop: 2 },
+  matchBadge: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  matchBadgeText: { fontSize: 11, fontWeight: '600' },
 })

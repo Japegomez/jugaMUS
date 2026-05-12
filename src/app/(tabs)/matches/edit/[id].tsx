@@ -1,19 +1,29 @@
+import { useEffect } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  Pressable,
+} from 'react-native'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
-import { useCreateMatch } from '@/hooks/useMatches'
+import { useMatch, useUpdateMatch } from '@/hooks/useMatches'
 import { MATCH_VISIBILITY } from '@/constants'
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
+// ─── Schema (same as create) ──────────────────────────────────────────────────
 
-const createMatchSchema = z.object({
+const editMatchSchema = z.object({
   title: z
     .string()
     .trim()
@@ -36,67 +46,132 @@ const createMatchSchema = z.object({
     .or(z.literal('')),
   duration_target_games: z.number().int().min(1).max(6),
   visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
-  notes: z.string().trim().max(300, 'Notas demasiado largas').optional().or(z.literal('')),
 })
 
-type CreateMatchValues = z.infer<typeof createMatchSchema>
+type EditMatchValues = z.infer<typeof editMatchSchema>
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Chip ─────────────────────────────────────────────────────────────────────
 
-function defaultStartAt() {
-  const d = new Date()
-  d.setHours(d.getHours() + 2, 0, 0, 0)
-  return d.toISOString().slice(0, 19)
+interface ChipProps {
+  label: string
+  sublabel?: string
+  selected: boolean
+  onPress: () => void
 }
+
+function Chip({ label, sublabel, selected, onPress }: ChipProps) {
+  return (
+    <Pressable
+      style={[chip.base, selected && chip.selected]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}>
+      <Text style={[chip.label, selected && chip.labelSelected]}>{label}</Text>
+      {sublabel ? (
+        <Text style={[chip.sublabel, selected && chip.sublabelSelected]}>{sublabel}</Text>
+      ) : null}
+    </Pressable>
+  )
+}
+
+const chip = StyleSheet.create({
+  base: {
+    flex: 1,
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  selected: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
+  label: { fontSize: 15, fontWeight: '600', color: '#666' },
+  labelSelected: { color: '#1a5f4a' },
+  sublabel: { fontSize: 11, color: '#999', marginTop: 2, textAlign: 'center' },
+  sublabelSelected: { color: '#2a8f6f' },
+})
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
-export default function CreateMatchScreen() {
+export default function EditMatchScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const createMatch = useCreateMatch()
+
+  const { data: match, isLoading } = useMatch(id)
+  const updateMatch = useUpdateMatch()
 
   const {
     control,
     handleSubmit,
+    reset,
     watch,
     setValue,
-    formState: { errors },
-  } = useForm<CreateMatchValues>({
-    resolver: zodResolver(createMatchSchema),
+    formState: { errors, isDirty },
+  } = useForm<EditMatchValues>({
+    resolver: zodResolver(editMatchSchema),
     defaultValues: {
       title: '',
       description: '',
-      start_at: defaultStartAt(),
+      start_at: '',
       city: '',
       place_defined: true,
       place_text: '',
       duration_target_games: 3,
       visibility: MATCH_VISIBILITY.PUBLIC,
-      notes: '',
     },
   })
+
+  // Pre-populate form with existing match data
+  useEffect(() => {
+    if (match) {
+      reset({
+        title: match.title,
+        description: match.description ?? '',
+        start_at: match.start_at,
+        city: match.city,
+        place_defined: match.place_defined,
+        place_text: match.place_text ?? '',
+        duration_target_games: match.duration_target_games,
+        visibility: match.visibility as
+          | typeof MATCH_VISIBILITY.PUBLIC
+          | typeof MATCH_VISIBILITY.LINK,
+      })
+    }
+  }, [match, reset])
 
   const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
 
-  const onSubmit = async (values: CreateMatchValues) => {
+  const onSubmit = async (values: EditMatchValues) => {
     try {
-      const match = await createMatch.mutateAsync({
-        title: values.title,
-        description: values.description || null,
-        start_at: values.start_at,
-        city: values.city,
-        place_defined: values.place_defined,
-        place_text: values.place_defined ? values.place_text || null : null,
-        duration_target_games: values.duration_target_games,
-        visibility: values.visibility,
-        location_privacy: 'participants_only',
+      await updateMatch.mutateAsync({
+        id,
+        data: {
+          title: values.title,
+          description: values.description || null,
+          start_at: values.start_at,
+          city: values.city,
+          place_defined: values.place_defined,
+          place_text: values.place_defined ? values.place_text || null : null,
+          duration_target_games: values.duration_target_games,
+          visibility: values.visibility,
+        },
       })
-      router.replace(`/(tabs)/matches/${match.id}`)
+      router.back()
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la partida')
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la partida')
     }
+  }
+
+  if (isLoading) {
+    return (
+      <View style={s.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    )
   }
 
   return (
@@ -104,7 +179,7 @@ export default function CreateMatchScreen() {
       style={s.scroll}
       contentContainerStyle={s.container}
       keyboardShouldPersistTaps="handled">
-      <Text style={s.heading}>Nueva partida</Text>
+      <Text style={s.heading}>Editar partida</Text>
 
       {/* Título */}
       <Controller
@@ -149,7 +224,6 @@ export default function CreateMatchScreen() {
             label="Fecha y hora *"
             value={field.value}
             onChange={field.onChange}
-            minDate={new Date()}
             error={errors.start_at?.message}
           />
         )}
@@ -234,96 +308,38 @@ export default function CreateMatchScreen() {
             sublabel="Aparece en el listado"
             selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
             onPress={() =>
-              setValue('visibility', MATCH_VISIBILITY.PUBLIC, { shouldValidate: true })
+              setValue('visibility', MATCH_VISIBILITY.PUBLIC, {
+                shouldValidate: true,
+              })
             }
           />
           <Chip
             label="Con enlace"
             sublabel="Solo accesible con el link"
             selected={visibilityValue === MATCH_VISIBILITY.LINK}
-            onPress={() => setValue('visibility', MATCH_VISIBILITY.LINK, { shouldValidate: true })}
+            onPress={() =>
+              setValue('visibility', MATCH_VISIBILITY.LINK, {
+                shouldValidate: true,
+              })
+            }
           />
         </View>
         {errors.visibility ? <Text style={s.error}>{errors.visibility.message}</Text> : null}
       </View>
 
-      {/* Notas */}
-      <Controller
-        control={control}
-        name="notes"
-        render={({ field }) => (
-          <Input
-            label="Notas opcionales"
-            placeholder="Información para los participantes..."
-            value={field.value ?? ''}
-            onChangeText={field.onChange}
-            error={errors.notes?.message}
-            multiline
-            numberOfLines={3}
-            autoCapitalize="sentences"
-          />
-        )}
-      />
-
       <Button
-        title="Crear partida"
+        title="Guardar cambios"
         onPress={handleSubmit(onSubmit)}
-        loading={createMatch.isPending}
+        loading={updateMatch.isPending}
+        disabled={!isDirty}
         style={s.submitBtn}
       />
     </ScrollView>
   )
 }
 
-// ─── Chip ─────────────────────────────────────────────────────────────────────
-
-import { Pressable } from 'react-native'
-
-interface ChipProps {
-  label: string
-  sublabel?: string
-  selected: boolean
-  onPress: () => void
-}
-
-function Chip({ label, sublabel, selected, onPress }: ChipProps) {
-  return (
-    <Pressable
-      style={[chip.base, selected && chip.selected]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}>
-      <Text style={[chip.label, selected && chip.labelSelected]}>{label}</Text>
-      {sublabel ? (
-        <Text style={[chip.sublabel, selected && chip.sublabelSelected]}>{sublabel}</Text>
-      ) : null}
-    </Pressable>
-  )
-}
-
-const chip = StyleSheet.create({
-  base: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
-    alignItems: 'center',
-  },
-  selected: {
-    borderColor: '#1a5f4a',
-    backgroundColor: '#eef7f3',
-  },
-  label: { fontSize: 15, fontWeight: '600', color: '#666' },
-  labelSelected: { color: '#1a5f4a' },
-  sublabel: { fontSize: 11, color: '#999', marginTop: 2, textAlign: 'center' },
-  sublabelSelected: { color: '#2a8f6f' },
-})
-
 const s = StyleSheet.create({
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, backgroundColor: '#f6f7f4' },
   container: { padding: 20, paddingBottom: 40 },
   heading: {
@@ -333,20 +349,9 @@ const s = StyleSheet.create({
     marginBottom: 20,
   },
   fieldWrap: { marginBottom: 20 },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#1a1a1a',
-  },
-  durationRow: {
-    flexDirection: 'row',
-    marginHorizontal: -4,
-  },
-  visRow: {
-    flexDirection: 'row',
-    marginHorizontal: -4,
-  },
+  label: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: '#1a1a1a' },
+  durationRow: { flexDirection: 'row', marginHorizontal: -4 },
+  visRow: { flexDirection: 'row', marginHorizontal: -4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
