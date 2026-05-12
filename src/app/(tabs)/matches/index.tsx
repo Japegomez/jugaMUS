@@ -1,13 +1,56 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 
 export default function MatchesScreen() {
+  const router = useRouter()
+
   return (
     <View style={styles.container}>
-      <Text>Listado de partidas — próximamente</Text>
+      <Text style={styles.empty}>Aquí aparecerán las partidas públicas</Text>
+      <Text style={styles.hint}>(Descubrir — próximamente)</Text>
+
+      <Pressable
+        style={styles.fab}
+        onPress={() => router.push('/(tabs)/matches/create')}
+        accessibilityRole="button"
+        accessibilityLabel="Crear partida">
+        <Text style={styles.fabIcon}>＋</Text>
+      </Pressable>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: '#f6f7f4' },
+  empty: {
+    flex: 1,
+    textAlign: 'center',
+    textAlignVertical: 'center',
+    fontSize: 15,
+    color: '#999',
+    paddingTop: '50%',
+  },
+  hint: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: '#bbb',
+    marginBottom: 80,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1a5f4a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
 })

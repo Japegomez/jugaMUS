@@ -9,7 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native'
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger'
 
 export interface ButtonProps extends Omit<PressableProps, 'style'> {
   title: string
@@ -40,6 +40,7 @@ export function Button({
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'outline' && styles.outline,
+        variant === 'danger' && styles.danger,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
         style,
@@ -51,7 +52,13 @@ export function Button({
           accessibilityLabel="Cargando"
         />
       ) : (
-        <Text style={[styles.label, variant === 'outline' && styles.labelOutline, textStyle]}>
+        <Text
+          style={[
+            styles.label,
+            variant === 'outline' && styles.labelOutline,
+            variant === 'danger' && styles.labelDanger,
+            textStyle,
+          ]}>
           {title}
         </Text>
       )}
@@ -78,6 +85,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#1a1a1a',
   },
+  danger: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#b00020',
+  },
   pressed: {
     opacity: 0.88,
   },
@@ -91,5 +103,8 @@ const styles = StyleSheet.create({
   },
   labelOutline: {
     color: '#1a1a1a',
+  },
+  labelDanger: {
+    color: '#b00020',
   },
 })

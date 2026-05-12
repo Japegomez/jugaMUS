@@ -82,8 +82,8 @@ _Ninguna tarea en progreso actualmente._
 - [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
 - [x] Preferencias de notificación (email y push)
-- [ ] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
-  - Pendiente: usar RPC `get_profile_with_phone` en detalle de partida / listados de participantes (F4).
+- [x] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
+  - RPC `get_profile_with_phone` usada en detalle de partida (pantalla `[id].tsx`).
 
 ### F3 - Ubicaciones
 
@@ -91,29 +91,29 @@ _Ninguna tarea en progreso actualmente._
   - `npm run sync:municipalities` → `src/data/municipalities.json` (~8k municipios; fuente por defecto CSV codeforspain alineado INE).
 - [x] Componente de selector de municipio con búsqueda local
   - `MunicipalityPicker` en edición de perfil; **pendiente**: mismo selector en formulario de creación/edición de partida (F4).
-- [ ] Campo "lugar por definir" en formulario de partida
+- [x] Campo "lugar por definir" en formulario de partida
 
 ### F4 - Partidas (Core)
 
-- [ ] Pantalla de creación de partida (formulario completo)
-  - [ ] Título, descripción
-  - [ ] Fecha y hora (selector nativo)
-  - [ ] Selector de ciudad/pueblo (municipios INE)
-  - [ ] Lugar (texto libre o "por definir")
-  - [ ] Duración en juegos (1-6, selector)
-  - [ ] Visibilidad (pública / con enlace)
-  - [ ] Notas opcionales
-- [ ] Pantalla de detalle de partida
-  - [ ] Información completa de la partida
-  - [ ] Lista de participantes por equipo (A y B)
-  - [ ] Botón "Unirse" (si hay plaza y no eres participante)
-  - [ ] Botón "Abandonar" (si eres participante y partida en estado `planned`)
-  - [ ] Botones "Editar" y "Cancelar" (solo para el creador)
-  - [ ] Teléfonos visibles solo si eres participante confirmado
-- [ ] Pantalla de edición de partida (mismo formulario que creación)
-- [ ] Lógica de unirse a partida con selección de equipo
-- [ ] Constraint: máximo 2 confirmados por equipo
-- [ ] Historial de partidas del usuario (pestaña en perfil o pantalla separada)
+- [x] Pantalla de creación de partida (formulario completo)
+  - [x] Título, descripción
+  - [x] Fecha y hora (selector nativo)
+  - [x] Selector de ciudad/pueblo (municipios INE)
+  - [x] Lugar (texto libre o "por definir")
+  - [x] Duración en juegos (1-6, selector)
+  - [x] Visibilidad (pública / con enlace)
+  - [x] Notas opcionales
+- [x] Pantalla de detalle de partida
+  - [x] Información completa de la partida
+  - [x] Lista de participantes por equipo (A y B)
+  - [x] Botón "Unirse" (si hay plaza y no eres participante)
+  - [x] Botón "Abandonar" (si eres participante y partida en estado `planned`)
+  - [x] Botones "Editar" y "Cancelar" (solo para el creador)
+  - [x] Teléfonos visibles solo si eres participante confirmado
+- [x] Pantalla de edición de partida (mismo formulario que creación)
+- [x] Lógica de unirse a partida con selección de equipo
+- [x] Constraint: máximo 2 confirmados por equipo
+- [x] Historial de partidas del usuario (sección en pantalla de perfil)
 
 ### F5 - Descubrir y filtrar
 
