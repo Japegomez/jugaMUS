@@ -90,17 +90,23 @@ function IOSPicker({ label, value, onChange, error, minDate }: DateTimePickerPro
               <Text style={s.modalConfirm}>Listo</Text>
             </Pressable>
           </View>
-          <RNDateTimePicker
-            value={draft}
-            mode="datetime"
-            display="spinner"
-            minimumDate={minDate}
-            locale="es_ES"
-            onChange={(_, d) => {
-              if (d) setDraft(d)
-            }}
-            style={s.iosSpinner}
-          />
+          {/* Fondo y colores explícitos: sin esto, ruedas blancas sobre sheet claro en iOS */}
+          <View style={s.iosPickerWrap}>
+            <RNDateTimePicker
+              value={draft}
+              mode="datetime"
+              display="spinner"
+              minimumDate={minDate}
+              locale="es_ES"
+              themeVariant="light"
+              textColor="#1a1a1a"
+              accentColor="#1a5f4a"
+              onChange={(_, d) => {
+                if (d) setDraft(d)
+              }}
+              style={s.iosSpinner}
+            />
+          </View>
         </SafeAreaView>
       </Modal>
     </View>
@@ -222,7 +228,13 @@ const s = StyleSheet.create({
   fieldPlaceholder: { color: '#888' },
   chevron: { fontSize: 12, color: '#666', paddingLeft: 8 },
   error: { color: '#b00020', fontSize: 13, marginTop: 4 },
-  modal: { flex: 1, backgroundColor: '#f6f7f4' },
+  modal: { flex: 1, backgroundColor: '#d5dad5' },
+  iosPickerWrap: {
+    flex: 1,
+    backgroundColor: '#c9cfc9',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -236,5 +248,5 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
   modalCancel: { fontSize: 16, color: '#666' },
   modalConfirm: { fontSize: 16, color: '#1a5f4a', fontWeight: '700' },
-  iosSpinner: { alignSelf: 'stretch' },
+  iosSpinner: { alignSelf: 'stretch', backgroundColor: 'transparent' },
 })
