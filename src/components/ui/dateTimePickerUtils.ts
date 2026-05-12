@@ -38,3 +38,15 @@ export function fromDatetimeLocalValue(s: string): string {
   if (isNaN(d.getTime())) return dateToLocalIsoString(new Date())
   return dateToLocalIsoString(d)
 }
+
+/** Start of local calendar day as UTC ISO (timestamptz-friendly). */
+export function dateToStartOfLocalDayIso(d: Date): string {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0)
+  return x.toISOString()
+}
+
+/** End of local calendar day as UTC ISO. */
+export function dateToEndOfLocalDayIso(d: Date): string {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+  return x.toISOString()
+}
