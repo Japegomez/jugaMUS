@@ -318,7 +318,8 @@ export default function MatchDetailScreen() {
   const slotsA = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.A).length
   const slotsB = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.B).length
   const hasSlots = slotsA > 0 || slotsB > 0
-  const canJoin = isPlanned && hasSlots && !isParticipant && !isCreator
+  /** Creator is not auto-added as participant; they must join like anyone else if they want a seat. */
+  const canJoin = isPlanned && hasSlots && !isParticipant
   const canLeave = isPlanned && isParticipant
 
   const status = statusLabel(match.status)
