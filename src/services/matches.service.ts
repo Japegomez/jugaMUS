@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { MATCH_STATUS, MAX_PLAYERS_PER_TEAM, MATCH_PAGE_SIZE } from '@/constants'
-import type { TablesInsert, TablesUpdate } from '@/types/database.types'
+import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -285,4 +285,71 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
   return Array.from(byId.values()).sort(
     (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
   )
+}
+
+// ─── Public explore (F5) — RPC list_public_matches ───────────────────────────
+
+export type PublicMatchExplorerRow = MatchRow & {
+  slots_filled: number
+  free_slots: number
+}
+
+type ListPublicMatchesRpc = Database['public']['Functions']['list_public_matches']
+
+export type PublicMatchesListFilters = {
+  search: string
+  city: string
+  /** `null` = any status */
+  status: string | null
+  startAfter: string | null
+  startBefore: string | null
+  /** 0 = no filter; otherwise require at least N free slots (of 4). */
+  minFreeSlots: number
+}
+
+function emptyToNull(s: string | null | undefined): string | null {
+  if (s == null) return null
+  const t = s.trim()
+  return t === '' ? null : t
+}
+
+/**
+ * Paginated public matches for the explore screen (visibility = public only).
+ * Requires DB migration `009_list_public_matches`.
+ */
+export async function listPublicMatchesPage(
+  filters: PublicMatchesListFilters & { limit?: number; offset?: number }
+): Promise<{ rows: PublicMatchExplorerRow[]; total: number; offset: number }> {
+  const limit = filters.limit ?? MATCH_PAGE_SIZE
+  const offset = filters.offset ?? 0
+
+  const args: ListPublicMatchesRpc['Args'] = {
+    p_search: emptyToNull(filters.search),
+    p_city: emptyToNull(filters.city),
+    p_status: filters.status && filters.status.trim() !== '' ? filters.status.trim() : null,
+    p_start_after: filters.startAfter,
+    p_start_before: filters.startBefore,
+    p_min_free_slots:
+      filters.minFreeSlots > 0 && filters.minFreeSlots <= 4 ? filters.minFreeSlots : null,
+    p_limit: limit,
+    p_offset: offset,
+  }
+
+  const { data, error } = await supabase.rpc('list_public_matches', args)
+
+  if (error) throw new Error(error.message)
+
+  const raw = (data ?? []) as ListPublicMatchesRpc['Returns']
+  if (raw.length === 0) {
+    return { rows: [], total: 0, offset }
+  }
+
+  const total = Number(raw[0].total_count)
+  const rows: PublicMatchExplorerRow[] = raw.map((r) => {
+    const { total_count: _totalCount, ...rest } = r
+    void _totalCount
+    return rest as PublicMatchExplorerRow
+  })
+
+  return { rows, total, offset }
 }

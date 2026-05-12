@@ -7,6 +7,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: '#007AFF',
       }}>
+      <Tabs.Screen name="explore/index" options={{ title: 'Descubrir' }} />
       <Tabs.Screen name="matches/index" options={{ title: 'Partidas' }} />
       <Tabs.Screen name="matches/create" options={{ href: null }} />
       <Tabs.Screen name="matches/[id]" options={{ href: null }} />

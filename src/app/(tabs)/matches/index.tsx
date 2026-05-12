@@ -6,8 +6,9 @@ export default function MatchesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.empty}>Aquí aparecerán las partidas públicas</Text>
-      <Text style={styles.hint}>(Descubrir — próximamente)</Text>
+      <Text style={styles.empty}>
+        Crea una partida o explora las públicas en la pestaña Descubrir.
+      </Text>
 
       <Pressable
         style={styles.fab}
@@ -29,12 +30,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#999',
     paddingTop: '50%',
-  },
-  hint: {
-    textAlign: 'center',
-    fontSize: 13,
-    color: '#bbb',
-    marginBottom: 80,
+    paddingHorizontal: 24,
   },
   fab: {
     position: 'absolute',

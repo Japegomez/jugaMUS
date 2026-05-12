@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   cancelMatch,
@@ -7,11 +8,12 @@ import {
   getUserMatches,
   joinMatch,
   leaveMatch,
+  listPublicMatchesPage,
   updateMatch,
 } from '@/services/matches.service'
-import type { MatchInsert, MatchUpdate } from '@/services/matches.service'
+import type { MatchInsert, MatchUpdate, PublicMatchesListFilters } from '@/services/matches.service'
 import { useAuthStore } from '@/hooks/useAuth'
-import { QUERY_STALE_TIME } from '@/constants'
+import { MATCH_PAGE_SIZE, QUERY_STALE_TIME } from '@/constants'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
@@ -21,6 +23,27 @@ export function matchQueryKey(id: string) {
 
 export function userMatchesQueryKey(userId: string) {
   return ['user-matches', userId] as const
+}
+
+export const PUBLIC_MATCHES_EXPLORE_ROOT = 'public-matches-explore' as const
+
+export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) {
+  return [
+    PUBLIC_MATCHES_EXPLORE_ROOT,
+    filters.search.trim(),
+    filters.city.trim(),
+    filters.status ?? '',
+    filters.startAfter ?? '',
+    filters.startBefore ?? '',
+    filters.minFreeSlots,
+  ] as const
+}
+
+function invalidatePublicMatchesExplore(queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    queryKey: [PUBLIC_MATCHES_EXPLORE_ROOT],
+    exact: false,
+  })
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -46,6 +69,26 @@ export function useUserMatches(userId?: string) {
   })
 }
 
+/** F5 — partidas públicas con paginación (20) y cache 5 min. */
+export function useInfinitePublicMatches(filters: PublicMatchesListFilters) {
+  return useInfiniteQuery({
+    queryKey: publicMatchesExploreQueryKey(filters),
+    queryFn: ({ pageParam }) =>
+      listPublicMatchesPage({
+        ...filters,
+        limit: MATCH_PAGE_SIZE,
+        offset: pageParam as number,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((acc, p) => acc + p.rows.length, 0)
+      if (lastPage.total <= 0 || loaded >= lastPage.total) return undefined
+      return loaded
+    },
+    staleTime: QUERY_STALE_TIME,
+  })
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export function useCreateMatch() {
@@ -63,6 +106,7 @@ export function useCreateMatch() {
           queryKey: userMatchesQueryKey(sessionUserId),
         })
       }
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }
@@ -77,6 +121,7 @@ export function useUpdateMatch() {
         if (!prev) return prev
         return { ...(prev as object), ...updated }
       })
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }
@@ -97,6 +142,7 @@ export function useCancelMatch() {
           queryKey: userMatchesQueryKey(sessionUserId),
         })
       }
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }
@@ -109,6 +155,7 @@ export function useJoinMatch() {
       joinMatch(matchId, userId, team),
     onSuccess: (_participant, { matchId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }
@@ -121,6 +168,7 @@ export function useLeaveMatch() {
       leaveMatch(matchId, userId),
     onSuccess: (_participant, { matchId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }

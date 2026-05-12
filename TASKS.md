@@ -117,13 +117,14 @@ _Ninguna tarea en progreso actualmente._
 
 ### F5 - Descubrir y filtrar
 
-- [ ] Pantalla principal con listado de partidas públicas
-- [ ] Ordenación por fecha (próximas primero)
-- [ ] Filtros: ciudad/pueblo, fecha, plazas libres, estado
-- [ ] Búsqueda por texto (campo título)
-- [ ] Paginación de 20 elementos (infinite scroll o botón "cargar más")
-- [ ] Cache con TanStack Query (5 minutos)
-- [ ] Estado vacío (sin partidas que coincidan con filtros)
+- [x] Pantalla principal con listado de partidas públicas
+- [x] Ordenación por fecha (próximas primero)
+- [x] Filtros: ciudad/pueblo, fecha, plazas libres, estado
+- [x] Búsqueda por texto (campo título)
+- [x] Paginación de 20 elementos (infinite scroll o botón "cargar más")
+- [x] Cache con TanStack Query (5 minutos)
+- [x] Estado vacío (sin partidas que coincidan con filtros)
+  - Nota: aplicar migración `009_list_public_matches` en Supabase (RPC `list_public_matches`); ya versionada en `supabase/migrations/`.
 
 ### Servicios externos (Fase 1)
 
