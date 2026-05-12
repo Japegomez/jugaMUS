@@ -179,6 +179,37 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      list_public_matches: {
+        Args: {
+          p_search?: string | null
+          p_city?: string | null
+          p_status?: string | null
+          p_start_after?: string | null
+          p_start_before?: string | null
+          p_min_free_slots?: number | null
+          p_limit?: number | null
+          p_offset?: number | null
+        }
+        Returns: {
+          id: string
+          title: string
+          description: string | null
+          start_at: string
+          city: string
+          place_defined: boolean
+          place_text: string | null
+          duration_target_games: number
+          visibility: string
+          location_privacy: string
+          status: string
+          creator_id: string
+          created_at: string
+          updated_at: string
+          slots_filled: number
+          free_slots: number
+          total_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
