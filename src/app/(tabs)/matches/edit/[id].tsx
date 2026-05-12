@@ -14,6 +14,8 @@ import {
 } from 'react-native'
 import { z } from 'zod'
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { Button } from '@/components/ui/Button'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
@@ -98,6 +100,7 @@ const chip = StyleSheet.create({
 export default function EditMatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   const { data: match, isLoading } = useMatch(id)
   const updateMatch = useUpdateMatch()
@@ -179,6 +182,17 @@ export default function EditMatchScreen() {
       style={s.scroll}
       contentContainerStyle={s.container}
       keyboardShouldPersistTaps="handled">
+      <View style={[s.closeBar, { paddingTop: Math.max(insets.top, 8) }]}>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar">
+          <Text style={s.closeX}>✕</Text>
+        </Pressable>
+      </View>
+
       <Text style={s.heading}>Editar partida</Text>
 
       {/* Título */}
@@ -342,6 +356,13 @@ const s = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, backgroundColor: '#f6f7f4' },
   container: { padding: 20, paddingBottom: 40 },
+  closeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    marginHorizontal: -4,
+  },
+  closeX: { fontSize: 22, color: '#555', padding: 8 },
   heading: {
     fontSize: 24,
     fontWeight: '700',

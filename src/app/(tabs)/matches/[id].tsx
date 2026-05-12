@@ -13,6 +13,8 @@ import {
   View,
 } from 'react-native'
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCancelMatch, useJoinMatch, useLeaveMatch, useMatch } from '@/hooks/useMatches'
@@ -280,6 +282,7 @@ const jm = StyleSheet.create({
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
 
   const { data: match, isLoading, isError } = useMatch(id)
@@ -372,6 +375,17 @@ export default function MatchDetailScreen() {
   return (
     <>
       <ScrollView style={s.scroll} contentContainerStyle={s.container}>
+        <View style={[s.closeBar, { paddingTop: Math.max(insets.top, 8) }]}>
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar">
+            <Text style={s.closeX}>✕</Text>
+          </Pressable>
+        </View>
+
         {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerText}>
@@ -503,6 +517,13 @@ const s = StyleSheet.create({
   errorText: { fontSize: 16, color: '#888', textAlign: 'center' },
   scroll: { flex: 1, backgroundColor: '#f6f7f4' },
   container: { padding: 20, paddingBottom: 40 },
+  closeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginHorizontal: -4,
+  },
+  closeX: { fontSize: 22, color: '#555', padding: 8 },
   headerRow: { marginBottom: 16 },
   headerText: { gap: 8 },
   title: { fontSize: 22, fontWeight: '800', color: '#1a1a1a' },
