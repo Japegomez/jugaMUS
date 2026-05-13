@@ -16,10 +16,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
+import { ReportModal } from '@/components/ui/ReportModal'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCancelMatch, useJoinMatch, useLeaveMatch, useMatch } from '@/hooks/useMatches'
 import { getParticipantProfile } from '@/services/matches.service'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
+import type { ReportTargetType } from '@/services/reports.service'
 import { MATCH_STATUS, MATCH_VISIBILITY, MAX_PLAYERS_PER_TEAM, TEAM } from '@/constants'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -56,9 +58,17 @@ interface ParticipantCardProps {
   participant: ParticipantWithProfile
   matchId: string
   isViewerParticipant: boolean
+  currentUserId?: string
+  onReportUser?: (userId: string, displayName: string) => void
 }
 
-function ParticipantCard({ participant, matchId, isViewerParticipant }: ParticipantCardProps) {
+function ParticipantCard({
+  participant,
+  matchId,
+  isViewerParticipant,
+  currentUserId,
+  onReportUser,
+}: ParticipantCardProps) {
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -98,6 +108,15 @@ function ParticipantCard({ participant, matchId, isViewerParticipant }: Particip
             )}
           </>
         )}
+        {currentUserId && participant.user_id !== currentUserId && onReportUser ? (
+          <Pressable
+            onPress={() => onReportUser(participant.user_id, p.display_name)}
+            accessibilityRole="button"
+            accessibilityLabel={`Reportar a ${p.display_name}`}
+            style={card.reportBtn}>
+            <Text style={card.reportText}>Reportar</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   )
@@ -135,6 +154,8 @@ const card = StyleSheet.create({
     marginTop: 3,
     textDecorationLine: 'underline',
   },
+  reportBtn: { marginTop: 8, alignSelf: 'flex-start' },
+  reportText: { fontSize: 13, color: '#b00020', fontWeight: '600' },
 })
 
 // ─── Team section ─────────────────────────────────────────────────────────────
@@ -144,9 +165,18 @@ interface TeamSectionProps {
   participants: ParticipantWithProfile[]
   matchId: string
   isViewerParticipant: boolean
+  currentUserId?: string
+  onReportUser?: (userId: string, displayName: string) => void
 }
 
-function TeamSection({ team, participants, matchId, isViewerParticipant }: TeamSectionProps) {
+function TeamSection({
+  team,
+  participants,
+  matchId,
+  isViewerParticipant,
+  currentUserId,
+  onReportUser,
+}: TeamSectionProps) {
   const active = participants.filter((p) => p.team === team && p.left_at === null)
   const slots = MAX_PLAYERS_PER_TEAM - active.length
 
@@ -169,6 +199,8 @@ function TeamSection({ team, participants, matchId, isViewerParticipant }: TeamS
             participant={p}
             matchId={matchId}
             isViewerParticipant={isViewerParticipant}
+            currentUserId={currentUserId}
+            onReportUser={onReportUser}
           />
         ))
       )}
@@ -291,6 +323,11 @@ export default function MatchDetailScreen() {
   const cancelMatch = useCancelMatch()
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
+  const [reportModal, setReportModal] = useState<{
+    targetType: ReportTargetType
+    targetId: string
+    targetLabel?: string
+  } | null>(null)
 
   if (isLoading) {
     return (
@@ -434,12 +471,28 @@ export default function MatchDetailScreen() {
             participants={match.participants}
             matchId={id}
             isViewerParticipant={isParticipant || isCreator}
+            currentUserId={userId}
+            onReportUser={(reportedUserId, displayName) =>
+              setReportModal({
+                targetType: 'user',
+                targetId: reportedUserId,
+                targetLabel: displayName,
+              })
+            }
           />
           <TeamSection
             team={TEAM.B}
             participants={match.participants}
             matchId={id}
             isViewerParticipant={isParticipant || isCreator}
+            currentUserId={userId}
+            onReportUser={(reportedUserId, displayName) =>
+              setReportModal({
+                targetType: 'user',
+                targetId: reportedUserId,
+                targetLabel: displayName,
+              })
+            }
           />
         </View>
 
@@ -481,6 +534,23 @@ export default function MatchDetailScreen() {
             </>
           ) : null}
         </View>
+
+        {userId && !isCreator ? (
+          <View style={s.reportMatchRow}>
+            <Pressable
+              onPress={() =>
+                setReportModal({
+                  targetType: 'match',
+                  targetId: id,
+                  targetLabel: match.title,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Reportar esta partida">
+              <Text style={s.reportMatchLink}>Reportar partida</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       <JoinModal
@@ -491,6 +561,16 @@ export default function MatchDetailScreen() {
         slotsB={slotsB}
         loading={joinMatch.isPending}
       />
+
+      {reportModal ? (
+        <ReportModal
+          visible
+          onClose={() => setReportModal(null)}
+          targetType={reportModal.targetType}
+          targetId={reportModal.targetId}
+          targetLabel={reportModal.targetLabel}
+        />
+      ) : null}
     </>
   )
 }
@@ -554,4 +634,11 @@ const s = StyleSheet.create({
   descText: { fontSize: 15, color: '#444', lineHeight: 22 },
   actions: { gap: 10 },
   actionBtn: {},
+  reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
+  reportMatchLink: {
+    fontSize: 14,
+    color: '#b00020',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
 })
