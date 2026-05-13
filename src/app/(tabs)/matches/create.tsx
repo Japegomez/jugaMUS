@@ -5,6 +5,7 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
@@ -46,7 +47,7 @@ type CreateMatchValues = z.infer<typeof createMatchSchema>
 function defaultStartAt() {
   const d = new Date()
   d.setHours(d.getHours() + 2, 0, 0, 0)
-  return d.toISOString().slice(0, 19)
+  return dateToLocalIsoString(d)
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
