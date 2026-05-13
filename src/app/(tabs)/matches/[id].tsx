@@ -15,6 +15,8 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { ApproveResultModal } from '@/components/matches/ApproveResultModal'
+import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
@@ -345,6 +347,8 @@ export default function MatchDetailScreen() {
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
   const [disputeResultVisible, setDisputeResultVisible] = useState(false)
+  const [approveResultVisible, setApproveResultVisible] = useState(false)
+  const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [reportModal, setReportModal] = useState<{
     targetType: ReportTargetType
     targetId: string
@@ -373,7 +377,9 @@ export default function MatchDetailScreen() {
   const isCreator = match.creator_id === userId
   const isParticipant = Boolean(myParticipation)
   const isPlanned = match.status === MATCH_STATUS.PLANNED
+  const isInProgress = match.status === MATCH_STATUS.IN_PROGRESS
   const isCancelled = match.status === MATCH_STATUS.CANCELLED
+  const canCancelMatch = isCreator && !isCancelled && (isPlanned || isInProgress)
 
   const slotsA = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.A).length
   const slotsB = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.B).length
@@ -468,20 +474,13 @@ export default function MatchDetailScreen() {
         team: myParticipation.team,
         decision: 'approve',
       })
+      setApproveResultVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo confirmar')
     }
   }
 
-  const handleApproveResultPress = () => {
-    Alert.alert('Aprobar resultado', '¿Confirmas que el marcador mostrado es correcto?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Sí, aprobar',
-        onPress: () => void handleApproveResult(),
-      },
-    ])
-  }
+  const handleApproveResultPress = () => setApproveResultVisible(true)
 
   const handleDisputeResult = async (comment: string | null) => {
     if (!userId || !myParticipation || !latestResult) return
@@ -500,30 +499,16 @@ export default function MatchDetailScreen() {
     }
   }
 
-  const handleCancel = () => {
-    Alert.alert(
-      'Cancelar partida',
-      '¿Seguro que quieres cancelar esta partida? Esta acción no se puede deshacer.',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Sí, cancelar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await cancelMatch.mutateAsync(id)
-            } catch (err) {
-              Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo cancelar')
-            }
-          },
-        },
-      ]
-    )
+  const handleConfirmCancelMatch = async () => {
+    await cancelMatch.mutateAsync(id)
   }
 
   return (
     <>
-      <ScrollView style={s.scroll} contentContainerStyle={s.container}>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.container}
+        keyboardShouldPersistTaps="handled">
         <View style={[s.closeBar, { paddingTop: Math.max(insets.top, 8) }]}>
           <View style={{ flex: 1 }} />
           <Pressable
@@ -665,21 +650,21 @@ export default function MatchDetailScreen() {
           ) : null}
 
           {isCreator && isPlanned ? (
-            <>
-              <Button
-                title="Editar partida"
-                onPress={() => router.push(`/(tabs)/matches/edit/${id}`)}
-                variant="secondary"
-                style={s.actionBtn}
-              />
-              <Button
-                title="Cancelar partida"
-                onPress={handleCancel}
-                loading={cancelMatch.isPending}
-                variant="danger"
-                style={s.actionBtn}
-              />
-            </>
+            <Button
+              title="Editar partida"
+              onPress={() => router.push(`/(tabs)/matches/edit/${id}`)}
+              variant="secondary"
+              style={s.actionBtn}
+            />
+          ) : null}
+
+          {canCancelMatch ? (
+            <Button
+              title="Cancelar partida"
+              onPress={() => setCancelMatchVisible(true)}
+              variant="danger"
+              style={s.actionBtn}
+            />
           ) : null}
 
           {canSubmitResult ? (
@@ -695,14 +680,15 @@ export default function MatchDetailScreen() {
               <Button
                 title="Aprobar resultado"
                 onPress={handleApproveResultPress}
-                loading={submitConfirmationMut.isPending}
                 style={s.actionBtn}
               />
               <Button
                 title="Disputar resultado"
                 variant="secondary"
-                onPress={() => setDisputeResultVisible(true)}
-                loading={submitConfirmationMut.isPending}
+                onPress={() => {
+                  setApproveResultVisible(false)
+                  setDisputeResultVisible(true)
+                }}
                 style={s.actionBtn}
               />
             </>
@@ -736,6 +722,14 @@ export default function MatchDetailScreen() {
         loading={joinMatch.isPending}
       />
 
+      <CancelMatchModal
+        visible={cancelMatchVisible}
+        onClose={() => setCancelMatchVisible(false)}
+        inProgress={isInProgress}
+        loading={cancelMatch.isPending}
+        onConfirm={handleConfirmCancelMatch}
+      />
+
       {myParticipation ? (
         <SubmitResultModal
           visible={submitResultVisible}
@@ -747,18 +741,32 @@ export default function MatchDetailScreen() {
       ) : null}
 
       {latestResult && myParticipation ? (
-        <DisputeResultModal
-          visible={disputeResultVisible}
-          onClose={() => setDisputeResultVisible(false)}
-          teamAScore={latestResult.team_a_games}
-          teamBScore={latestResult.team_b_games}
-          submitterDisplayName={submitterDisplayName(
-            match.participants,
-            latestResult.submitted_by_user_id
-          )}
-          loading={submitConfirmationMut.isPending}
-          onDispute={handleDisputeResult}
-        />
+        <>
+          <ApproveResultModal
+            visible={approveResultVisible}
+            onClose={() => setApproveResultVisible(false)}
+            teamAScore={latestResult.team_a_games}
+            teamBScore={latestResult.team_b_games}
+            submitterDisplayName={submitterDisplayName(
+              match.participants,
+              latestResult.submitted_by_user_id
+            )}
+            loading={submitConfirmationMut.isPending}
+            onConfirm={() => void handleApproveResult()}
+          />
+          <DisputeResultModal
+            visible={disputeResultVisible}
+            onClose={() => setDisputeResultVisible(false)}
+            teamAScore={latestResult.team_a_games}
+            teamBScore={latestResult.team_b_games}
+            submitterDisplayName={submitterDisplayName(
+              match.participants,
+              latestResult.submitted_by_user_id
+            )}
+            loading={submitConfirmationMut.isPending}
+            onDispute={handleDisputeResult}
+          />
+        </>
       ) : null}
 
       {reportModal ? (

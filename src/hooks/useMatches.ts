@@ -166,6 +166,10 @@ export function useCancelMatch() {
         if (!prev) return prev
         return { ...(prev as object), status: updated.status }
       })
+      queryClient.invalidateQueries({
+        queryKey: [...matchQueryKey(updated.id), 'match_result'],
+        exact: false,
+      })
       if (sessionUserId) {
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),
