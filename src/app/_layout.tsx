@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { useAuthStore } from '@/hooks/useAuth'
+import { useNotifications } from '@/hooks/useNotifications'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,6 +17,8 @@ export default function RootLayout() {
   const { session, initialized } = useAuthStore()
   const segments = useSegments()
   const router = useRouter()
+
+  useNotifications()
 
   useEffect(() => {
     useAuthStore.getState().initializeAuth()
