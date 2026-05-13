@@ -2,7 +2,7 @@
 import { Sentry } from '@/lib/sentry'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Stack, useRouter, useSegments } from 'expo-router'
+import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router'
 import { PostHogProvider } from 'posthog-react-native'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -21,6 +21,7 @@ function RootLayout() {
   const { session, initialized } = useAuthStore()
   const segments = useSegments()
   const router = useRouter()
+  const navigationState = useRootNavigationState()
 
   useNotifications()
 
@@ -30,6 +31,7 @@ function RootLayout() {
 
   useEffect(() => {
     if (!initialized) return
+    if (!navigationState?.key) return
 
     const inAuthGroup = segments[0] === '(auth)'
 
@@ -38,7 +40,7 @@ function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)/matches')
     }
-  }, [session, initialized, segments, router])
+  }, [session, initialized, segments, navigationState?.key, router])
 
   return (
     <PostHogProvider client={posthog}>

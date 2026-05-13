@@ -21,7 +21,8 @@ function userFacingAuthError(error: { message: string; status?: number }): Error
   return new Error(msg)
 }
 
-async function enforceProfileNotSuspended(userId: string): Promise<string | null> {
+/** Returns a user-facing message if the profile is suspended; does not sign out (callers handle that). */
+async function getProfileSuspendedMessage(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from('profiles')
     .select('status')
@@ -31,7 +32,6 @@ async function enforceProfileNotSuspended(userId: string): Promise<string | null
   if (error || !data) return null
 
   if (data.status === 'suspended') {
-    await supabase.auth.signOut()
     return 'Tu cuenta está suspendida. Contacta con soporte.'
   }
 
@@ -74,8 +74,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     void supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const suspendedMsg = await enforceProfileNotSuspended(session.user.id)
+        const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
         if (suspendedMsg) {
+          await supabase.auth.signOut()
           set({ session: null, initialized: true, lastAuthMessage: suspendedMsg })
           return
         }
@@ -83,19 +84,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ session, initialized: true })
     })
 
-    const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        const suspendedMsg = await enforceProfileNotSuspended(session.user.id)
-        if (suspendedMsg) {
-          set({ session: null, lastAuthMessage: suspendedMsg })
-          return
-        }
-      }
-
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      // Set session in the store immediately so root navigation does not treat the user as
+      // logged out while we await the profile check (fixes OAuth returning to login).
       set({ session })
-
       if (!get().initialized) {
         set({ initialized: true })
+      }
+
+      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        void (async () => {
+          const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
+          if (suspendedMsg) {
+            await supabase.auth.signOut()
+            set({ session: null, lastAuthMessage: suspendedMsg })
+          }
+        })()
       }
     })
 
@@ -108,8 +112,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: userFacingAuthError(error) }
     }
     if (data.user) {
-      const suspendedMsg = await enforceProfileNotSuspended(data.user.id)
+      const suspendedMsg = await getProfileSuspendedMessage(data.user.id)
       if (suspendedMsg) {
+        await supabase.auth.signOut()
         return { error: new Error(suspendedMsg) }
       }
     }
@@ -187,8 +192,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const userId = appleData.user?.id ?? appleData.session?.user?.id
       if (userId) {
-        const suspendedMsg = await enforceProfileNotSuspended(userId)
+        const suspendedMsg = await getProfileSuspendedMessage(userId)
         if (suspendedMsg) {
+          await supabase.auth.signOut()
           return { error: new Error(suspendedMsg) }
         }
       }
