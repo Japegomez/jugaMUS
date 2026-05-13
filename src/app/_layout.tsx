@@ -1,8 +1,12 @@
+// Sentry debe cargarse antes que el resto de módulos de la app.
+import { Sentry } from '@/lib/sentry'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack, useRouter, useSegments } from 'expo-router'
+import { PostHogProvider } from 'posthog-react-native'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
+import { posthog } from '@/lib/posthog'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,7 +17,7 @@ const queryClient = new QueryClient({
   },
 })
 
-export default function RootLayout() {
+function RootLayout() {
   const { session, initialized } = useAuthStore()
   const segments = useSegments()
   const router = useRouter()
@@ -37,8 +41,12 @@ export default function RootLayout() {
   }, [session, initialized, segments, router])
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </QueryClientProvider>
+    <PostHogProvider client={posthog}>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </QueryClientProvider>
+    </PostHogProvider>
   )
 }
+
+export default Sentry.wrap(RootLayout)
