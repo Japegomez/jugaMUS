@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 11/05/2026 (cierre de sesión)
+> Actualizado: 13/05/2026
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -139,26 +139,42 @@ _Ninguna tarea en progreso actualmente._
 
 ### Migraciones de base de datos
 
-- [ ] Crear tabla `match_results`
-- [ ] Crear tabla `result_confirmations`
-- [ ] Crear tabla `reports`
-- [ ] Crear tabla `notification_queue`
-- [ ] Crear tabla `match_state_transitions`
-- [ ] Añadir índices correspondientes (idx_notifications_pending)
+- [x] Crear tabla `match_results`
+- [x] Crear tabla `result_confirmations`
+- [x] Crear tabla `reports`
+- [x] Crear tabla `notification_queue`
+- [x] Crear tabla `match_state_transitions`
+- [x] Añadir índices correspondientes (idx_notifications_pending)
+  - Migraciones `010` y `011` aplicadas en Supabase. También incluye `idx_reports_status`, `idx_results_match`, `idx_state_transitions_match`. RLS habilitada en todas las tablas nuevas.
 
-### F7 - Notificaciones
+### F6 - Notificaciones
 
-- [ ] Configurar Expo Push Notifications (registro de tokens)
-- [ ] Guardar token de push en `profiles`
-- [ ] Supabase Edge Function: disparar notificación al unirse alguien a tu partida
-- [ ] Supabase Edge Function: disparar notificación al editar o cancelar partida
-- [ ] Configurar `pg_cron` para transiciones automáticas de estado
-  - [ ] `planned` → `in_progress` al llegar `start_at`
-  - [ ] Recordatorio a las 5h si sigue `in_progress`
-  - [ ] `in_progress` → `finished_no_result` a las 12h si no hay resultado
-- [ ] Recordatorio automático 24h antes de la partida
-- [ ] Recordatorio automático 2h antes de la partida
-- [ ] Gestión de reintentos en `NotificationQueue` (max 3 intentos)
+- [x] Configurar Expo Push Notifications (registro de tokens)
+  - `expo-notifications` + `expo-device` instalados. Plugin añadido a `app.json`.
+- [x] Guardar token de push en `profiles`
+  - `useNotifications` hook guarda el token via `supabase.from('profiles').update({ push_token })`. Hook cableado en `_layout.tsx`.
+- [x] Supabase Edge Function: disparar notificación al unirse alguien a tu partida
+  - Trigger `trg_notify_participant_join` (migration 011) escribe en `notification_queue`. Edge Function `process-notifications` envía al Expo Push API.
+- [x] Supabase Edge Function: disparar notificación al editar o cancelar partida
+  - Trigger `trg_notify_match_change` (migration 011) escribe en `notification_queue` para todos los participantes confirmados.
+- [x] Configurar `pg_cron` para transiciones automáticas de estado
+  - [x] `planned` → `in_progress` al llegar `start_at`
+  - [x] Recordatorio a las 5h si sigue `in_progress`
+  - [x] `in_progress` → `finished_no_result` a las 12h si no hay resultado
+  - Función `process_match_state_transitions()` + job `match-state-transitions` (cada minuto).
+- [x] Recordatorio automático 24h antes de la partida
+- [x] Recordatorio automático 2h antes de la partida
+  - Reminders deduplicados por `(user_id, type, match_id)` en `notification_queue`.
+- [x] Gestión de reintentos en `NotificationQueue` (max 3 intentos)
+  - Edge Function incrementa `attempts`; marca `failed` al alcanzar `max_attempts`. Limpia `push_token` si Expo devuelve `DeviceNotRegistered`.
+
+#### Credenciales push (manual — builds nativos)
+
+Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
+
+- [ ] **Android (FCM):** crear proyecto en Firebase Console para el package `com.javiwacho.musapp`, descargar `google-services.json` en la raíz del repo y subirlo en `eas credentials` (Android).
+- [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
+- [ ] **Build de prueba:** `eas build --profile development --platform android` (y/o iOS) e instalar en dispositivo físico para validar recepción de push end-to-end.
 
 ### F7 - Resultados
 

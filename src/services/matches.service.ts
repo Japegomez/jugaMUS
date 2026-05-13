@@ -307,10 +307,10 @@ export type PublicMatchesListFilters = {
   minFreeSlots: number
 }
 
-function emptyToNull(s: string | null | undefined): string | null {
-  if (s == null) return null
+function emptyToUndefined(s: string | null | undefined): string | undefined {
+  if (s == null) return undefined
   const t = s.trim()
-  return t === '' ? null : t
+  return t === '' ? undefined : t
 }
 
 /**
@@ -324,13 +324,13 @@ export async function listPublicMatchesPage(
   const offset = filters.offset ?? 0
 
   const args: ListPublicMatchesRpc['Args'] = {
-    p_search: emptyToNull(filters.search),
-    p_city: emptyToNull(filters.city),
-    p_status: filters.status && filters.status.trim() !== '' ? filters.status.trim() : null,
-    p_start_after: filters.startAfter,
-    p_start_before: filters.startBefore,
+    p_search: emptyToUndefined(filters.search),
+    p_city: emptyToUndefined(filters.city),
+    p_status: filters.status && filters.status.trim() !== '' ? filters.status.trim() : undefined,
+    p_start_after: filters.startAfter ?? undefined,
+    p_start_before: filters.startBefore ?? undefined,
     p_min_free_slots:
-      filters.minFreeSlots > 0 && filters.minFreeSlots <= 4 ? filters.minFreeSlots : null,
+      filters.minFreeSlots > 0 && filters.minFreeSlots <= 4 ? filters.minFreeSlots : undefined,
     p_limit: limit,
     p_offset: offset,
   }

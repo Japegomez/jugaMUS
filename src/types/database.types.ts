@@ -1,6 +1,8 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: '14.5'
   }
@@ -44,6 +46,108 @@ export type Database = {
           },
           {
             foreignKeyName: 'match_participants_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      match_results: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          status: string
+          submitted_at: string
+          submitted_by_team: string
+          submitted_by_user_id: string
+          team_a_games: number
+          team_b_games: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          status?: string
+          submitted_at?: string
+          submitted_by_team: string
+          submitted_by_user_id: string
+          team_a_games: number
+          team_b_games: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          status?: string
+          submitted_at?: string
+          submitted_by_team?: string
+          submitted_by_user_id?: string
+          team_a_games?: number
+          team_b_games?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'match_results_match_id_fkey'
+            columns: ['match_id']
+            isOneToOne: false
+            referencedRelation: 'matches'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_results_submitted_by_user_id_fkey'
+            columns: ['submitted_by_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      match_state_transitions: {
+        Row: {
+          created_at: string
+          from_status: string
+          id: string
+          match_id: string
+          reason: string | null
+          to_status: string
+          triggered_by: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_status: string
+          id?: string
+          match_id: string
+          reason?: string | null
+          to_status: string
+          triggered_by: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_status?: string
+          id?: string
+          match_id?: string
+          reason?: string | null
+          to_status?: string
+          triggered_by?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'match_state_transitions_match_id_fkey'
+            columns: ['match_id']
+            isOneToOne: false
+            referencedRelation: 'matches'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_state_transitions_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'profiles'
@@ -110,6 +214,59 @@ export type Database = {
           },
         ]
       }
+      notification_queue: {
+        Row: {
+          attempts: number
+          body: string
+          created_at: string
+          id: string
+          max_attempts: number
+          payload_json: Json | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          created_at?: string
+          id?: string
+          max_attempts?: number
+          payload_json?: Json | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          created_at?: string
+          id?: string
+          max_attempts?: number
+          payload_json?: Json | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'notification_queue_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       profiles: {
         Row: {
           city: string | null
@@ -120,6 +277,7 @@ export type Database = {
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
+          push_token: string | null
           role: string
           status: string
           updated_at: string
@@ -133,6 +291,7 @@ export type Database = {
           notify_push?: boolean
           phone_e164: string
           photo_url?: string | null
+          push_token?: string | null
           role?: string
           status?: string
           updated_at?: string
@@ -146,17 +305,135 @@ export type Database = {
           notify_push?: boolean
           phone_e164?: string
           photo_url?: string | null
+          push_token?: string | null
           role?: string
           status?: string
           updated_at?: string
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          action_taken: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          reason: string
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action_taken?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason: string
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action_taken?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'reports_reporter_id_fkey'
+            columns: ['reporter_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'reports_resolved_by_fkey'
+            columns: ['resolved_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      result_confirmations: {
+        Row: {
+          comment: string | null
+          created_at: string
+          decision: string
+          id: string
+          match_result_id: string
+          team: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          decision: string
+          id?: string
+          match_result_id: string
+          team: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          decision?: string
+          id?: string
+          match_result_id?: string
+          team?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'result_confirmations_match_result_id_fkey'
+            columns: ['match_result_id']
+            isOneToOne: false
+            referencedRelation: 'match_results'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'result_confirmations_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      auth_is_confirmed_in_match: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
+      enqueue_notification: {
+        Args: {
+          p_body: string
+          p_payload_json?: Json
+          p_scheduled_for?: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       get_profile_with_phone: {
         Args: { p_match_id: string; p_profile_id: string }
         Returns: {
@@ -168,6 +445,7 @@ export type Database = {
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
+          push_token: string | null
           role: string
           status: string
           updated_at: string
@@ -181,34 +459,39 @@ export type Database = {
       }
       list_public_matches: {
         Args: {
-          p_search?: string | null
-          p_city?: string | null
-          p_status?: string | null
-          p_start_after?: string | null
-          p_start_before?: string | null
-          p_min_free_slots?: number | null
-          p_limit?: number | null
-          p_offset?: number | null
+          p_city?: string
+          p_limit?: number
+          p_min_free_slots?: number
+          p_offset?: number
+          p_search?: string
+          p_start_after?: string
+          p_start_before?: string
+          p_status?: string
         }
         Returns: {
-          id: string
-          title: string
-          description: string | null
-          start_at: string
           city: string
-          place_defined: boolean
-          place_text: string | null
-          duration_target_games: number
-          visibility: string
-          location_privacy: string
-          status: string
-          creator_id: string
           created_at: string
-          updated_at: string
-          slots_filled: number
+          creator_id: string
+          description: string
+          duration_target_games: number
           free_slots: number
+          id: string
+          location_privacy: string
+          place_defined: boolean
+          place_text: string
+          slots_filled: number
+          start_at: string
+          status: string
+          title: string
           total_count: number
+          updated_at: string
+          visibility: string
         }[]
+      }
+      process_match_state_transitions: { Args: never; Returns: undefined }
+      profile_shares_confirmed_match_with_auth: {
+        Args: { p_profile_id: string }
+        Returns: boolean
       }
     }
     Enums: {
