@@ -2,6 +2,15 @@ import { supabase } from '@/lib/supabase'
 import { MATCH_STATUS, MAX_PLAYERS_PER_TEAM, MATCH_PAGE_SIZE } from '@/constants'
 import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
 
+/** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
+function startAtToTimestamptzIso(startAt: string): string {
+  const d = new Date(startAt)
+  if (Number.isNaN(d.getTime())) {
+    throw new Error('Fecha de inicio no válida')
+  }
+  return d.toISOString()
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type MatchRow = {
@@ -89,7 +98,7 @@ export function countTeamSlots(participants: ParticipantWithProfile[], team: str
 export async function createMatch(userId: string, data: MatchInsert): Promise<MatchRow> {
   const { data: row, error } = await supabase
     .from('matches')
-    .insert({ ...data, creator_id: userId })
+    .insert({ ...data, start_at: startAtToTimestamptzIso(data.start_at), creator_id: userId })
     .select()
     .single()
 
@@ -137,9 +146,14 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
 }
 
 export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchRow> {
+  const payload: MatchUpdate =
+    data.start_at !== undefined
+      ? { ...data, start_at: startAtToTimestamptzIso(data.start_at) }
+      : data
+
   const { data: row, error } = await supabase
     .from('matches')
-    .update(data)
+    .update(payload)
     .eq('id', id)
     .select()
     .single()
