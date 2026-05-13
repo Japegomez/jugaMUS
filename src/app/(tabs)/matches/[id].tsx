@@ -19,11 +19,13 @@ import { ConfirmResultModal } from '@/components/matches/ConfirmResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
+import { ReportModal } from '@/components/ui/ReportModal'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCancelMatch, useJoinMatch, useLeaveMatch, useMatch } from '@/hooks/useMatches'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import { getParticipantProfile } from '@/services/matches.service'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
+import type { ReportTargetType } from '@/services/reports.service'
 import {
   MATCH_STATUS,
   MATCH_VISIBILITY,
@@ -71,9 +73,17 @@ interface ParticipantCardProps {
   participant: ParticipantWithProfile
   matchId: string
   isViewerParticipant: boolean
+  currentUserId?: string
+  onReportUser?: (userId: string, displayName: string) => void
 }
 
-function ParticipantCard({ participant, matchId, isViewerParticipant }: ParticipantCardProps) {
+function ParticipantCard({
+  participant,
+  matchId,
+  isViewerParticipant,
+  currentUserId,
+  onReportUser,
+}: ParticipantCardProps) {
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -113,6 +123,15 @@ function ParticipantCard({ participant, matchId, isViewerParticipant }: Particip
             )}
           </>
         )}
+        {currentUserId && participant.user_id !== currentUserId && onReportUser ? (
+          <Pressable
+            onPress={() => onReportUser(participant.user_id, p.display_name)}
+            accessibilityRole="button"
+            accessibilityLabel={`Reportar a ${p.display_name}`}
+            style={card.reportBtn}>
+            <Text style={card.reportText}>Reportar</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   )
@@ -150,6 +169,8 @@ const card = StyleSheet.create({
     marginTop: 3,
     textDecorationLine: 'underline',
   },
+  reportBtn: { marginTop: 8, alignSelf: 'flex-start' },
+  reportText: { fontSize: 13, color: '#b00020', fontWeight: '600' },
 })
 
 // ─── Team section ─────────────────────────────────────────────────────────────
@@ -159,9 +180,18 @@ interface TeamSectionProps {
   participants: ParticipantWithProfile[]
   matchId: string
   isViewerParticipant: boolean
+  currentUserId?: string
+  onReportUser?: (userId: string, displayName: string) => void
 }
 
-function TeamSection({ team, participants, matchId, isViewerParticipant }: TeamSectionProps) {
+function TeamSection({
+  team,
+  participants,
+  matchId,
+  isViewerParticipant,
+  currentUserId,
+  onReportUser,
+}: TeamSectionProps) {
   const active = participants.filter((p) => p.team === team && p.left_at === null)
   const slots = MAX_PLAYERS_PER_TEAM - active.length
 
@@ -184,6 +214,8 @@ function TeamSection({ team, participants, matchId, isViewerParticipant }: TeamS
             participant={p}
             matchId={matchId}
             isViewerParticipant={isViewerParticipant}
+            currentUserId={currentUserId}
+            onReportUser={onReportUser}
           />
         ))
       )}
@@ -311,6 +343,11 @@ export default function MatchDetailScreen() {
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
   const [confirmResultVisible, setConfirmResultVisible] = useState(false)
+  const [reportModal, setReportModal] = useState<{
+    targetType: ReportTargetType
+    targetId: string
+    targetLabel?: string
+  } | null>(null)
 
   if (isLoading) {
     return (
@@ -532,12 +569,28 @@ export default function MatchDetailScreen() {
             participants={match.participants}
             matchId={id}
             isViewerParticipant={isParticipant || isCreator}
+            currentUserId={userId}
+            onReportUser={(reportedUserId, displayName) =>
+              setReportModal({
+                targetType: 'user',
+                targetId: reportedUserId,
+                targetLabel: displayName,
+              })
+            }
           />
           <TeamSection
             team={TEAM.B}
             participants={match.participants}
             matchId={id}
             isViewerParticipant={isParticipant || isCreator}
+            currentUserId={userId}
+            onReportUser={(reportedUserId, displayName) =>
+              setReportModal({
+                targetType: 'user',
+                targetId: reportedUserId,
+                targetLabel: displayName,
+              })
+            }
           />
         </View>
 
@@ -621,6 +674,23 @@ export default function MatchDetailScreen() {
             />
           ) : null}
         </View>
+
+        {userId && !isCreator ? (
+          <View style={s.reportMatchRow}>
+            <Pressable
+              onPress={() =>
+                setReportModal({
+                  targetType: 'match',
+                  targetId: id,
+                  targetLabel: match.title,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Reportar esta partida">
+              <Text style={s.reportMatchLink}>Reportar partida</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       <JoinModal
@@ -655,6 +725,16 @@ export default function MatchDetailScreen() {
           loading={submitConfirmationMut.isPending}
           onApprove={handleApproveResult}
           onDispute={handleDisputeResult}
+        />
+      ) : null}
+
+      {reportModal ? (
+        <ReportModal
+          visible
+          onClose={() => setReportModal(null)}
+          targetType={reportModal.targetType}
+          targetId={reportModal.targetId}
+          targetLabel={reportModal.targetLabel}
         />
       ) : null}
     </>
@@ -722,4 +802,11 @@ const s = StyleSheet.create({
   resultHint: { fontSize: 14, color: '#555', marginTop: 10, lineHeight: 20 },
   actions: { gap: 10 },
   actionBtn: {},
+  reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
+  reportMatchLink: {
+    fontSize: 14,
+    color: '#b00020',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
 })

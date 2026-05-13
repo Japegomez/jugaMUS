@@ -186,9 +186,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### F8 - Reportes (formulario)
 
-- [ ] Pantalla/modal de reporte (usuario, partida o resultado)
-- [ ] Lista de motivos predefinidos + comentario libre
-- [ ] Guardar reporte como anónimo para el reportado
+- [x] Pantalla/modal de reporte (usuario, partida o resultado)
+- [x] Lista de motivos predefinidos + comentario libre
+- [x] Guardar reporte como anónimo para el reportado
 
 ### CI/CD Fase 2
 
