@@ -323,21 +323,14 @@ SELECT cron.schedule(
 );
 
 -- 2. Process notification queue via Edge Function: every minute
---    Requires app.edge_function_url and app.service_role_key to be set:
---      ALTER DATABASE postgres SET "app.edge_function_url" = 'https://<ref>.supabase.co/functions/v1';
---      ALTER DATABASE postgres SET "app.service_role_key"  = '<service_role_key>';
---    Run those two commands manually in Supabase SQL Editor after first deploy.
+--    The Edge Function is deployed with verify_jwt=false so no auth header is needed.
+--    If the project ref changes, update the URL below.
 SELECT cron.schedule(
   'process-notification-queue',
   '* * * * *',
-  $$
-  SELECT extensions.http_post(
-    url     := current_setting('app.edge_function_url', true) || '/process-notifications',
-    headers := jsonb_build_object(
-                 'Content-Type',  'application/json',
-                 'Authorization', 'Bearer ' || current_setting('app.service_role_key', true)
-               ),
+  $$SELECT extensions.http_post(
+    url     := 'https://gnseokumiqtdtdzyrldk.supabase.co/functions/v1/process-notifications',
+    headers := jsonb_build_object('Content-Type', 'application/json'),
     body    := '{}'::jsonb
-  )
-  $$
+  )$$
 );
