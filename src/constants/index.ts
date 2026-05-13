@@ -5,6 +5,14 @@ export const MATCH_STATUS = {
   FINISHED_NO_RESULT: 'finished_no_result',
 } as const
 
+/** `match_results.status` — DB check constraint (migration 010). */
+export const RESULT_STATUS = {
+  PENDING_VALIDATION: 'pending_validation',
+  CONFIRMED: 'confirmed',
+  DISPUTED: 'disputed',
+  VOID: 'void',
+} as const
+
 export const MATCH_VISIBILITY = {
   PUBLIC: 'public',
   LINK: 'link',

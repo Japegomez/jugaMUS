@@ -21,6 +21,11 @@ export function matchQueryKey(id: string) {
   return ['match', id] as const
 }
 
+/** Latest `match_results` (+ viewer confirmation) for a match detail screen. */
+export function matchResultQueryKey(matchId: string, viewerUserId?: string | null) {
+  return [...matchQueryKey(matchId), 'match_result', viewerUserId ?? 'anon'] as const
+}
+
 export function userMatchesQueryKey(userId: string) {
   return ['user-matches', userId] as const
 }

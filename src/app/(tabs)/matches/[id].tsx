@@ -15,12 +15,22 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { ConfirmResultModal } from '@/components/matches/ConfirmResultModal'
+import { ResultCard } from '@/components/matches/ResultCard'
+import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCancelMatch, useJoinMatch, useLeaveMatch, useMatch } from '@/hooks/useMatches'
+import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import { getParticipantProfile } from '@/services/matches.service'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
-import { MATCH_STATUS, MATCH_VISIBILITY, MAX_PLAYERS_PER_TEAM, TEAM } from '@/constants'
+import {
+  MATCH_STATUS,
+  MATCH_VISIBILITY,
+  MAX_PLAYERS_PER_TEAM,
+  RESULT_STATUS,
+  TEAM,
+} from '@/constants'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +43,11 @@ function formatDate(iso: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function submitterDisplayName(participants: ParticipantWithProfile[], userId: string) {
+  const p = participants.find((x) => x.user_id === userId)
+  return p?.profile.display_name ?? 'Jugador'
 }
 
 function statusLabel(status: string) {
@@ -286,11 +301,16 @@ export default function MatchDetailScreen() {
   const userId = useAuthStore((s) => s.session?.user.id)
 
   const { data: match, isLoading, isError } = useMatch(id)
+  const { data: resultBundle, isLoading: resultLoading } = useMatchResult(id)
   const joinMatch = useJoinMatch()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
+  const submitResultMut = useSubmitResult()
+  const submitConfirmationMut = useSubmitConfirmation()
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
+  const [submitResultVisible, setSubmitResultVisible] = useState(false)
+  const [confirmResultVisible, setConfirmResultVisible] = useState(false)
 
   if (isLoading) {
     return (
@@ -322,6 +342,35 @@ export default function MatchDetailScreen() {
   const canJoin = isPlanned && hasSlots && !isParticipant
   const canLeave = isPlanned && isParticipant
 
+  const latestResult = resultBundle?.result ?? null
+  const myResultConfirmation = resultBundle?.myConfirmation ?? null
+
+  const resultBlocksNewSubmit =
+    latestResult &&
+    (latestResult.status === RESULT_STATUS.PENDING_VALIDATION ||
+      latestResult.status === RESULT_STATUS.CONFIRMED)
+
+  const canSubmitResult = Boolean(
+    userId &&
+    myParticipation &&
+    (match.status === MATCH_STATUS.IN_PROGRESS ||
+      match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
+    !resultBlocksNewSubmit
+  )
+
+  const canValidateResult = Boolean(
+    userId &&
+    myParticipation &&
+    latestResult?.status === RESULT_STATUS.PENDING_VALIDATION &&
+    myParticipation.team !== latestResult.submitted_by_team &&
+    !myResultConfirmation
+  )
+
+  const awaitingRivalValidation = Boolean(
+    latestResult?.status === RESULT_STATUS.PENDING_VALIDATION &&
+    myParticipation?.team === latestResult.submitted_by_team
+  )
+
   const status = statusLabel(match.status)
 
   const handleJoin = async (team: string) => {
@@ -350,6 +399,55 @@ export default function MatchDetailScreen() {
         },
       },
     ])
+  }
+
+  const handleSubmitScores = async (payload: { teamAGames: number; teamBGames: number }) => {
+    if (!userId || !myParticipation) return
+    try {
+      await submitResultMut.mutateAsync({
+        matchId: id,
+        submittedByUserId: userId,
+        submittedByTeam: myParticipation.team,
+        teamAGames: payload.teamAGames,
+        teamBGames: payload.teamBGames,
+      })
+      setSubmitResultVisible(false)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
+    }
+  }
+
+  const handleApproveResult = async () => {
+    if (!userId || !myParticipation || !latestResult) return
+    try {
+      await submitConfirmationMut.mutateAsync({
+        matchId: id,
+        matchResultId: latestResult.id,
+        userId,
+        team: myParticipation.team,
+        decision: 'approve',
+      })
+      setConfirmResultVisible(false)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo confirmar')
+    }
+  }
+
+  const handleDisputeResult = async (comment: string | null) => {
+    if (!userId || !myParticipation || !latestResult) return
+    try {
+      await submitConfirmationMut.mutateAsync({
+        matchId: id,
+        matchResultId: latestResult.id,
+        userId,
+        team: myParticipation.team,
+        decision: 'dispute',
+        comment,
+      })
+      setConfirmResultVisible(false)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar la disputa')
+    }
   }
 
   const handleCancel = () => {
@@ -443,6 +541,32 @@ export default function MatchDetailScreen() {
           />
         </View>
 
+        {/* Resultado (F7) */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Resultado</Text>
+          {!userId ? (
+            <Text style={s.resultEmpty}>Inicia sesión para ver o registrar resultados.</Text>
+          ) : resultLoading ? (
+            <ActivityIndicator style={{ marginVertical: 12 }} />
+          ) : latestResult ? (
+            <ResultCard result={latestResult} />
+          ) : (
+            <Text style={s.resultEmpty}>Aún no hay resultado registrado.</Text>
+          )}
+          {latestResult?.status === RESULT_STATUS.DISPUTED ? (
+            <Text style={s.resultHint}>
+              El resultado está en disputa. Podéis registrar un nuevo resultado.
+            </Text>
+          ) : null}
+          {awaitingRivalValidation ? (
+            <Text style={s.resultHint}>Esperando la validación del equipo contrario.</Text>
+          ) : null}
+          {latestResult?.status === RESULT_STATUS.CONFIRMED &&
+          match.status === MATCH_STATUS.FINISHED ? (
+            <Text style={s.resultHint}>Partida cerrada con resultado confirmado.</Text>
+          ) : null}
+        </View>
+
         {/* Actions */}
         <View style={s.actions}>
           {canJoin ? (
@@ -480,6 +604,22 @@ export default function MatchDetailScreen() {
               />
             </>
           ) : null}
+
+          {canSubmitResult ? (
+            <Button
+              title="Registrar resultado"
+              onPress={() => setSubmitResultVisible(true)}
+              style={s.actionBtn}
+            />
+          ) : null}
+
+          {canValidateResult ? (
+            <Button
+              title="Validar resultado"
+              onPress={() => setConfirmResultVisible(true)}
+              style={s.actionBtn}
+            />
+          ) : null}
         </View>
       </ScrollView>
 
@@ -491,6 +631,32 @@ export default function MatchDetailScreen() {
         slotsB={slotsB}
         loading={joinMatch.isPending}
       />
+
+      {myParticipation ? (
+        <SubmitResultModal
+          visible={submitResultVisible}
+          onClose={() => setSubmitResultVisible(false)}
+          viewerTeam={myParticipation.team}
+          loading={submitResultMut.isPending}
+          onSubmit={handleSubmitScores}
+        />
+      ) : null}
+
+      {latestResult && myParticipation ? (
+        <ConfirmResultModal
+          visible={confirmResultVisible}
+          onClose={() => setConfirmResultVisible(false)}
+          teamAScore={latestResult.team_a_games}
+          teamBScore={latestResult.team_b_games}
+          submitterDisplayName={submitterDisplayName(
+            match.participants,
+            latestResult.submitted_by_user_id
+          )}
+          loading={submitConfirmationMut.isPending}
+          onApprove={handleApproveResult}
+          onDispute={handleDisputeResult}
+        />
+      ) : null}
     </>
   )
 }
@@ -552,6 +718,8 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   descText: { fontSize: 15, color: '#444', lineHeight: 22 },
+  resultEmpty: { fontSize: 14, color: '#999', fontStyle: 'italic' },
+  resultHint: { fontSize: 14, color: '#555', marginTop: 10, lineHeight: 20 },
   actions: { gap: 10 },
   actionBtn: {},
 })

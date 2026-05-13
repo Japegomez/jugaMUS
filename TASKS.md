@@ -178,11 +178,11 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### F7 - Resultados
 
-- [ ] Pantalla/modal de introducción de resultado
-- [ ] Lógica de validación por equipo rival
-- [ ] Pantalla/modal de confirmación o disputa de resultado
-- [ ] Estado `resultado en revisión` cuando hay disputa
-- [ ] Reporte automático generado al abrir una disputa
+- [x] Pantalla/modal de introducción de resultado
+- [x] Lógica de validación por equipo rival
+- [x] Pantalla/modal de confirmación o disputa de resultado
+- [x] Estado `resultado en revisión` cuando hay disputa
+- [x] Reporte automático generado al abrir una disputa
 
 ### F8 - Reportes (formulario)
 
