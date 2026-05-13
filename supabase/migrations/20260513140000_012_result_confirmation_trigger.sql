@@ -114,8 +114,6 @@ AS $$
 DECLARE
   mr              public.match_results%ROWTYPE;
   m               public.matches%ROWTYPE;
-  v_match_title   TEXT;
-  v_part          RECORD;
   v_from_status   TEXT;
 BEGIN
   SELECT * INTO mr FROM public.match_results WHERE id = NEW.match_result_id;
@@ -140,8 +138,6 @@ BEGIN
     RAISE EXCEPTION '%', 'Datos de confirmación no válidos.';
   END IF;
 
-  SELECT title INTO v_match_title FROM public.matches WHERE id = mr.match_id;
-
   IF NEW.decision = 'dispute' THEN
     IF NEW.team = mr.submitted_by_team THEN
       RAISE EXCEPTION '%', 'Solo el equipo rival puede disputar el resultado.';
@@ -159,21 +155,6 @@ BEGIN
       NULLIF(btrim(COALESCE(NEW.comment, '')), ''),
       NEW.user_id
     );
-
-    FOR v_part IN
-      SELECT user_id FROM public.match_participants
-      WHERE match_id = mr.match_id
-        AND state = 'confirmed'
-        AND left_at IS NULL
-    LOOP
-      PERFORM public.enqueue_notification(
-        p_user_id      := v_part.user_id,
-        p_type         := 'result_disputed',
-        p_title        := 'Resultado en disputa',
-        p_body         := 'Se ha disputado el resultado de «' || COALESCE(v_match_title, 'la partida') || '».',
-        p_payload_json := jsonb_build_object('match_id', mr.match_id, 'match_result_id', mr.id)
-      );
-    END LOOP;
 
     RETURN NEW;
   END IF;
@@ -203,21 +184,6 @@ BEGIN
         (m.id, v_from_status, 'finished', 'user', NEW.user_id, 'Resultado confirmado');
     END IF;
 
-    FOR v_part IN
-      SELECT user_id FROM public.match_participants
-      WHERE match_id = mr.match_id
-        AND state = 'confirmed'
-        AND left_at IS NULL
-    LOOP
-      PERFORM public.enqueue_notification(
-        p_user_id      := v_part.user_id,
-        p_type         := 'result_confirmed',
-        p_title        := 'Resultado confirmado',
-        p_body         := 'El resultado de «' || COALESCE(v_match_title, 'la partida') || '» ha sido confirmado.',
-        p_payload_json := jsonb_build_object('match_id', mr.match_id, 'match_result_id', mr.id)
-      );
-    END LOOP;
-
     RETURN NEW;
   END IF;
 
@@ -237,3 +203,25 @@ REVOKE ALL ON FUNCTION public.fn_notify_on_match_result_submitted() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.fn_process_result_confirmation() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_notify_on_match_result_submitted() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_process_result_confirmation() TO authenticated;
+
+-- ── Backfill: rows approved while trigger was missing (INSERT ok, no side effects) ──
+
+UPDATE public.match_results mr
+SET status = 'confirmed', updated_at = NOW()
+WHERE mr.status = 'pending_validation'
+  AND EXISTS (
+    SELECT 1
+    FROM public.result_confirmations rc
+    WHERE rc.match_result_id = mr.id
+      AND rc.decision = 'approve'
+  );
+
+UPDATE public.matches m
+SET status = 'finished', updated_at = NOW()
+WHERE m.status IN ('in_progress', 'finished_no_result')
+  AND EXISTS (
+    SELECT 1
+    FROM public.match_results mr
+    WHERE mr.match_id = m.id
+      AND mr.status = 'confirmed'
+  );
