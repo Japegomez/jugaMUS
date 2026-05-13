@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 13/05/2026 (cierre de sesión)
+> Actualizado: 13/05/2026
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -167,11 +167,14 @@ _Ninguna tarea en progreso actualmente._
   - Reminders deduplicados por `(user_id, type, match_id)` en `notification_queue`.
 - [x] Gestión de reintentos en `NotificationQueue` (max 3 intentos)
   - Edge Function incrementa `attempts`; marca `failed` al alcanzar `max_attempts`. Limpia `push_token` si Expo devuelve `DeviceNotRegistered`.
-  - **Pendiente manual:** ejecutar en Supabase SQL Editor tras primer deploy de la Edge Function:
-    ```sql
-    ALTER DATABASE postgres SET "app.edge_function_url" = 'https://gnseokumiqtdtdzyrldk.supabase.co/functions/v1';
-    ALTER DATABASE postgres SET "app.service_role_key"  = '<service_role_key>';
-    ```
+
+#### Credenciales push (manual — builds nativos)
+
+Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
+
+- [ ] **Android (FCM):** crear proyecto en Firebase Console para el package `com.javiwacho.musapp`, descargar `google-services.json` en la raíz del repo y subirlo en `eas credentials` (Android).
+- [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
+- [ ] **Build de prueba:** `eas build --profile development --platform android` (y/o iOS) e instalar en dispositivo físico para validar recepción de push end-to-end.
 
 ### F7 - Resultados
 
