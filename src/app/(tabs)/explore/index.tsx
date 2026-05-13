@@ -47,6 +47,8 @@ function statusLabel(status: string) {
       return 'Finalizada'
     case MATCH_STATUS.FINISHED_NO_RESULT:
       return 'Sin resultado'
+    case MATCH_STATUS.CANCELLED:
+      return 'Cancelada'
     default:
       return status
   }
@@ -270,6 +272,14 @@ export default function ExploreScreen() {
           </View>
         }
       />
+
+      <Pressable
+        style={styles.fab}
+        onPress={() => router.push('/(tabs)/matches/create')}
+        accessibilityRole="button"
+        accessibilityLabel="Crear partida">
+        <Text style={styles.fabIcon}>＋</Text>
+      </Pressable>
 
       <Modal visible={filterModalOpen} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modalRoot, { paddingTop: insets.top + 8 }]}>
@@ -526,6 +536,23 @@ const styles = StyleSheet.create({
   helpMuted: { fontSize: 12, color: '#888', marginTop: 6, lineHeight: 16 },
   clearLink: { marginTop: 8 },
   clearLinkText: { color: '#1a5f4a', fontSize: 14 },
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1a5f4a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
   modalActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,

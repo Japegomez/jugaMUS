@@ -3,6 +3,7 @@ export const MATCH_STATUS = {
   IN_PROGRESS: 'in_progress',
   FINISHED: 'finished',
   FINISHED_NO_RESULT: 'finished_no_result',
+  CANCELLED: 'cancelled',
 } as const
 
 /** `match_results.status` — DB check constraint (migration 010). */

@@ -419,6 +419,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_can_read_match: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
       auth_is_confirmed_in_match: {
         Args: { p_match_id: string }
         Returns: boolean
@@ -456,6 +460,34 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      list_match_participant_display: {
+        Args: { p_match_id: string }
+        Returns: {
+          participant_id: string
+          match_id: string
+          user_id: string
+          team: string
+          state: string
+          joined_at: string
+          left_at: string | null
+          display_name: string
+          photo_url: string | null
+          city: string | null
+        }[]
+      }
+      list_matches_awaiting_my_result_action: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          title: string
+          start_at: string
+          city: string
+          status: string
+          visibility: string
+          creator_id: string
+          match_result_id: string
+        }[]
       }
       list_public_matches: {
         Args: {
