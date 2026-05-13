@@ -51,6 +51,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "root": "src/app"
+      },
+      "eas": {
+        "projectId": "216a264e-aef8-4e9c-ad34-b2394d13eb51"
+      }
+    },
+    "owner": "javiwacho"
   }
 }
