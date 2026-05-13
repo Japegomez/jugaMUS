@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 13/05/2026
+> Actualizado: 13/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -109,6 +109,7 @@ _Ninguna tarea en progreso actualmente._
   - [x] Botón "Unirse" (si hay plaza y no eres participante)
   - [x] Botón "Abandonar" (si eres participante y partida en estado `planned`)
   - [x] Botones "Editar" y "Cancelar" (solo para el creador)
+  - [x] Cancelar partida también en `in_progress` (creador, sin exigir ser participante); confirmación con modal (`CancelMatchModal`) para que funcione en web (sin `Alert`).
   - [x] Teléfonos visibles solo si eres participante confirmado
 - [x] Pantalla de edición de partida (mismo formulario que creación)
 - [x] Lógica de unirse a partida con selección de equipo
@@ -150,6 +151,7 @@ _Ninguna tarea en progreso actualmente._
 - [x] Crear tabla `match_state_transitions`
 - [x] Añadir índices correspondientes (idx_notifications_pending)
   - Migraciones `010` y `011` aplicadas en Supabase. También incluye `idx_reports_status`, `idx_results_match`, `idx_state_transitions_match`. RLS habilitada en todas las tablas nuevas.
+  - Migración `012` (triggers de confirmación de resultado + backfill si faltaba el trigger en remoto): mantener aplicada en Supabase en todos los entornos; `useCancelMatch` invalida cache de resultado al cancelar.
 
 ### F6 - Notificaciones
 
@@ -187,6 +189,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Pantalla/modal de introducción de resultado
 - [x] Lógica de validación por equipo rival
 - [x] Pantalla/modal de confirmación o disputa de resultado
+  - Aprobación con `ApproveResultModal` (misma idea que disputa: evita `Alert` vacío en Expo Web).
 - [x] Estado `resultado en revisión` cuando hay disputa
 - [x] Reporte automático generado al abrir una disputa
 
