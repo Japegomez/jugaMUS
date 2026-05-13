@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { MATCH_STATUS, MAX_PLAYERS_PER_TEAM, MATCH_PAGE_SIZE } from '@/constants'
+import { MATCH_STATUS, MAX_PLAYERS_PER_TEAM, MATCH_PAGE_SIZE, RESULT_STATUS } from '@/constants'
 import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
 
 /** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
@@ -9,6 +9,22 @@ function startAtToTimestamptzIso(startAt: string): string {
     throw new Error('Fecha de inicio no válida')
   }
   return d.toISOString()
+}
+
+function isMissingPostgrestRpcError(error: {
+  message?: string
+  code?: string
+  details?: string
+  status?: number
+}): boolean {
+  if (error.status === 404) return true
+  const msg = (error.message ?? '').toLowerCase()
+  const details = (error.details ?? '').toLowerCase()
+  const code = error.code ?? ''
+  if (code === 'PGRST202' || code === '42883') return true
+  if (/could not find.*function|schema cache/.test(msg)) return true
+  if (msg.includes('404') || details.includes('404')) return true
+  return false
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -124,37 +140,68 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
     }
   )
 
-  if (rosterError) throw new Error(rosterError.message)
+  let participants: ParticipantWithProfile[]
 
-  type RosterRow = {
-    participant_id: string
-    match_id: string
-    user_id: string
-    team: string
-    state: string
-    joined_at: string
-    left_at: string | null
-    display_name: string
-    photo_url: string | null
-    city: string | null
+  if (rosterError) {
+    if (!isMissingPostgrestRpcError(rosterError)) {
+      throw new Error(rosterError.message)
+    }
+    const { data: nested, error: nestedError } = await supabase
+      .from('matches')
+      .select(
+        `*,
+         participants:match_participants(
+           id, match_id, user_id, team, state, joined_at, left_at,
+           profile:profiles(id, display_name, photo_url, city)
+         )`
+      )
+      .eq('id', id)
+      .single()
+    if (nestedError) throw new Error(nestedError.message)
+    const rawNested = nested as MatchRow & {
+      participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
+    }
+    participants = (rawNested.participants ?? []).map((p) => ({
+      ...p,
+      profile: p.profile ?? {
+        id: p.user_id,
+        display_name: 'Usuario',
+        photo_url: null,
+        city: null,
+        phone_e164: null,
+      },
+    }))
+  } else {
+    type RosterRow = {
+      participant_id: string
+      match_id: string
+      user_id: string
+      team: string
+      state: string
+      joined_at: string
+      left_at: string | null
+      display_name: string
+      photo_url: string | null
+      city: string | null
+    }
+
+    participants = ((roster ?? []) as RosterRow[]).map((r) => ({
+      id: r.participant_id,
+      match_id: r.match_id,
+      user_id: r.user_id,
+      team: r.team,
+      state: r.state,
+      joined_at: r.joined_at,
+      left_at: r.left_at,
+      profile: {
+        id: r.user_id,
+        display_name: r.display_name,
+        photo_url: r.photo_url,
+        city: r.city,
+        phone_e164: null,
+      },
+    }))
   }
-
-  const participants: ParticipantWithProfile[] = ((roster ?? []) as RosterRow[]).map((r) => ({
-    id: r.participant_id,
-    match_id: r.match_id,
-    user_id: r.user_id,
-    team: r.team,
-    state: r.state,
-    joined_at: r.joined_at,
-    left_at: r.left_at,
-    profile: {
-      id: r.user_id,
-      display_name: r.display_name,
-      photo_url: r.photo_url,
-      city: r.city,
-      phone_e164: null,
-    },
-  }))
 
   return { ...(raw as MatchRow), participants }
 }
@@ -325,6 +372,80 @@ export type MyMatchesDashboard = {
 }
 
 /**
+ * Same logic as `list_matches_awaiting_my_result_action` when that RPC is not yet applied on the
+ * Supabase project (avoids 404 breaking «Mis partidas»).
+ */
+async function listAwaitingResultValidationClientFallback(
+  userId: string
+): Promise<AwaitingResultMatchRow[]> {
+  const { data: parts, error: partsError } = await supabase
+    .from('match_participants')
+    .select('match_id, team')
+    .eq('user_id', userId)
+    .eq('state', 'confirmed')
+    .is('left_at', null)
+
+  if (partsError) throw new Error(partsError.message)
+
+  const teamByMatch = new Map<string, string>()
+  for (const row of parts ?? []) {
+    teamByMatch.set(row.match_id, row.team)
+  }
+  const matchIds = [...teamByMatch.keys()]
+  if (matchIds.length === 0) return []
+
+  const { data: pendingRows, error: resultsError } = await supabase
+    .from('match_results')
+    .select(
+      `id, match_id, submitted_by_team, created_at,
+       match:matches(id, title, start_at, city, status, visibility, creator_id)`
+    )
+    .in('match_id', matchIds)
+    .eq('status', RESULT_STATUS.PENDING_VALIDATION)
+    .order('created_at', { ascending: false })
+
+  if (resultsError) throw new Error(resultsError.message)
+
+  type PendingRow = {
+    id: string
+    match_id: string
+    submitted_by_team: string
+    match: UserMatchSummary | null
+  }
+
+  const latestByMatch = new Map<string, PendingRow>()
+  for (const row of (pendingRows ?? []) as PendingRow[]) {
+    if (!latestByMatch.has(row.match_id)) {
+      latestByMatch.set(row.match_id, row)
+    }
+  }
+
+  const resultIds = [...latestByMatch.values()].map((r) => r.id)
+  if (resultIds.length === 0) return []
+
+  const { data: confs, error: confError } = await supabase
+    .from('result_confirmations')
+    .select('match_result_id')
+    .eq('user_id', userId)
+    .in('match_result_id', resultIds)
+
+  if (confError) throw new Error(confError.message)
+
+  const responded = new Set((confs ?? []).map((c) => c.match_result_id))
+
+  const out: AwaitingResultMatchRow[] = []
+  for (const row of latestByMatch.values()) {
+    const myTeam = teamByMatch.get(row.match_id)
+    if (!myTeam || myTeam === row.submitted_by_team) continue
+    if (responded.has(row.id)) continue
+    const m = row.match
+    if (!m) continue
+    out.push({ ...m, match_result_id: row.id })
+  }
+  return out
+}
+
+/**
  * Data for the «Mis Partidas» tab: upcoming (planned, future), in progress,
  * and matches where the user must approve or dispute a submitted result.
  */
@@ -340,7 +461,17 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
       .limit(120),
   ])
 
-  if (awaitingRes.error) throw new Error(awaitingRes.error.message)
+  let awaitingResultValidation: AwaitingResultMatchRow[]
+  if (awaitingRes.error) {
+    if (isMissingPostgrestRpcError(awaitingRes.error)) {
+      awaitingResultValidation = await listAwaitingResultValidationClientFallback(userId)
+    } else {
+      throw new Error(awaitingRes.error.message)
+    }
+  } else {
+    awaitingResultValidation = (awaitingRes.data ?? []) as AwaitingResultMatchRow[]
+  }
+
   if (participantRes.error) throw new Error(participantRes.error.message)
 
   const now = Date.now()
@@ -356,7 +487,7 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     .filter((m) => m.status === MATCH_STATUS.IN_PROGRESS)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 
-  const awaitingResultValidation = ((awaitingRes.data ?? []) as AwaitingResultMatchRow[]).sort(
+  awaitingResultValidation.sort(
     (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
   )
 
