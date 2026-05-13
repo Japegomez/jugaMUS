@@ -128,10 +128,14 @@ _Ninguna tarea en progreso actualmente._
 
 ### Servicios externos (Fase 1)
 
-- [ ] Instalar y configurar Sentry (crash reporting básico)
-- [ ] Instalar y configurar PostHog (analytics básico)
-- [ ] Configurar Expo EAS Build (primer build de prueba en Android)
+- [x] Instalar y configurar Sentry (crash reporting básico)
+  - `src/lib/sentry.ts`, plugin en `app.json` (UE `de.sentry.io`), `Sentry.wrap` en `_layout.tsx`; botón de prueba en perfil solo `__DEV__`.
+- [x] Instalar y configurar PostHog (analytics básico)
+  - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
+- [x] Configurar Expo EAS Build (primer build de prueba en Android)
+  - Perfil `production` en Android; FCM vía `google-services.json` + `eas credentials`.
 - [ ] Configurar Expo EAS Build para iOS
+  - **Bloqueado:** requiere Apple Developer Program (cuenta de pago). Reanudar cuando haya membresía activa.
 
 ---
 
@@ -172,9 +176,11 @@ _Ninguna tarea en progreso actualmente._
 
 Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
 
-- [ ] **Android (FCM):** crear proyecto en Firebase Console para el package `com.javiwacho.musapp`, descargar `google-services.json` en la raíz del repo y subirlo en `eas credentials` (Android).
+- [x] **Android (FCM):** crear proyecto en Firebase Console para el package `com.javiwacho.musapp`, descargar `google-services.json` en la raíz del repo y subirlo en `eas credentials` (Android).
 - [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
-- [ ] **Build de prueba:** `eas build --profile development --platform android` (y/o iOS) e instalar en dispositivo físico para validar recepción de push end-to-end.
+  - **Pendiente:** mismo bloqueo que EAS iOS (Apple Developer Program).
+- [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
+  - **Pendiente:** validación push end-to-end en dispositivo físico si aún no se ha hecho; iOS cuando exista programa Apple.
 
 ### F7 - Resultados
 
@@ -192,9 +198,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### CI/CD Fase 2
 
-- [ ] Configurar EAS Submit para publicación automática en Google Play
+- [x] Configurar EAS Submit para publicación automática en Google Play
+  - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` Android `production` → `eas submit` Android. Secrets: `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (genera `google-service-account.json` en el runner).
 - [ ] Configurar EAS Submit para publicación automática en App Store
+  - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
 - [ ] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
+  - **Hecho parcial:** `ci.yml` en PRs (lint + type-check); `eas.yml` en `main` (build + submit Android). Falta encadenar tests y/o unificar criterios de release.
 
 ---
 
