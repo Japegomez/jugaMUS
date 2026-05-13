@@ -147,7 +147,7 @@ _Ninguna tarea en progreso actualmente._
 - [x] Añadir índices correspondientes (idx_notifications_pending)
   - Migraciones `010` y `011` aplicadas en Supabase. También incluye `idx_reports_status`, `idx_results_match`, `idx_state_transitions_match`. RLS habilitada en todas las tablas nuevas.
 
-### F7 - Notificaciones
+### F6 - Notificaciones
 
 - [x] Configurar Expo Push Notifications (registro de tokens)
   - `expo-notifications` + `expo-device` instalados. Plugin añadido a `app.json`.
