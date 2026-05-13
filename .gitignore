@@ -68,3 +68,7 @@ supabase/.temp
 
 # Expo types reference (generated)
 expo-env.d.ts
+
+.env.local
+google-services.json
+*firebase*.json

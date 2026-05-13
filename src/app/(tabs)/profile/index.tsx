@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
@@ -39,6 +40,7 @@ function AvatarCircle({ uri, name }: { uri: string | null; name: string }) {
 
 export default function ProfileScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const signOut = useAuthStore((s) => s.signOut)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading, isError } = useProfile(sessionUserId)
@@ -82,7 +84,11 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[
+        styles.scroll,
+        // Espacio extra para que los botones finales no queden bajo la tab bar
+        { paddingBottom: 32 + insets.bottom + 72 },
+      ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       {/* Header */}
@@ -214,7 +220,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 32,
-    paddingBottom: 40,
     backgroundColor: '#f6f7f4',
     gap: 16,
   },

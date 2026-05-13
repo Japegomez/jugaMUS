@@ -10,6 +10,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 
 ### Decisiones clave
 
+- **CI/CD (may. 2026):** el workflow de EAS en GitHub Actions está limitado a **Android** (build + submit a Play) hasta contar con **Apple Developer Program**; iOS en CI y APNs quedan fuera hasta entonces.
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
