@@ -109,40 +109,54 @@ export async function createMatch(userId: string, data: MatchInsert): Promise<Ma
 /**
  * Fetch a single match together with all its participants and their basic
  * profile info (display_name, photo_url, city).
- * Phone numbers are NOT included here — use getParticipantProfile() for that.
+ * Phone numbers are NOT included — use getParticipantProfile() for that.
+ * Roster comes from RPC `list_match_participant_display` so non-members can see names without phone.
  */
 export async function getMatch(id: string): Promise<MatchWithParticipants> {
-  const { data, error } = await supabase
-    .from('matches')
-    .select(
-      `*,
-       participants:match_participants(
-         id, match_id, user_id, team, state, joined_at, left_at,
-         profile:profiles(id, display_name, photo_url, city)
-       )`
-    )
-    .eq('id', id)
-    .single()
+  const { data: raw, error } = await supabase.from('matches').select('*').eq('id', id).single()
 
   if (error) throw new Error(error.message)
 
-  const raw = data as MatchRow & {
-    participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
+  const { data: roster, error: rosterError } = await supabase.rpc(
+    'list_match_participant_display',
+    {
+      p_match_id: id,
+    }
+  )
+
+  if (rosterError) throw new Error(rosterError.message)
+
+  type RosterRow = {
+    participant_id: string
+    match_id: string
+    user_id: string
+    team: string
+    state: string
+    joined_at: string
+    left_at: string | null
+    display_name: string
+    photo_url: string | null
+    city: string | null
   }
 
-  return {
-    ...raw,
-    participants: (raw.participants ?? []).map((p) => ({
-      ...p,
-      profile: p.profile ?? {
-        id: p.user_id,
-        display_name: 'Usuario',
-        photo_url: null,
-        city: null,
-        phone_e164: null,
-      },
-    })),
-  }
+  const participants: ParticipantWithProfile[] = ((roster ?? []) as RosterRow[]).map((r) => ({
+    id: r.participant_id,
+    match_id: r.match_id,
+    user_id: r.user_id,
+    team: r.team,
+    state: r.state,
+    joined_at: r.joined_at,
+    left_at: r.left_at,
+    profile: {
+      id: r.user_id,
+      display_name: r.display_name,
+      photo_url: r.photo_url,
+      city: r.city,
+      phone_e164: null,
+    },
+  }))
+
+  return { ...(raw as MatchRow), participants }
 }
 
 export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchRow> {
@@ -165,7 +179,7 @@ export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchR
 export async function cancelMatch(id: string): Promise<MatchRow> {
   const { data: row, error } = await supabase
     .from('matches')
-    .update({ status: MATCH_STATUS.FINISHED })
+    .update({ status: MATCH_STATUS.CANCELLED })
     .eq('id', id)
     .select()
     .single()
@@ -299,6 +313,54 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
   return Array.from(byId.values()).sort(
     (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
   )
+}
+
+/** Row from `list_matches_awaiting_my_result_action` — same shape as `UserMatchSummary` + result id. */
+export type AwaitingResultMatchRow = UserMatchSummary & { match_result_id: string }
+
+export type MyMatchesDashboard = {
+  upcoming: UserMatchSummary[]
+  inProgress: UserMatchSummary[]
+  awaitingResultValidation: AwaitingResultMatchRow[]
+}
+
+/**
+ * Data for the «Mis Partidas» tab: upcoming (planned, future), in progress,
+ * and matches where the user must approve or dispute a submitted result.
+ */
+export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
+  const [awaitingRes, participantRes] = await Promise.all([
+    supabase.rpc('list_matches_awaiting_my_result_action'),
+    supabase
+      .from('match_participants')
+      .select(`match:matches(id, title, start_at, city, status, visibility, creator_id)`)
+      .eq('user_id', userId)
+      .is('left_at', null)
+      .eq('state', 'confirmed')
+      .limit(120),
+  ])
+
+  if (awaitingRes.error) throw new Error(awaitingRes.error.message)
+  if (participantRes.error) throw new Error(participantRes.error.message)
+
+  const now = Date.now()
+  const fromParts = (participantRes.data ?? [])
+    .map((r) => r.match as UserMatchSummary | null)
+    .filter((m): m is UserMatchSummary => m !== null)
+
+  const upcoming = fromParts
+    .filter((m) => m.status === MATCH_STATUS.PLANNED && new Date(m.start_at).getTime() >= now)
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+
+  const inProgress = fromParts
+    .filter((m) => m.status === MATCH_STATUS.IN_PROGRESS)
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+
+  const awaitingResultValidation = ((awaitingRes.data ?? []) as AwaitingResultMatchRow[]).sort(
+    (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+  )
+
+  return { upcoming, inProgress, awaitingResultValidation }
 }
 
 // ─── Public explore (F5) — RPC list_public_matches ───────────────────────────

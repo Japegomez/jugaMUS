@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_STALE_TIME } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
-import { matchQueryKey, matchResultQueryKey, userMatchesQueryKey } from '@/hooks/useMatches'
+import {
+  matchQueryKey,
+  matchResultQueryKey,
+  userMatchesQueryKey,
+  invalidateMyMatchesDashboard,
+} from '@/hooks/useMatches'
 import {
   fetchMatchResultBundle,
   submitConfirmation,
@@ -35,6 +40,7 @@ export function useSubmitResult() {
       })
       if (sessionUserId) {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
     },
   })
@@ -53,6 +59,7 @@ export function useSubmitConfirmation() {
       })
       if (sessionUserId) {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
     },
   })

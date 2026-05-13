@@ -15,7 +15,7 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { ConfirmResultModal } from '@/components/matches/ConfirmResultModal'
+import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
@@ -62,6 +62,8 @@ function statusLabel(status: string) {
       return { text: 'Finalizada', color: '#555' }
     case MATCH_STATUS.FINISHED_NO_RESULT:
       return { text: 'Sin resultado', color: '#999' }
+    case MATCH_STATUS.CANCELLED:
+      return { text: 'Cancelada', color: '#b00020' }
     default:
       return { text: status, color: '#888' }
   }
@@ -72,7 +74,7 @@ function statusLabel(status: string) {
 interface ParticipantCardProps {
   participant: ParticipantWithProfile
   matchId: string
-  isViewerParticipant: boolean
+  canRevealPhone: boolean
   currentUserId?: string
   onReportUser?: (userId: string, displayName: string) => void
 }
@@ -80,7 +82,7 @@ interface ParticipantCardProps {
 function ParticipantCard({
   participant,
   matchId,
-  isViewerParticipant,
+  canRevealPhone,
   currentUserId,
   onReportUser,
 }: ParticipantCardProps) {
@@ -88,7 +90,7 @@ function ParticipantCard({
   const [loading, setLoading] = useState(false)
 
   const handleRevealPhone = async () => {
-    if (!isViewerParticipant) return
+    if (!canRevealPhone) return
     setLoading(true)
     try {
       const profile = await getParticipantProfile(matchId, participant.user_id)
@@ -112,7 +114,7 @@ function ParticipantCard({
       <View style={card.info}>
         <Text style={card.name}>{p.display_name}</Text>
         {p.city ? <Text style={card.city}>{p.city}</Text> : null}
-        {isViewerParticipant && (
+        {canRevealPhone && (
           <>
             {fullProfile?.phone_e164 ? (
               <Text style={card.phone}>{fullProfile.phone_e164}</Text>
@@ -179,7 +181,7 @@ interface TeamSectionProps {
   team: string
   participants: ParticipantWithProfile[]
   matchId: string
-  isViewerParticipant: boolean
+  canRevealPhone: boolean
   currentUserId?: string
   onReportUser?: (userId: string, displayName: string) => void
 }
@@ -188,7 +190,7 @@ function TeamSection({
   team,
   participants,
   matchId,
-  isViewerParticipant,
+  canRevealPhone,
   currentUserId,
   onReportUser,
 }: TeamSectionProps) {
@@ -213,7 +215,7 @@ function TeamSection({
             key={p.id}
             participant={p}
             matchId={matchId}
-            isViewerParticipant={isViewerParticipant}
+            canRevealPhone={canRevealPhone}
             currentUserId={currentUserId}
             onReportUser={onReportUser}
           />
@@ -342,7 +344,7 @@ export default function MatchDetailScreen() {
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
-  const [confirmResultVisible, setConfirmResultVisible] = useState(false)
+  const [disputeResultVisible, setDisputeResultVisible] = useState(false)
   const [reportModal, setReportModal] = useState<{
     targetType: ReportTargetType
     targetId: string
@@ -371,12 +373,13 @@ export default function MatchDetailScreen() {
   const isCreator = match.creator_id === userId
   const isParticipant = Boolean(myParticipation)
   const isPlanned = match.status === MATCH_STATUS.PLANNED
+  const isCancelled = match.status === MATCH_STATUS.CANCELLED
 
   const slotsA = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.A).length
   const slotsB = MAX_PLAYERS_PER_TEAM - activeParticipants.filter((p) => p.team === TEAM.B).length
   const hasSlots = slotsA > 0 || slotsB > 0
   /** Creator is not auto-added as participant; they must join like anyone else if they want a seat. */
-  const canJoin = isPlanned && hasSlots && !isParticipant
+  const canJoin = isPlanned && hasSlots && !isParticipant && !isCancelled
   const canLeave = isPlanned && isParticipant
 
   const latestResult = resultBundle?.result ?? null
@@ -390,6 +393,7 @@ export default function MatchDetailScreen() {
   const canSubmitResult = Boolean(
     userId &&
     myParticipation &&
+    match.status !== MATCH_STATUS.CANCELLED &&
     (match.status === MATCH_STATUS.IN_PROGRESS ||
       match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
     !resultBlocksNewSubmit
@@ -464,10 +468,19 @@ export default function MatchDetailScreen() {
         team: myParticipation.team,
         decision: 'approve',
       })
-      setConfirmResultVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo confirmar')
     }
+  }
+
+  const handleApproveResultPress = () => {
+    Alert.alert('Aprobar resultado', '¿Confirmas que el marcador mostrado es correcto?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Sí, aprobar',
+        onPress: () => void handleApproveResult(),
+      },
+    ])
   }
 
   const handleDisputeResult = async (comment: string | null) => {
@@ -481,7 +494,7 @@ export default function MatchDetailScreen() {
         decision: 'dispute',
         comment,
       })
-      setConfirmResultVisible(false)
+      setDisputeResultVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar la disputa')
     }
@@ -568,28 +581,34 @@ export default function MatchDetailScreen() {
             team={TEAM.A}
             participants={match.participants}
             matchId={id}
-            isViewerParticipant={isParticipant || isCreator}
+            canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
-            onReportUser={(reportedUserId, displayName) =>
-              setReportModal({
-                targetType: 'user',
-                targetId: reportedUserId,
-                targetLabel: displayName,
-              })
+            onReportUser={
+              isParticipant
+                ? (reportedUserId, displayName) =>
+                    setReportModal({
+                      targetType: 'user',
+                      targetId: reportedUserId,
+                      targetLabel: displayName,
+                    })
+                : undefined
             }
           />
           <TeamSection
             team={TEAM.B}
             participants={match.participants}
             matchId={id}
-            isViewerParticipant={isParticipant || isCreator}
+            canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
-            onReportUser={(reportedUserId, displayName) =>
-              setReportModal({
-                targetType: 'user',
-                targetId: reportedUserId,
-                targetLabel: displayName,
-              })
+            onReportUser={
+              isParticipant
+                ? (reportedUserId, displayName) =>
+                    setReportModal({
+                      targetType: 'user',
+                      targetId: reportedUserId,
+                      targetLabel: displayName,
+                    })
+                : undefined
             }
           />
         </View>
@@ -606,6 +625,11 @@ export default function MatchDetailScreen() {
           ) : (
             <Text style={s.resultEmpty}>Aún no hay resultado registrado.</Text>
           )}
+          {isCancelled ? (
+            <Text style={s.resultHint}>
+              Esta partida ha sido cancelada. No hay resultado oficial.
+            </Text>
+          ) : null}
           {latestResult?.status === RESULT_STATUS.DISPUTED ? (
             <Text style={s.resultHint}>
               El resultado está en disputa. Podéis registrar un nuevo resultado.
@@ -667,11 +691,21 @@ export default function MatchDetailScreen() {
           ) : null}
 
           {canValidateResult ? (
-            <Button
-              title="Validar resultado"
-              onPress={() => setConfirmResultVisible(true)}
-              style={s.actionBtn}
-            />
+            <>
+              <Button
+                title="Aprobar resultado"
+                onPress={handleApproveResultPress}
+                loading={submitConfirmationMut.isPending}
+                style={s.actionBtn}
+              />
+              <Button
+                title="Disputar resultado"
+                variant="secondary"
+                onPress={() => setDisputeResultVisible(true)}
+                loading={submitConfirmationMut.isPending}
+                style={s.actionBtn}
+              />
+            </>
           ) : null}
         </View>
 
@@ -713,9 +747,9 @@ export default function MatchDetailScreen() {
       ) : null}
 
       {latestResult && myParticipation ? (
-        <ConfirmResultModal
-          visible={confirmResultVisible}
-          onClose={() => setConfirmResultVisible(false)}
+        <DisputeResultModal
+          visible={disputeResultVisible}
+          onClose={() => setDisputeResultVisible(false)}
           teamAScore={latestResult.team_a_games}
           teamBScore={latestResult.team_b_games}
           submitterDisplayName={submitterDisplayName(
@@ -723,7 +757,6 @@ export default function MatchDetailScreen() {
             latestResult.submitted_by_user_id
           )}
           loading={submitConfirmationMut.isPending}
-          onApprove={handleApproveResult}
           onDispute={handleDisputeResult}
         />
       ) : null}

@@ -112,7 +112,7 @@ export default function ProfileScreen() {
 
       {/* Match history */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Mis partidas</Text>
+        <Text style={styles.cardTitle}>Historial</Text>
         {matchesLoading ? (
           <ActivityIndicator size="small" color="#1a5f4a" style={styles.matchesLoader} />
         ) : !userMatches || userMatches.length === 0 ? (
@@ -158,6 +158,8 @@ function matchStatusLabel(status: string): { text: string; color: string } {
       return { text: 'Finalizada', color: '#555' }
     case MATCH_STATUS.FINISHED_NO_RESULT:
       return { text: 'Sin resultado', color: '#999' }
+    case MATCH_STATUS.CANCELLED:
+      return { text: 'Cancelada', color: '#b00020' }
     default:
       return { text: status, color: '#888' }
   }

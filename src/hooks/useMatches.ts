@@ -5,6 +5,7 @@ import {
   cancelMatch,
   createMatch,
   getMatch,
+  getMyMatchesDashboard,
   getUserMatches,
   joinMatch,
   leaveMatch,
@@ -28,6 +29,15 @@ export function matchResultQueryKey(matchId: string, viewerUserId?: string | nul
 
 export function userMatchesQueryKey(userId: string) {
   return ['user-matches', userId] as const
+}
+
+export function myMatchesDashboardQueryKey(userId: string) {
+  return ['my-matches-dashboard', userId] as const
+}
+
+export function invalidateMyMatchesDashboard(queryClient: QueryClient, userId?: string | null) {
+  if (!userId) return
+  queryClient.invalidateQueries({ queryKey: myMatchesDashboardQueryKey(userId) })
 }
 
 export const PUBLIC_MATCHES_EXPLORE_ROOT = 'public-matches-explore' as const
@@ -74,6 +84,17 @@ export function useUserMatches(userId?: string) {
   })
 }
 
+export function useMyMatchesDashboard() {
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useQuery({
+    queryKey: myMatchesDashboardQueryKey(sessionUserId ?? ''),
+    queryFn: () => getMyMatchesDashboard(sessionUserId!),
+    enabled: Boolean(sessionUserId),
+    staleTime: QUERY_STALE_TIME,
+  })
+}
+
 /** F5 — partidas públicas con paginación (20) y cache 5 min. */
 export function useInfinitePublicMatches(filters: PublicMatchesListFilters) {
   return useInfiniteQuery({
@@ -110,6 +131,7 @@ export function useCreateMatch() {
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),
         })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
       invalidatePublicMatchesExplore(queryClient)
     },
@@ -118,6 +140,7 @@ export function useCreateMatch() {
 
 export function useUpdateMatch() {
   const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: MatchUpdate }) => updateMatch(id, data),
@@ -127,6 +150,7 @@ export function useUpdateMatch() {
         return { ...(prev as object), ...updated }
       })
       invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
     },
   })
 }
@@ -146,6 +170,7 @@ export function useCancelMatch() {
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),
         })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
       invalidatePublicMatchesExplore(queryClient)
     },
@@ -158,9 +183,10 @@ export function useJoinMatch() {
   return useMutation({
     mutationFn: ({ matchId, userId, team }: { matchId: string; userId: string; team: string }) =>
       joinMatch(matchId, userId, team),
-    onSuccess: (_participant, { matchId }) => {
+    onSuccess: (_participant, { matchId, userId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
       invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, userId)
     },
   })
 }
@@ -171,9 +197,10 @@ export function useLeaveMatch() {
   return useMutation({
     mutationFn: ({ matchId, userId }: { matchId: string; userId: string }) =>
       leaveMatch(matchId, userId),
-    onSuccess: (_participant, { matchId }) => {
+    onSuccess: (_participant, { matchId, userId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
       invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, userId)
     },
   })
 }
