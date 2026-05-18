@@ -27,11 +27,20 @@ type FormOutput = z.output<typeof schema>
 export interface RecordResultModalProps {
   visible: boolean
   onClose: () => void
+  teamAName: string
+  teamBName: string
   loading: boolean
   onSubmit: (values: { teamAGames: number; teamBGames: number }) => void
 }
 
-export function RecordResultModal({ visible, onClose, loading, onSubmit }: RecordResultModalProps) {
+export function RecordResultModal({
+  visible,
+  onClose,
+  teamAName,
+  teamBName,
+  loading,
+  onSubmit,
+}: RecordResultModalProps) {
   const {
     control,
     handleSubmit,
@@ -75,7 +84,7 @@ export function RecordResultModal({ visible, onClose, loading, onSubmit }: Recor
             name="team_a_games"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Juegos equipo A"
+                label={`Juegos ${teamAName}`}
                 keyboardType="number-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -89,7 +98,7 @@ export function RecordResultModal({ visible, onClose, loading, onSubmit }: Recor
             name="team_b_games"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Juegos equipo B"
+                label={`Juegos ${teamBName}`}
                 keyboardType="number-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}

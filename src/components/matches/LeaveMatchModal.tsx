@@ -1,41 +1,40 @@
+import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
 
-export interface ApproveResultModalProps {
+export interface LeaveMatchModalProps {
   visible: boolean
   onClose: () => void
-  teamAScore: number
-  teamBScore: number
-  teamAName?: string
-  teamBName?: string
-  submitterDisplayName: string
   loading: boolean
-  onConfirm: () => void
+  onConfirm: () => Promise<void>
 }
 
-export function ApproveResultModal({
-  visible,
-  onClose,
-  teamAScore,
-  teamBScore,
-  teamAName = 'Equipo A',
-  teamBName = 'Equipo B',
-  submitterDisplayName,
-  loading,
-  onConfirm,
-}: ApproveResultModalProps) {
+export function LeaveMatchModal({ visible, onClose, loading, onConfirm }: LeaveMatchModalProps) {
+  const [error, setError] = useState<string | null>(null)
+
+  const handleConfirm = async () => {
+    setError(null)
+    try {
+      await onConfirm()
+      onClose()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo abandonar la partida')
+    }
+  }
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      onShow={() => setError(null)}
       onRequestClose={() => {
         if (!loading) onClose()
       }}>
       <SafeAreaView style={s.wrap}>
         <View style={s.header}>
-          <Text style={s.title}>Aprobar resultado</Text>
+          <Text style={s.title}>Abandonar partida</Text>
           <Pressable
             onPress={onClose}
             disabled={loading}
@@ -45,21 +44,19 @@ export function ApproveResultModal({
           </Pressable>
         </View>
         <View style={s.body}>
-          <Text style={s.score}>
-            {teamAName}: {teamAScore} — {teamBName}: {teamBScore}
+          <Text style={s.message}>
+            ¿Seguro que quieres abandonar esta partida? Dejarás de aparecer en la plantilla y podrás
+            volver a unirte si quedan plazas libres.
           </Text>
-          <Text style={s.submitter}>
-            Enviado por <Text style={s.submitterName}>{submitterDisplayName}</Text>
-          </Text>
-          <Text style={s.question}>¿Confirmas que este marcador es correcto?</Text>
-          <Button title="Sí, aprobar" onPress={onConfirm} loading={loading} style={s.btn} />
+          {error ? <Text style={s.error}>{error}</Text> : null}
           <Button
-            title="Cancelar"
-            variant="outline"
-            onPress={onClose}
-            disabled={loading}
+            title="Sí, abandonar"
+            variant="danger"
+            onPress={() => void handleConfirm()}
+            loading={loading}
             style={s.btn}
           />
+          <Button title="No" variant="outline" onPress={onClose} disabled={loading} style={s.btn} />
         </View>
       </SafeAreaView>
     </Modal>
@@ -80,9 +77,7 @@ const s = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
   close: { fontSize: 18, color: '#555', padding: 4 },
   body: { padding: 20 },
-  score: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 8 },
-  submitter: { fontSize: 15, color: '#555', marginBottom: 16 },
-  submitterName: { fontWeight: '700', color: '#1a1a1a' },
-  question: { fontSize: 15, color: '#333', marginBottom: 24 },
+  message: { fontSize: 15, color: '#333', marginBottom: 16, lineHeight: 22 },
+  error: { fontSize: 14, color: '#b00020', marginBottom: 16 },
   btn: { marginBottom: 12 },
 })

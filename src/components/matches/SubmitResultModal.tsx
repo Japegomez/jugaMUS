@@ -28,6 +28,9 @@ export interface SubmitResultModalProps {
   visible: boolean
   onClose: () => void
   viewerTeam: string
+  viewerTeamLabel: string
+  teamAName: string
+  teamBName: string
   loading: boolean
   onSubmit: (values: { teamAGames: number; teamBGames: number }) => void
 }
@@ -35,7 +38,9 @@ export interface SubmitResultModalProps {
 export function SubmitResultModal({
   visible,
   onClose,
-  viewerTeam,
+  viewerTeamLabel,
+  teamAName,
+  teamBName,
   loading,
   onSubmit,
 }: SubmitResultModalProps) {
@@ -69,7 +74,7 @@ export function SubmitResultModal({
         </View>
         <View style={s.body}>
           <Text style={s.hint}>
-            Tu equipo: <Text style={s.hintStrong}>Equipo {viewerTeam}</Text>
+            Tu equipo: <Text style={s.hintStrong}>{viewerTeamLabel}</Text>
           </Text>
           <Text style={s.sub}>Introduce los juegos ganados por cada equipo (0 a 6).</Text>
 
@@ -78,7 +83,7 @@ export function SubmitResultModal({
             name="team_a_games"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Juegos equipo A"
+                label={`Juegos ${teamAName}`}
                 keyboardType="number-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -92,7 +97,7 @@ export function SubmitResultModal({
             name="team_b_games"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
-                label="Juegos equipo B"
+                label={`Juegos ${teamBName}`}
                 keyboardType="number-pad"
                 onBlur={onBlur}
                 onChangeText={onChange}

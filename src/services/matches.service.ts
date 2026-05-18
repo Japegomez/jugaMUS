@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabase'
-import { MATCH_STATUS, MAX_PLAYERS_PER_TEAM, MATCH_PAGE_SIZE, RESULT_STATUS } from '@/constants'
+import {
+  DEFAULT_TEAM_A_NAME,
+  DEFAULT_TEAM_B_NAME,
+  MATCH_STATUS,
+  MAX_PLAYERS_PER_TEAM,
+  MATCH_PAGE_SIZE,
+  RESULT_STATUS,
+  TEAM,
+} from '@/constants'
 import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
 
 /** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
@@ -42,8 +50,10 @@ export type MatchRow = {
   location_privacy: string
   status: string
   creator_id: string
+  team_a_name: string
   team_a_player_1: string | null
   team_a_player_2: string | null
+  team_b_name: string
   team_b_player_1: string | null
   team_b_player_2: string | null
   created_at: string
@@ -87,8 +97,10 @@ export type MatchInsert = Pick<
   | 'duration_target_games'
   | 'visibility'
   | 'location_privacy'
+  | 'team_a_name'
   | 'team_a_player_1'
   | 'team_a_player_2'
+  | 'team_b_name'
   | 'team_b_player_1'
   | 'team_b_player_2'
 >
@@ -103,8 +115,10 @@ export type MatchUpdate = Pick<
   | 'place_text'
   | 'duration_target_games'
   | 'visibility'
+  | 'team_a_name'
   | 'team_a_player_1'
   | 'team_a_player_2'
+  | 'team_b_name'
   | 'team_b_player_1'
   | 'team_b_player_2'
 >
@@ -121,6 +135,95 @@ export function countTeamSlots(participants: ParticipantWithProfile[], team: str
   return activeParticipants(participants).filter((p) => p.team === team).length
 }
 
+type TextPlayerFields = Pick<
+  MatchRow,
+  'team_a_player_1' | 'team_a_player_2' | 'team_b_player_1' | 'team_b_player_2'
+>
+
+function textPlayerNamesOnTeam(match: TextPlayerFields, team: string): string[] {
+  const slots =
+    team === TEAM.B
+      ? [match.team_b_player_1, match.team_b_player_2]
+      : [match.team_a_player_1, match.team_a_player_2]
+  return slots.map((s) => s?.trim()).filter((s): s is string => Boolean(s))
+}
+
+/** Free seats on a team (registered + text names count toward the 2 per team). */
+export function freeTeamSlots(
+  match: TextPlayerFields,
+  participants: ParticipantWithProfile[],
+  team: string
+): number {
+  const registered = countTeamSlots(participants, team)
+  const textCount = textPlayerNamesOnTeam(match, team).length
+  return Math.max(0, MAX_PLAYERS_PER_TEAM - registered - textCount)
+}
+
+/** Max text-name fields allowed on a team given registered participants. */
+export function maxTextSlotsForTeam(participants: ParticipantWithProfile[], team: string): number {
+  return Math.max(0, MAX_PLAYERS_PER_TEAM - countTeamSlots(participants, team))
+}
+
+export type EditableTextPlayerField = 'team_a_player_2' | 'team_b_player_1' | 'team_b_player_2'
+
+const TEXT_SLOTS_BY_TEAM: Record<string, EditableTextPlayerField[]> = {
+  [TEAM.A]: ['team_a_player_2'],
+  [TEAM.B]: ['team_b_player_1', 'team_b_player_2'],
+}
+
+/** Text fields that may be edited without exceeding the 2-per-team roster cap. */
+export function editableTextSlotsForTeam(
+  participants: ParticipantWithProfile[],
+  team: string,
+  current: TextPlayerFields
+): EditableTextPlayerField[] {
+  const keys = TEXT_SLOTS_BY_TEAM[team] ?? []
+  const max = maxTextSlotsForTeam(participants, team)
+  if (max <= 0) return []
+  if (max >= keys.length) return keys
+
+  const withValues = keys.filter((k) => current[k]?.trim())
+  if (withValues.length > max) return withValues
+  const without = keys.filter((k) => !current[k]?.trim())
+  return [...withValues, ...without].slice(0, max)
+}
+
+/** Returns a user-facing error when registered + text players exceed the team cap. */
+export function validateTextRosterCapacity(
+  participants: ParticipantWithProfile[],
+  textFields: TextPlayerFields,
+  teamNames?: Pick<MatchRow, 'team_a_name' | 'team_b_name'>
+): string | null {
+  for (const team of [TEAM.A, TEAM.B]) {
+    const registered = countTeamSlots(participants, team)
+    const textCount = textPlayerNamesOnTeam(textFields, team).length
+    if (registered + textCount > MAX_PLAYERS_PER_TEAM) {
+      const label = teamNames ? resolveTeamName(teamNames, team) : `equipo ${team}`
+      return `${label} ya está completo; no puedes añadir más jugadores por nombre.`
+    }
+  }
+  return null
+}
+
+const TEXT_PLAYER_UPDATE_KEYS = [
+  'team_a_player_1',
+  'team_a_player_2',
+  'team_b_player_1',
+  'team_b_player_2',
+] as const satisfies ReadonlyArray<keyof TextPlayerFields>
+
+export function resolveTeamName(
+  match: Pick<MatchRow, 'team_a_name' | 'team_b_name'>,
+  team: string
+): string {
+  if (team === TEAM.B) {
+    const name = match.team_b_name?.trim()
+    return name || DEFAULT_TEAM_B_NAME
+  }
+  const name = match.team_a_name?.trim()
+  return name || DEFAULT_TEAM_A_NAME
+}
+
 // ─── Match CRUD ───────────────────────────────────────────────────────────────
 
 export async function createMatch(userId: string, data: MatchInsert): Promise<MatchRow> {
@@ -131,6 +234,15 @@ export async function createMatch(userId: string, data: MatchInsert): Promise<Ma
     .single()
 
   if (error) throw new Error(error.message)
+
+  try {
+    await joinMatch(row.id, userId, TEAM.A)
+  } catch (joinErr) {
+    throw joinErr instanceof Error
+      ? joinErr
+      : new Error('No se pudo añadirte como jugador del equipo A')
+  }
+
   return row as MatchRow
 }
 
@@ -219,6 +331,24 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
 }
 
 export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchRow> {
+  const touchesTextPlayers = TEXT_PLAYER_UPDATE_KEYS.some((k) => k in data)
+
+  if (touchesTextPlayers) {
+    const current = await getMatch(id)
+    const mergedText: TextPlayerFields = {
+      team_a_player_1:
+        'team_a_player_1' in data ? (data.team_a_player_1 ?? null) : current.team_a_player_1,
+      team_a_player_2:
+        'team_a_player_2' in data ? (data.team_a_player_2 ?? null) : current.team_a_player_2,
+      team_b_player_1:
+        'team_b_player_1' in data ? (data.team_b_player_1 ?? null) : current.team_b_player_1,
+      team_b_player_2:
+        'team_b_player_2' in data ? (data.team_b_player_2 ?? null) : current.team_b_player_2,
+    }
+    const rosterError = validateTextRosterCapacity(current.participants, mergedText, current)
+    if (rosterError) throw new Error(rosterError)
+  }
+
   const payload: MatchUpdate =
     data.start_at !== undefined
       ? { ...data, start_at: startAtToTimestamptzIso(data.start_at) }
@@ -249,29 +379,64 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 
 // ─── Participants ─────────────────────────────────────────────────────────────
 
+function throwJoinMatchError(error: { message?: string; code?: string }, team: string): never {
+  const msg = error.message ?? ''
+  if (msg.includes('max_players') || msg.includes('team_capacity') || error.code === '23514') {
+    throw new Error(`El equipo ${team} ya tiene ${MAX_PLAYERS_PER_TEAM} jugadores.`)
+  }
+  if (error.code === '23505') {
+    throw new Error('Ya participas en esta partida.')
+  }
+  throw new Error(msg)
+}
+
 /**
  * Join a match for a given team.
- * The DB constraint ensures max MAX_PLAYERS_PER_TEAM per team.
- * We surface a friendly error if the limit is reached.
+ * Re-activates a prior row if the user had left (unique on match_id + user_id).
+ * The DB trigger ensures max MAX_PLAYERS_PER_TEAM per team.
  */
 export async function joinMatch(
   matchId: string,
   userId: string,
   team: string
 ): Promise<ParticipantRow> {
+  const { data: existing, error: lookupError } = await supabase
+    .from('match_participants')
+    .select('id, left_at, state')
+    .eq('match_id', matchId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (lookupError) throw new Error(lookupError.message)
+
+  if (existing && existing.left_at === null && existing.state === 'confirmed') {
+    throw new Error('Ya participas en esta partida.')
+  }
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('match_participants')
+      .update({
+        team,
+        state: 'confirmed',
+        left_at: null,
+        joined_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select()
+      .single()
+
+    if (error) throwJoinMatchError(error, team)
+    return data as ParticipantRow
+  }
+
   const { data, error } = await supabase
     .from('match_participants')
     .insert({ match_id: matchId, user_id: userId, team })
     .select()
     .single()
 
-  if (error) {
-    if (error.message.includes('max_players') || error.code === '23514' || error.code === '23505') {
-      throw new Error(`El equipo ${team} ya tiene ${MAX_PLAYERS_PER_TEAM} jugadores.`)
-    }
-    throw new Error(error.message)
-  }
-
+  if (error) throwJoinMatchError(error, team)
   return data as ParticipantRow
 }
 

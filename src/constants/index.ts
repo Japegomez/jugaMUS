@@ -24,6 +24,9 @@ export const TEAM = {
   B: 'B',
 } as const
 
+export const DEFAULT_TEAM_A_NAME = 'Equipo A'
+export const DEFAULT_TEAM_B_NAME = 'Equipo B'
+
 export const MAX_PLAYERS_PER_TEAM = 2
 export const MATCH_PAGE_SIZE = 20
 export const QUERY_STALE_TIME = 5 * 60 * 1000 // 5 minutos

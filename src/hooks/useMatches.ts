@@ -127,7 +127,8 @@ export function useCreateMatch() {
       if (!sessionUserId) throw new Error('No autenticado')
       return createMatch(sessionUserId, data)
     },
-    onSuccess: () => {
+    onSuccess: (match) => {
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(match.id) })
       if (sessionUserId) {
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),

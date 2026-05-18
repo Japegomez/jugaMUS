@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
@@ -21,7 +21,12 @@ import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useMatch, useUpdateMatch } from '@/hooks/useMatches'
-import { MATCH_VISIBILITY } from '@/constants'
+import { DEFAULT_TEAM_A_NAME, DEFAULT_TEAM_B_NAME, MATCH_VISIBILITY, TEAM } from '@/constants'
+import {
+  editableTextSlotsForTeam,
+  freeTeamSlots,
+  validateTextRosterCapacity,
+} from '@/services/matches.service'
 
 // ─── Schema (same as create) ──────────────────────────────────────────────────
 
@@ -48,7 +53,16 @@ const editMatchSchema = z.object({
     .or(z.literal('')),
   duration_target_games: z.number().int().min(1).max(6),
   visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
-  team_a_player_1: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
+  team_a_name: z
+    .string()
+    .trim()
+    .min(1, 'Nombre del equipo requerido')
+    .max(40, 'Nombre demasiado largo'),
+  team_b_name: z
+    .string()
+    .trim()
+    .min(1, 'Nombre del equipo requerido')
+    .max(40, 'Nombre demasiado largo'),
   team_a_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
   team_b_player_1: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
   team_b_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
@@ -57,6 +71,18 @@ const editMatchSchema = z.object({
 function textPlayerOrNull(value?: string): string | null {
   const trimmed = value?.trim()
   return trimmed ? trimmed : null
+}
+
+function textPlayerForUpdate(
+  key: 'team_a_player_2' | 'team_b_player_1' | 'team_b_player_2',
+  editable: readonly ('team_a_player_2' | 'team_b_player_1' | 'team_b_player_2')[],
+  formValue: string | undefined,
+  existing: string | null | undefined
+): string | null {
+  if (!editable.includes(key)) {
+    return existing ?? null
+  }
+  return textPlayerOrNull(formValue)
 }
 
 type EditMatchValues = z.infer<typeof editMatchSchema>
@@ -132,7 +158,8 @@ export default function EditMatchScreen() {
       place_text: '',
       duration_target_games: 3,
       visibility: MATCH_VISIBILITY.PUBLIC,
-      team_a_player_1: '',
+      team_a_name: DEFAULT_TEAM_A_NAME,
+      team_b_name: DEFAULT_TEAM_B_NAME,
       team_a_player_2: '',
       team_b_player_1: '',
       team_b_player_2: '',
@@ -153,7 +180,8 @@ export default function EditMatchScreen() {
         visibility: match.visibility as
           | typeof MATCH_VISIBILITY.PUBLIC
           | typeof MATCH_VISIBILITY.LINK,
-        team_a_player_1: match.team_a_player_1 ?? '',
+        team_a_name: match.team_a_name ?? DEFAULT_TEAM_A_NAME,
+        team_b_name: match.team_b_name ?? DEFAULT_TEAM_B_NAME,
         team_a_player_2: match.team_a_player_2 ?? '',
         team_b_player_1: match.team_b_player_1 ?? '',
         team_b_player_2: match.team_b_player_2 ?? '',
@@ -164,8 +192,45 @@ export default function EditMatchScreen() {
   const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
+  const teamAPlayer2 = watch('team_a_player_2')
+  const teamBPlayer1 = watch('team_b_player_1')
+  const teamBPlayer2 = watch('team_b_player_2')
+
+  const rosterTextDraft = useMemo(
+    () => ({
+      team_a_player_1: match?.team_a_player_1 ?? null,
+      team_a_player_2: teamAPlayer2 || null,
+      team_b_player_1: teamBPlayer1 || null,
+      team_b_player_2: teamBPlayer2 || null,
+    }),
+    [match?.team_a_player_1, teamAPlayer2, teamBPlayer1, teamBPlayer2]
+  )
+
+  const editableA = match
+    ? editableTextSlotsForTeam(match.participants, TEAM.A, rosterTextDraft)
+    : []
+  const editableB = match
+    ? editableTextSlotsForTeam(match.participants, TEAM.B, rosterTextDraft)
+    : []
+
+  const teamAFull = match ? freeTeamSlots(rosterTextDraft, match.participants, TEAM.A) === 0 : false
+  const teamBFull = match ? freeTeamSlots(rosterTextDraft, match.participants, TEAM.B) === 0 : false
 
   const onSubmit = async (values: EditMatchValues) => {
+    if (!match) return
+
+    const textFields = {
+      team_a_player_1: match.team_a_player_1,
+      team_a_player_2: textPlayerOrNull(values.team_a_player_2),
+      team_b_player_1: textPlayerOrNull(values.team_b_player_1),
+      team_b_player_2: textPlayerOrNull(values.team_b_player_2),
+    }
+    const rosterError = validateTextRosterCapacity(match.participants, textFields, match)
+    if (rosterError) {
+      Alert.alert('Plantilla completa', rosterError)
+      return
+    }
+
     try {
       await updateMatch.mutateAsync({
         id,
@@ -178,10 +243,27 @@ export default function EditMatchScreen() {
           place_text: values.place_defined ? values.place_text || null : null,
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
-          team_a_player_1: textPlayerOrNull(values.team_a_player_1),
-          team_a_player_2: textPlayerOrNull(values.team_a_player_2),
-          team_b_player_1: textPlayerOrNull(values.team_b_player_1),
-          team_b_player_2: textPlayerOrNull(values.team_b_player_2),
+          team_a_name: values.team_a_name.trim(),
+          team_b_name: values.team_b_name.trim(),
+          team_a_player_1: null,
+          team_a_player_2: textPlayerForUpdate(
+            'team_a_player_2',
+            editableA,
+            values.team_a_player_2,
+            match.team_a_player_2
+          ),
+          team_b_player_1: textPlayerForUpdate(
+            'team_b_player_1',
+            editableB,
+            values.team_b_player_1,
+            match.team_b_player_1
+          ),
+          team_b_player_2: textPlayerForUpdate(
+            'team_b_player_2',
+            editableB,
+            values.team_b_player_2,
+            match.team_b_player_2
+          ),
         },
       })
       router.back()
@@ -363,66 +445,91 @@ export default function EditMatchScreen() {
       </View>
 
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Jugadores (opcional)</Text>
-        <Text style={s.hint}>Nombres de compañeros y rivales (no necesitan cuenta en la app).</Text>
-        <Text style={s.teamLabel}>Equipo A</Text>
+        <Text style={s.label}>Equipos y jugadores (opcional)</Text>
+        <Text style={s.hint}>Nombres de equipos y jugadores invitados (sin cuenta en la app).</Text>
         <Controller
           control={control}
-          name="team_a_player_1"
+          name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Jugador 1"
-              placeholder="Nombre"
-              value={field.value ?? ''}
+              label="Nombre equipo A"
+              placeholder={DEFAULT_TEAM_A_NAME}
+              value={field.value}
               onChangeText={field.onChange}
-              error={errors.team_a_player_1?.message}
+              error={errors.team_a_name?.message}
               autoCapitalize="words"
             />
           )}
         />
+        {teamAFull && !editableA.includes('team_a_player_2') ? (
+          <Text style={s.rosterNote}>Compañero: cubierto por jugadores con cuenta en la app.</Text>
+        ) : editableA.includes('team_a_player_2') ? (
+          <Controller
+            control={control}
+            name="team_a_player_2"
+            render={({ field }) => (
+              <Input
+                label="Compañero (jugador 2, opcional)"
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_a_player_2?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : null}
         <Controller
           control={control}
-          name="team_a_player_2"
+          name="team_b_name"
           render={({ field }) => (
             <Input
-              label="Jugador 2"
-              placeholder="Nombre"
-              value={field.value ?? ''}
+              label="Nombre equipo B"
+              placeholder={DEFAULT_TEAM_B_NAME}
+              value={field.value}
               onChangeText={field.onChange}
-              error={errors.team_a_player_2?.message}
+              error={errors.team_b_name?.message}
               autoCapitalize="words"
             />
           )}
         />
-        <Text style={s.teamLabel}>Equipo B</Text>
-        <Controller
-          control={control}
-          name="team_b_player_1"
-          render={({ field }) => (
-            <Input
-              label="Jugador 1"
-              placeholder="Nombre"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_b_player_1?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="team_b_player_2"
-          render={({ field }) => (
-            <Input
-              label="Jugador 2"
-              placeholder="Nombre"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_b_player_2?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
+        {teamBFull && editableB.length === 0 ? (
+          <Text style={s.rosterNote}>
+            Rivales: plantilla completa (cuenta en la app y/o nombres).
+          </Text>
+        ) : null}
+        {editableB.includes('team_b_player_1') ? (
+          <Controller
+            control={control}
+            name="team_b_player_1"
+            render={({ field }) => (
+              <Input
+                label="Jugador 1 (nombre)"
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_b_player_1?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : null}
+        {editableB.includes('team_b_player_2') ? (
+          <Controller
+            control={control}
+            name="team_b_player_2"
+            render={({ field }) => (
+              <Input
+                label="Jugador 2 (nombre)"
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_b_player_2?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : null}
       </View>
 
       <Button
@@ -473,6 +580,7 @@ const s = StyleSheet.create({
   rowLabel: { fontSize: 16, color: '#1a1a1a', fontWeight: '500' },
   rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
   hint: { fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 },
+  rosterNote: { fontSize: 13, color: '#666', fontStyle: 'italic', marginBottom: 12 },
   teamLabel: { fontSize: 14, fontWeight: '700', color: '#1a5f4a', marginBottom: 8, marginTop: 4 },
   error: { color: '#b00020', fontSize: 13, marginTop: 4 },
   submitBtn: { marginTop: 8 },

@@ -20,9 +20,15 @@ function statusBadge(status: string) {
 
 interface ResultCardProps {
   result: MatchResultRow
+  teamAName?: string
+  teamBName?: string
 }
 
-export function ResultCard({ result }: ResultCardProps) {
+export function ResultCard({
+  result,
+  teamAName = 'Equipo A',
+  teamBName = 'Equipo B',
+}: ResultCardProps) {
   const badge = statusBadge(result.status)
 
   return (
@@ -34,9 +40,11 @@ export function ResultCard({ result }: ResultCardProps) {
         </View>
       </View>
       <Text style={s.score}>
-        Equipo A: {result.team_a_games} — Equipo B: {result.team_b_games}
+        {teamAName}: {result.team_a_games} — {teamBName}: {result.team_b_games}
       </Text>
-      <Text style={s.meta}>Enviado por equipo {result.submitted_by_team}</Text>
+      <Text style={s.meta}>
+        Enviado por {result.submitted_by_team === 'A' ? teamAName : teamBName}
+      </Text>
     </View>
   )
 }
