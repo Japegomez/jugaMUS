@@ -1,6 +1,6 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 13/05/2026 (cierre de sesión)
+> Actualizado: 18/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -108,9 +108,15 @@ _Ninguna tarea en progreso actualmente._
   - [x] Lista de participantes por equipo (A y B)
   - [x] Botón "Unirse" (si hay plaza y no eres participante)
   - [x] Botón "Abandonar" (si eres participante y partida en estado `planned`)
+  - [x] Confirmación de abandonar con `LeaveMatchModal` (web); re-unión tras abandonar actualiza fila existente (sin error 23505).
   - [x] Botones "Editar" y "Cancelar" (solo para el creador)
   - [x] Cancelar partida también en `in_progress` (creador, sin exigir ser participante); confirmación con modal (`CancelMatchModal`) para que funcione en web (sin `Alert`).
   - [x] Teléfonos visibles solo si eres participante confirmado
+  - [x] Jugadores por nombre (texto) en crear/editar; nombres de equipo editables; creador como jugador 1 equipo A al crear.
+  - [x] Plazas libres / cron / explore cuentan jugadores de texto (`016` + `freeTeamSlots` en cliente).
+  - [x] Edición de plantilla: no permite más jugadores de texto de los que caben si hay cuentas registradas en el equipo.
+  - [x] Marcador directo por creador en partidas sin otros registrados (`record_match_result_direct`); botón solo con partida `in_progress` (`017`).
+  - [x] FAB «Nueva partida» en pantalla Mis partidas (como Descubrir).
 - [x] Pantalla de edición de partida (mismo formulario que creación)
 - [x] Lógica de unirse a partida con selección de equipo
 - [x] Constraint: máximo 2 confirmados por equipo
@@ -151,7 +157,7 @@ _Ninguna tarea en progreso actualmente._
 - [x] Crear tabla `match_state_transitions`
 - [x] Añadir índices correspondientes (idx_notifications_pending)
   - Migraciones `010` y `011` aplicadas en Supabase. También incluye `idx_reports_status`, `idx_results_match`, `idx_state_transitions_match`. RLS habilitada en todas las tablas nuevas.
-  - Migración `012` (triggers de confirmación de resultado + backfill si faltaba el trigger en remoto): mantener aplicada en Supabase en todos los entornos; `useCancelMatch` invalida cache de resultado al cancelar.
+  - Migraciones `012` / `018` (triggers de confirmación de resultado + notificación al enviar resultado): **aplicadas en remoto** (18/05); incluyen backfill de filas aprobadas sin actualizar estado. `useCancelMatch` invalida cache de resultado al cancelar.
 
 ### F6 - Notificaciones
 
@@ -190,6 +196,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Lógica de validación por equipo rival
 - [x] Pantalla/modal de confirmación o disputa de resultado
   - Aprobación con `ApproveResultModal` (misma idea que disputa: evita `Alert` vacío en Expo Web).
+  - Trigger `fn_process_result_confirmation` reparado en remoto (`018`); al aprobar pasa resultado a `confirmed` y partida a `finished`.
 - [x] Estado `resultado en revisión` cuando hay disputa
 - [x] Reporte automático generado al abrir una disputa
 
