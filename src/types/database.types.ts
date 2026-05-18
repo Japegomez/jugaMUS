@@ -168,8 +168,10 @@ export type Database = {
           place_text: string | null
           start_at: string
           status: string
+          team_a_name: string
           team_a_player_1: string | null
           team_a_player_2: string | null
+          team_b_name: string
           team_b_player_1: string | null
           team_b_player_2: string | null
           title: string
@@ -188,8 +190,10 @@ export type Database = {
           place_text?: string | null
           start_at: string
           status?: string
+          team_a_name?: string
           team_a_player_1?: string | null
           team_a_player_2?: string | null
+          team_b_name?: string
           team_b_player_1?: string | null
           team_b_player_2?: string | null
           title: string
@@ -208,8 +212,10 @@ export type Database = {
           place_text?: string | null
           start_at?: string
           status?: string
+          team_a_name?: string
           team_a_player_1?: string | null
           team_a_player_2?: string | null
+          team_b_name?: string
           team_b_player_1?: string | null
           team_b_player_2?: string | null
           title?: string
