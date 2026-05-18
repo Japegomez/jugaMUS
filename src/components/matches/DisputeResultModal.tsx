@@ -8,6 +8,8 @@ export interface DisputeResultModalProps {
   onClose: () => void
   teamAScore: number
   teamBScore: number
+  teamAName?: string
+  teamBName?: string
   submitterDisplayName: string
   loading: boolean
   onDispute: (comment: string | null) => void
@@ -18,6 +20,8 @@ export function DisputeResultModal({
   onClose,
   teamAScore,
   teamBScore,
+  teamAName = 'Equipo A',
+  teamBName = 'Equipo B',
   submitterDisplayName,
   loading,
   onDispute,
@@ -44,7 +48,7 @@ export function DisputeResultModal({
         </View>
         <View style={s.body}>
           <Text style={s.score}>
-            Equipo A: {teamAScore} — Equipo B: {teamBScore}
+            {teamAName}: {teamAScore} — {teamBName}: {teamBScore}
           </Text>
           <Text style={s.submitter}>
             Enviado por <Text style={s.submitterName}>{submitterDisplayName}</Text>

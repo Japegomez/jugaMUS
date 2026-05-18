@@ -24,26 +24,23 @@ const schema = z.object({
 type FormInput = z.input<typeof schema>
 type FormOutput = z.output<typeof schema>
 
-export interface SubmitResultModalProps {
+export interface RecordResultModalProps {
   visible: boolean
   onClose: () => void
-  viewerTeam: string
-  viewerTeamLabel: string
   teamAName: string
   teamBName: string
   loading: boolean
   onSubmit: (values: { teamAGames: number; teamBGames: number }) => void
 }
 
-export function SubmitResultModal({
+export function RecordResultModal({
   visible,
   onClose,
-  viewerTeamLabel,
   teamAName,
   teamBName,
   loading,
   onSubmit,
-}: SubmitResultModalProps) {
+}: RecordResultModalProps) {
   const {
     control,
     handleSubmit,
@@ -55,6 +52,7 @@ export function SubmitResultModal({
   })
 
   const close = () => {
+    if (loading) return
     reset({ team_a_games: '3', team_b_games: '3' })
     onClose()
   }
@@ -67,16 +65,19 @@ export function SubmitResultModal({
       onRequestClose={close}>
       <SafeAreaView style={s.wrap}>
         <View style={s.header}>
-          <Text style={s.title}>Registrar resultado</Text>
-          <Pressable onPress={close} accessibilityRole="button" accessibilityLabel="Cerrar">
+          <Text style={s.title}>Registrar marcador</Text>
+          <Pressable
+            onPress={close}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar">
             <Text style={s.close}>✕</Text>
           </Pressable>
         </View>
         <View style={s.body}>
-          <Text style={s.hint}>
-            Tu equipo: <Text style={s.hintStrong}>{viewerTeamLabel}</Text>
+          <Text style={s.sub}>
+            Partida personal: el marcador queda confirmado al guardar (sin validación del rival).
           </Text>
-          <Text style={s.sub}>Introduce los juegos ganados por cada equipo (0 a 6).</Text>
 
           <Controller
             control={control}
@@ -108,7 +109,7 @@ export function SubmitResultModal({
           />
 
           <Button
-            title="Enviar resultado"
+            title="Confirmar marcador"
             onPress={handleSubmit((v) =>
               onSubmit({
                 teamAGames: v.team_a_games,
@@ -117,6 +118,13 @@ export function SubmitResultModal({
             )}
             loading={loading}
             style={{ marginTop: 12 }}
+          />
+          <Button
+            title="Cancelar"
+            variant="outline"
+            onPress={close}
+            disabled={loading}
+            style={{ marginTop: 8 }}
           />
         </View>
       </SafeAreaView>
@@ -138,7 +146,5 @@ const s = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
   close: { fontSize: 18, color: '#555', padding: 4 },
   body: { padding: 20 },
-  hint: { fontSize: 15, color: '#444', marginBottom: 6 },
-  hintStrong: { fontWeight: '700', color: '#1a5f4a' },
-  sub: { fontSize: 14, color: '#666', marginBottom: 16 },
+  sub: { fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 20 },
 })

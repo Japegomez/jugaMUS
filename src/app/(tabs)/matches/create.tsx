@@ -10,7 +10,7 @@ import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useCreateMatch } from '@/hooks/useMatches'
-import { MATCH_VISIBILITY } from '@/constants'
+import { DEFAULT_TEAM_A_NAME, DEFAULT_TEAM_B_NAME, MATCH_VISIBILITY } from '@/constants'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -38,6 +38,19 @@ const createMatchSchema = z.object({
   duration_target_games: z.number().int().min(1).max(6),
   visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
   notes: z.string().trim().max(300, 'Notas demasiado largas').optional().or(z.literal('')),
+  team_a_name: z
+    .string()
+    .trim()
+    .min(1, 'Nombre del equipo requerido')
+    .max(40, 'Nombre demasiado largo'),
+  team_b_name: z
+    .string()
+    .trim()
+    .min(1, 'Nombre del equipo requerido')
+    .max(40, 'Nombre demasiado largo'),
+  team_a_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
+  team_b_player_1: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
+  team_b_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
 })
 
 type CreateMatchValues = z.infer<typeof createMatchSchema>
@@ -48,6 +61,11 @@ function defaultStartAt() {
   const d = new Date()
   d.setHours(d.getHours() + 2, 0, 0, 0)
   return dateToLocalIsoString(d)
+}
+
+function textPlayerOrNull(value?: string): string | null {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -74,6 +92,11 @@ export default function CreateMatchScreen() {
       duration_target_games: 3,
       visibility: MATCH_VISIBILITY.PUBLIC,
       notes: '',
+      team_a_name: DEFAULT_TEAM_A_NAME,
+      team_b_name: DEFAULT_TEAM_B_NAME,
+      team_a_player_2: '',
+      team_b_player_1: '',
+      team_b_player_2: '',
     },
   })
 
@@ -93,6 +116,12 @@ export default function CreateMatchScreen() {
         duration_target_games: values.duration_target_games,
         visibility: values.visibility,
         location_privacy: 'participants_only',
+        team_a_name: values.team_a_name.trim(),
+        team_b_name: values.team_b_name.trim(),
+        team_a_player_1: null,
+        team_a_player_2: textPlayerOrNull(values.team_a_player_2),
+        team_b_player_1: textPlayerOrNull(values.team_b_player_1),
+        team_b_player_2: textPlayerOrNull(values.team_b_player_2),
       })
       router.replace(`/(tabs)/matches/${match.id}`)
     } catch (err) {
@@ -248,6 +277,85 @@ export default function CreateMatchScreen() {
         {errors.visibility ? <Text style={s.error}>{errors.visibility.message}</Text> : null}
       </View>
 
+      {/* Equipos y jugadores */}
+      <View style={s.fieldWrap}>
+        <Text style={s.label}>Equipos y jugadores (opcional)</Text>
+        <Text style={s.hint}>
+          Te unirás automáticamente como jugador 1 del primer equipo. El resto puede ser por nombre
+          (sin cuenta en la app).
+        </Text>
+        <Controller
+          control={control}
+          name="team_a_name"
+          render={({ field }) => (
+            <Input
+              label="Nombre equipo A"
+              placeholder={DEFAULT_TEAM_A_NAME}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.team_a_name?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="team_a_player_2"
+          render={({ field }) => (
+            <Input
+              label="Compañero (jugador 2, opcional)"
+              placeholder="Nombre"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.team_a_player_2?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="team_b_name"
+          render={({ field }) => (
+            <Input
+              label="Nombre equipo B"
+              placeholder={DEFAULT_TEAM_B_NAME}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.team_b_name?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="team_b_player_1"
+          render={({ field }) => (
+            <Input
+              label="Jugador 1"
+              placeholder="Nombre"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.team_b_player_1?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="team_b_player_2"
+          render={({ field }) => (
+            <Input
+              label="Jugador 2"
+              placeholder="Nombre"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.team_b_player_2?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+      </View>
+
       {/* Notas */}
       <Controller
         control={control}
@@ -363,6 +471,8 @@ const s = StyleSheet.create({
   rowText: { flex: 1, marginRight: 12 },
   rowLabel: { fontSize: 16, color: '#1a1a1a', fontWeight: '500' },
   rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
+  hint: { fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 },
+  teamLabel: { fontSize: 14, fontWeight: '700', color: '#1a5f4a', marginBottom: 8, marginTop: 4 },
   error: { color: '#b00020', fontSize: 13, marginTop: 4 },
   submitBtn: { marginTop: 8 },
 })

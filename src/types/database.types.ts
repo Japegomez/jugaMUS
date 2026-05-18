@@ -168,6 +168,12 @@ export type Database = {
           place_text: string | null
           start_at: string
           status: string
+          team_a_name: string
+          team_a_player_1: string | null
+          team_a_player_2: string | null
+          team_b_name: string
+          team_b_player_1: string | null
+          team_b_player_2: string | null
           title: string
           updated_at: string
           visibility: string
@@ -184,6 +190,12 @@ export type Database = {
           place_text?: string | null
           start_at: string
           status?: string
+          team_a_name?: string
+          team_a_player_1?: string | null
+          team_a_player_2?: string | null
+          team_b_name?: string
+          team_b_player_1?: string | null
+          team_b_player_2?: string | null
           title: string
           updated_at?: string
           visibility?: string
@@ -200,6 +212,12 @@ export type Database = {
           place_text?: string | null
           start_at?: string
           status?: string
+          team_a_name?: string
+          team_a_player_1?: string | null
+          team_a_player_2?: string | null
+          team_b_name?: string
+          team_b_player_1?: string | null
+          team_b_player_2?: string | null
           title?: string
           updated_at?: string
           visibility?: string
@@ -488,6 +506,14 @@ export type Database = {
           creator_id: string
           match_result_id: string
         }[]
+      }
+      record_match_result_direct: {
+        Args: {
+          p_match_id: string
+          p_team_a_games: number
+          p_team_b_games: number
+        }
+        Returns: undefined
       }
       list_public_matches: {
         Args: {

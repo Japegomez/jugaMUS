@@ -64,21 +64,37 @@ export default function MatchesScreen() {
     )
   }
 
+  const createFab = (
+    <Pressable
+      style={styles.fab}
+      onPress={() => router.push('/(tabs)/matches/create')}
+      accessibilityRole="button"
+      accessibilityLabel="Crear partida">
+      <Text style={styles.fabIcon}>＋</Text>
+    </Pressable>
+  )
+
   if (isLoading) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
+      <View style={styles.root}>
+        <View style={[styles.container, styles.centered]}>
+          <ActivityIndicator size="large" color="#1a5f4a" />
+        </View>
+        {createFab}
       </View>
     )
   }
 
   if (isError || !data) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Text style={styles.empty}>No se pudieron cargar tus partidas.</Text>
-        <Pressable onPress={() => refetch()} style={styles.retry}>
-          <Text style={styles.retryText}>Reintentar</Text>
-        </Pressable>
+      <View style={styles.root}>
+        <View style={[styles.container, styles.centered]}>
+          <Text style={styles.empty}>No se pudieron cargar tus partidas.</Text>
+          <Pressable onPress={() => refetch()} style={styles.retry}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </Pressable>
+        </View>
+        {createFab}
       </View>
     )
   }
@@ -90,70 +106,91 @@ export default function MatchesScreen() {
     upcoming.length > 0 || inProgressDeduped.length > 0 || awaitingResultValidation.length > 0
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingTop: Math.max(insets.top, 16), paddingBottom: insets.bottom + 24 },
-      ]}
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-      }>
-      <Text style={styles.screenTitle}>Mis partidas</Text>
-      <Text style={styles.screenSubtitle}>
-        Próximas fechas, partidas en curso y acciones pendientes. El historial está en Perfil.
-      </Text>
-
-      {!hasAny ? (
-        <Text style={styles.emptyBlock}>
-          No tienes partidas activas aquí. Explora en Descubrir o revisa tu historial en Perfil.
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: Math.max(insets.top, 16), paddingBottom: insets.bottom + 88 },
+        ]}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }>
+        <Text style={styles.screenTitle}>Mis partidas</Text>
+        <Text style={styles.screenSubtitle}>
+          Próximas fechas, partidas en curso y acciones pendientes. El historial está en Perfil.
         </Text>
-      ) : null}
 
-      {awaitingResultValidation.length > 0 ? (
-        <Section title="Pendiente: validar resultado">
-          {awaitingResultValidation.map((m) => (
-            <MatchRowCard
-              key={m.id}
-              row={m}
-              subtitle="Tienes que aprobar o disputar el marcador enviado por el rival."
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))}
-        </Section>
-      ) : null}
+        {!hasAny ? (
+          <Text style={styles.emptyBlock}>
+            No tienes partidas activas aquí. Explora en Descubrir o crea una nueva partida.
+          </Text>
+        ) : null}
 
-      {inProgressDeduped.length > 0 ? (
-        <Section title="En curso">
-          {inProgressDeduped.map((m) => (
-            <MatchRowCard
-              key={m.id}
-              row={m}
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))}
-        </Section>
-      ) : null}
+        {awaitingResultValidation.length > 0 ? (
+          <Section title="Pendiente: validar resultado">
+            {awaitingResultValidation.map((m) => (
+              <MatchRowCard
+                key={m.id}
+                row={m}
+                subtitle="Tienes que aprobar o disputar el marcador enviado por el rival."
+                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+              />
+            ))}
+          </Section>
+        ) : null}
 
-      {upcoming.length > 0 ? (
-        <Section title="Próximas">
-          {upcoming.map((m) => (
-            <MatchRowCard
-              key={m.id}
-              row={m}
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))}
-        </Section>
-      ) : null}
-    </ScrollView>
+        {inProgressDeduped.length > 0 ? (
+          <Section title="En curso">
+            {inProgressDeduped.map((m) => (
+              <MatchRowCard
+                key={m.id}
+                row={m}
+                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+              />
+            ))}
+          </Section>
+        ) : null}
+
+        {upcoming.length > 0 ? (
+          <Section title="Próximas">
+            {upcoming.map((m) => (
+              <MatchRowCard
+                key={m.id}
+                row={m}
+                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+              />
+            ))}
+          </Section>
+        ) : null}
+      </ScrollView>
+      {createFab}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#f6f7f4' },
   scroll: { flex: 1, backgroundColor: '#f6f7f4' },
   scrollContent: { paddingHorizontal: 20 },
   container: { flex: 1, backgroundColor: '#f6f7f4' },
+  fab: {
+    position: 'absolute',
+    bottom: 28,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1a5f4a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
   centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
   screenTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
   screenSubtitle: { fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 20 },
