@@ -42,6 +42,10 @@ export type MatchRow = {
   location_privacy: string
   status: string
   creator_id: string
+  team_a_player_1: string | null
+  team_a_player_2: string | null
+  team_b_player_1: string | null
+  team_b_player_2: string | null
   created_at: string
   updated_at: string
 }
@@ -83,6 +87,10 @@ export type MatchInsert = Pick<
   | 'duration_target_games'
   | 'visibility'
   | 'location_privacy'
+  | 'team_a_player_1'
+  | 'team_a_player_2'
+  | 'team_b_player_1'
+  | 'team_b_player_2'
 >
 
 export type MatchUpdate = Pick<
@@ -95,6 +103,10 @@ export type MatchUpdate = Pick<
   | 'place_text'
   | 'duration_target_games'
   | 'visibility'
+  | 'team_a_player_1'
+  | 'team_a_player_2'
+  | 'team_b_player_1'
+  | 'team_b_player_2'
 >
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -518,6 +530,21 @@ function emptyToUndefined(s: string | null | undefined): string | undefined {
   if (s == null) return undefined
   const t = s.trim()
   return t === '' ? undefined : t
+}
+
+/** Creator-only matches with no other registered players: record score and close match. */
+export async function recordMatchResultDirect(
+  matchId: string,
+  teamAGames: number,
+  teamBGames: number
+): Promise<void> {
+  const { error } = await supabase.rpc('record_match_result_direct', {
+    p_match_id: matchId,
+    p_team_a_games: teamAGames,
+    p_team_b_games: teamBGames,
+  })
+
+  if (error) throw new Error(error.message)
 }
 
 /**

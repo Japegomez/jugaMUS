@@ -19,11 +19,18 @@ import { ApproveResultModal } from '@/components/matches/ApproveResultModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
+import { RecordResultModal } from '@/components/matches/RecordResultModal'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
 import { ReportModal } from '@/components/ui/ReportModal'
 import { useAuthStore } from '@/hooks/useAuth'
-import { useCancelMatch, useJoinMatch, useLeaveMatch, useMatch } from '@/hooks/useMatches'
+import {
+  useCancelMatch,
+  useJoinMatch,
+  useLeaveMatch,
+  useMatch,
+  useRecordMatchResultDirect,
+} from '@/hooks/useMatches'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import { getParticipantProfile } from '@/services/matches.service'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
@@ -182,21 +189,32 @@ const card = StyleSheet.create({
 interface TeamSectionProps {
   team: string
   participants: ParticipantWithProfile[]
+  textPlayers?: (string | null | undefined)[]
   matchId: string
   canRevealPhone: boolean
   currentUserId?: string
   onReportUser?: (userId: string, displayName: string) => void
 }
 
+function TextPlayerRow({ name }: { name: string }) {
+  return (
+    <View style={textPlayer_s.row}>
+      <Text style={textPlayer_s.name}>{name}</Text>
+    </View>
+  )
+}
+
 function TeamSection({
   team,
   participants,
+  textPlayers,
   matchId,
   canRevealPhone,
   currentUserId,
   onReportUser,
 }: TeamSectionProps) {
   const active = participants.filter((p) => p.team === team && p.left_at === null)
+  const textNames = (textPlayers ?? []).map((n) => n?.trim()).filter((n): n is string => Boolean(n))
   const slots = MAX_PLAYERS_PER_TEAM - active.length
 
   return (
@@ -209,7 +227,10 @@ function TeamSection({
             : 'Completo'}
         </Text>
       </View>
-      {active.length === 0 ? (
+      {textNames.map((name, i) => (
+        <TextPlayerRow key={`text-${team}-${i}-${name}`} name={name} />
+      ))}
+      {active.length === 0 && textNames.length === 0 ? (
         <Text style={team_s.empty}>Sin jugadores aún</Text>
       ) : (
         active.map((p) => (
@@ -238,6 +259,18 @@ const team_s = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
   slots: { fontSize: 13, color: '#888' },
   empty: { fontSize: 14, color: '#bbb', paddingVertical: 8 },
+})
+
+const textPlayer_s = StyleSheet.create({
+  row: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+  },
+  name: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
 })
 
 // ─── Join Modal ───────────────────────────────────────────────────────────────
@@ -343,9 +376,11 @@ export default function MatchDetailScreen() {
   const cancelMatch = useCancelMatch()
   const submitResultMut = useSubmitResult()
   const submitConfirmationMut = useSubmitConfirmation()
+  const recordResultDirectMut = useRecordMatchResultDirect()
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
+  const [recordResultVisible, setRecordResultVisible] = useState(false)
   const [disputeResultVisible, setDisputeResultVisible] = useState(false)
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
@@ -396,12 +431,25 @@ export default function MatchDetailScreen() {
     (latestResult.status === RESULT_STATUS.PENDING_VALIDATION ||
       latestResult.status === RESULT_STATUS.CONFIRMED)
 
+  const otherRegistered = activeParticipants.filter((p) => p.user_id !== userId)
+  const isPersonalMatch = isCreator && otherRegistered.length === 0
+
   const canSubmitResult = Boolean(
     userId &&
     myParticipation &&
+    !isPersonalMatch &&
     match.status !== MATCH_STATUS.CANCELLED &&
     (match.status === MATCH_STATUS.IN_PROGRESS ||
       match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
+    !resultBlocksNewSubmit
+  )
+
+  const canRecordDirect = Boolean(
+    userId &&
+    isPersonalMatch &&
+    !isCancelled &&
+    match.status !== MATCH_STATUS.FINISHED &&
+    (isPlanned || isInProgress || match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
     !resultBlocksNewSubmit
   )
 
@@ -461,6 +509,20 @@ export default function MatchDetailScreen() {
       setSubmitResultVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
+    }
+  }
+
+  const handleRecordDirect = async (payload: { teamAGames: number; teamBGames: number }) => {
+    if (!userId) return
+    try {
+      await recordResultDirectMut.mutateAsync({
+        matchId: id,
+        teamAGames: payload.teamAGames,
+        teamBGames: payload.teamBGames,
+      })
+      setRecordResultVisible(false)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el marcador')
     }
   }
 
@@ -565,6 +627,7 @@ export default function MatchDetailScreen() {
           <TeamSection
             team={TEAM.A}
             participants={match.participants}
+            textPlayers={[match.team_a_player_1, match.team_a_player_2]}
             matchId={id}
             canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
@@ -582,6 +645,7 @@ export default function MatchDetailScreen() {
           <TeamSection
             team={TEAM.B}
             participants={match.participants}
+            textPlayers={[match.team_b_player_1, match.team_b_player_2]}
             matchId={id}
             canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
@@ -675,6 +739,14 @@ export default function MatchDetailScreen() {
             />
           ) : null}
 
+          {canRecordDirect ? (
+            <Button
+              title="Registrar marcador"
+              onPress={() => setRecordResultVisible(true)}
+              style={s.actionBtn}
+            />
+          ) : null}
+
           {canValidateResult ? (
             <>
               <Button
@@ -739,6 +811,13 @@ export default function MatchDetailScreen() {
           onSubmit={handleSubmitScores}
         />
       ) : null}
+
+      <RecordResultModal
+        visible={recordResultVisible}
+        onClose={() => setRecordResultVisible(false)}
+        loading={recordResultDirectMut.isPending}
+        onSubmit={handleRecordDirect}
+      />
 
       {latestResult && myParticipation ? (
         <>

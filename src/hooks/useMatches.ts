@@ -10,6 +10,7 @@ import {
   joinMatch,
   leaveMatch,
   listPublicMatchesPage,
+  recordMatchResultDirect,
   updateMatch,
 } from '@/services/matches.service'
 import type { MatchInsert, MatchUpdate, PublicMatchesListFilters } from '@/services/matches.service'
@@ -205,6 +206,37 @@ export function useLeaveMatch() {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
       invalidatePublicMatchesExplore(queryClient)
       invalidateMyMatchesDashboard(queryClient, userId)
+    },
+  })
+}
+
+export function useRecordMatchResultDirect() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: ({
+      matchId,
+      teamAGames,
+      teamBGames,
+    }: {
+      matchId: string
+      teamAGames: number
+      teamBGames: number
+    }) => recordMatchResultDirect(matchId, teamAGames, teamBGames),
+    onSuccess: (_void, { matchId }) => {
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
+      queryClient.invalidateQueries({
+        queryKey: [...matchQueryKey(matchId), 'match_result'],
+        exact: false,
+      })
+      if (sessionUserId) {
+        queryClient.invalidateQueries({
+          queryKey: userMatchesQueryKey(sessionUserId),
+        })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+      }
+      invalidatePublicMatchesExplore(queryClient)
     },
   })
 }
