@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { BarChart, LineChart } from 'react-native-chart-kit'
 
+import { AdminCloseBar } from '@/components/admin/AdminCloseBar'
+
 import {
   useAnalyticsSummary,
   useMatchesByCity,
@@ -56,74 +58,85 @@ export default function AdminAnalyticsScreen() {
   }, [byCity])
 
   return (
-    <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      {summaryLoading ? (
-        <ActivityIndicator size="large" color="#1a5f4a" />
-      ) : summary ? (
-        <View style={styles.statsGrid}>
-          <StatCard label="MAU" value={String(summary.mau)} />
-          <StatCard label="Partidas" value={String(summary.total_matches)} />
-          <StatCard label="% confirmados" value={`${summary.pct_confirmed}%`} />
-          <StatCard label="% disputados" value={`${summary.pct_disputed}%`} />
-        </View>
-      ) : null}
+    <View style={styles.root}>
+      <AdminCloseBar />
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={styles.screenTitle}>Analíticas</Text>
+        {summaryLoading ? (
+          <ActivityIndicator size="large" color="#1a5f4a" />
+        ) : summary ? (
+          <View style={styles.statsGrid}>
+            <StatCard label="MAU" value={String(summary.mau)} />
+            <StatCard label="Partidas" value={String(summary.total_matches)} />
+            <StatCard label="% confirmados" value={`${summary.pct_confirmed}%`} />
+            <StatCard label="% disputados" value={`${summary.pct_disputed}%`} />
+          </View>
+        ) : null}
 
-      <Text style={styles.sectionTitle}>Partidas por semana</Text>
-      {weekLoading ? (
-        <ActivityIndicator color="#1a5f4a" />
-      ) : (
-        <LineChart
-          data={lineData}
-          width={screenWidth}
-          height={220}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-          yAxisLabel=""
-          yAxisSuffix=""
-        />
-      )}
+        <Text style={styles.sectionTitle}>Partidas por semana</Text>
+        {weekLoading ? (
+          <ActivityIndicator color="#1a5f4a" />
+        ) : (
+          <LineChart
+            data={lineData}
+            width={screenWidth}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            style={styles.chart}
+            yAxisLabel=""
+            yAxisSuffix=""
+          />
+        )}
 
-      <Text style={styles.sectionTitle}>Top ciudades</Text>
-      {cityLoading ? (
-        <ActivityIndicator color="#1a5f4a" />
-      ) : (
-        <BarChart
-          data={barData}
-          width={screenWidth}
-          height={240}
-          chartConfig={chartConfig}
-          style={styles.chart}
-          yAxisLabel=""
-          yAxisSuffix=""
-          fromZero
-          showValuesOnTopOfBars
-        />
-      )}
+        <Text style={styles.sectionTitle}>Top ciudades</Text>
+        {cityLoading ? (
+          <ActivityIndicator color="#1a5f4a" />
+        ) : (
+          <BarChart
+            data={barData}
+            width={screenWidth}
+            height={240}
+            chartConfig={chartConfig}
+            style={styles.chart}
+            yAxisLabel=""
+            yAxisSuffix=""
+            fromZero
+            showValuesOnTopOfBars
+          />
+        )}
 
-      <Text style={styles.sectionTitle}>Ranking de usuarios</Text>
-      {rankingLoading ? (
-        <ActivityIndicator color="#1a5f4a" />
-      ) : !ranking?.length ? (
-        <Text style={styles.empty}>Sin datos de participación.</Text>
-      ) : (
-        <View style={styles.rankingCard}>
-          {ranking.map((row, index) => (
-            <View key={row.user_id} style={styles.rankingRow}>
-              <Text style={styles.rankNum}>{index + 1}</Text>
-              <Text style={styles.rankName} numberOfLines={1}>
-                {row.display_name}
-              </Text>
-              <Text style={styles.rankCount}>{row.match_count} partidas</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+        <Text style={styles.sectionTitle}>Ranking de usuarios</Text>
+        {rankingLoading ? (
+          <ActivityIndicator color="#1a5f4a" />
+        ) : !ranking?.length ? (
+          <Text style={styles.empty}>Sin datos de participación.</Text>
+        ) : (
+          <View style={styles.rankingCard}>
+            {ranking.map((row, index) => (
+              <View key={row.user_id} style={styles.rankingRow}>
+                <Text style={styles.rankNum}>{index + 1}</Text>
+                <Text style={styles.rankName} numberOfLines={1}>
+                  {row.display_name}
+                </Text>
+                <Text style={styles.rankCount}>{row.match_count} partidas</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#f6f7f4' },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
   scroll: {
     flexGrow: 1,
     padding: 20,

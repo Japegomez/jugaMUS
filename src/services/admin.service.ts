@@ -1,8 +1,32 @@
 import { supabase } from '@/lib/supabase'
 import type { Json, Tables } from '@/types/database.types'
 
+export type ReportTargetUserSummary = {
+  display_name: string
+  city: string | null
+  status: string
+}
+
+export type ReportTargetMatchSummary = {
+  title: string
+  city: string
+  start_at: string
+  status: string
+}
+
+export type ReportTargetResultSummary = {
+  match_id: string
+  match_title: string | null
+  team_a_games: number
+  team_b_games: number
+  result_status: string
+}
+
 export type AdminReport = Tables<'reports'> & {
   reporter_display_name: string | null
+  target_user: ReportTargetUserSummary | null
+  target_match: ReportTargetMatchSummary | null
+  target_result: ReportTargetResultSummary | null
 }
 
 export type ReportListFilters = {
@@ -68,7 +92,7 @@ export async function fetchAdminReports(filters: ReportListFilters): Promise<Adm
     throw new Error(error.message || 'No se pudieron cargar los reportes')
   }
 
-  return (data ?? []).map((row) => {
+  const reports = (data ?? []).map((row) => {
     const { reporter, ...report } = row as Tables<'reports'> & {
       reporter: { display_name: string } | null
     }
@@ -77,6 +101,105 @@ export async function fetchAdminReports(filters: ReportListFilters): Promise<Adm
       reporter_display_name: reporter?.display_name ?? null,
     }
   })
+
+  return enrichReportsWithTargets(reports)
+}
+
+async function enrichReportsWithTargets(
+  reports: Array<Tables<'reports'> & { reporter_display_name: string | null }>
+): Promise<AdminReport[]> {
+  const userIds = [
+    ...new Set(reports.filter((r) => r.target_type === 'user').map((r) => r.target_id)),
+  ]
+  const matchIds = [
+    ...new Set(reports.filter((r) => r.target_type === 'match').map((r) => r.target_id)),
+  ]
+  const resultIds = [
+    ...new Set(reports.filter((r) => r.target_type === 'result').map((r) => r.target_id)),
+  ]
+
+  const usersById = new Map<string, ReportTargetUserSummary>()
+  const matchesById = new Map<string, ReportTargetMatchSummary>()
+  const resultsById = new Map<string, ReportTargetResultSummary>()
+
+  if (userIds.length > 0) {
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, city, status')
+      .in('id', userIds)
+
+    if (error) {
+      throw new Error(error.message || 'No se pudieron cargar los usuarios reportados')
+    }
+
+    for (const p of profiles ?? []) {
+      usersById.set(p.id, {
+        display_name: p.display_name,
+        city: p.city,
+        status: p.status,
+      })
+    }
+  }
+
+  if (matchIds.length > 0) {
+    const { data: matches, error } = await supabase
+      .from('matches')
+      .select('id, title, city, start_at, status')
+      .in('id', matchIds)
+
+    if (error) {
+      throw new Error(error.message || 'No se pudieron cargar las partidas reportadas')
+    }
+
+    for (const m of matches ?? []) {
+      matchesById.set(m.id, {
+        title: m.title,
+        city: m.city,
+        start_at: m.start_at,
+        status: m.status,
+      })
+    }
+  }
+
+  if (resultIds.length > 0) {
+    const { data: results, error } = await supabase
+      .from('match_results')
+      .select(
+        `
+        id,
+        match_id,
+        team_a_games,
+        team_b_games,
+        status,
+        match:matches!match_results_match_id_fkey(title)
+      `
+      )
+      .in('id', resultIds)
+
+    if (error) {
+      throw new Error(error.message || 'No se pudieron cargar los resultados reportados')
+    }
+
+    for (const row of results ?? []) {
+      const match = row.match as { title: string } | null
+      resultsById.set(row.id, {
+        match_id: row.match_id,
+        match_title: match?.title ?? null,
+        team_a_games: row.team_a_games,
+        team_b_games: row.team_b_games,
+        result_status: row.status,
+      })
+    }
+  }
+
+  return reports.map((report) => ({
+    ...report,
+    target_user: report.target_type === 'user' ? (usersById.get(report.target_id) ?? null) : null,
+    target_match:
+      report.target_type === 'match' ? (matchesById.get(report.target_id) ?? null) : null,
+    target_result:
+      report.target_type === 'result' ? (resultsById.get(report.target_id) ?? null) : null,
+  }))
 }
 
 export async function resolveReport(
@@ -121,6 +244,10 @@ export async function blockUser(adminId: string, userId: string, reportId?: stri
     target_id: userId,
     details: reportId ? { report_id: reportId } : null,
   })
+
+  if (reportId) {
+    await resolveReport(adminId, reportId, 'user_suspended')
+  }
 }
 
 export async function deleteMatch(
@@ -140,6 +267,10 @@ export async function deleteMatch(
     target_id: matchId,
     details: reportId ? { report_id: reportId } : null,
   })
+
+  if (reportId) {
+    await resolveReport(adminId, reportId, 'match_deleted')
+  }
 }
 
 export async function deleteMatchResult(
@@ -159,6 +290,10 @@ export async function deleteMatchResult(
     target_id: resultId,
     details: reportId ? { report_id: reportId } : null,
   })
+
+  if (reportId) {
+    await resolveReport(adminId, reportId, 'result_deleted')
+  }
 }
 
 export async function fetchAnalyticsSummary(): Promise<AnalyticsSummary> {

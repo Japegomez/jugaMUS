@@ -1,48 +1,48 @@
-import { useEffect } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
-import { Stack, useRouter } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
 
 export default function AdminLayout() {
-  const router = useRouter()
+  const initialized = useAuthStore((s) => s.initialized)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
-  const { data: profile, isLoading, isError } = useProfile(sessionUserId)
+  const { data: profile, isLoading, isError, isFetched } = useProfile(sessionUserId)
 
-  useEffect(() => {
-    if (isLoading) return
-    if (!sessionUserId || isError || !profile || profile.role !== 'admin') {
-      router.replace('/(tabs)/matches')
-    }
-  }, [isLoading, isError, profile, sessionUserId, router])
+  if (initialized && !sessionUserId) {
+    return <Redirect href="/(auth)/login" />
+  }
 
-  if (isLoading || !profile || profile.role !== 'admin') {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
-      </View>
-    )
+  if (initialized && isFetched && !isLoading && (isError || profile?.role !== 'admin')) {
+    return <Redirect href="/(tabs)/matches" />
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: true,
-        headerTintColor: '#1a5f4a',
-        headerStyle: { backgroundColor: '#f6f7f4' },
-        headerTitleStyle: { fontWeight: '600' },
-      }}>
-      <Stack.Screen name="index" options={{ title: 'Administración' }} />
-      <Stack.Screen name="reports" options={{ title: 'Reportes' }} />
-      <Stack.Screen name="analytics" options={{ title: 'Analíticas' }} />
-    </Stack>
+    <View style={styles.root}>
+      <Stack
+        screenOptions={{
+          headerShown: true,
+          headerTintColor: '#1a5f4a',
+          headerStyle: { backgroundColor: '#f6f7f4' },
+          headerTitleStyle: { fontWeight: '600' },
+        }}>
+        <Stack.Screen name="index" options={{ title: 'Administración' }} />
+        <Stack.Screen name="reports" options={{ headerShown: false }} />
+        <Stack.Screen name="analytics" options={{ headerShown: false }} />
+      </Stack>
+      {(!initialized || isLoading || profile?.role !== 'admin') && (
+        <View style={styles.accessOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color="#1a5f4a" />
+        </View>
+      )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
+  root: { flex: 1 },
+  accessOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#f6f7f4',

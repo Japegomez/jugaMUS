@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 
+import { AdminCloseBar } from '@/components/admin/AdminCloseBar'
+import { AdminConfirmModal } from '@/components/admin/AdminConfirmModal'
 import { Button } from '@/components/ui/Button'
 import {
   useBlockUser,
@@ -14,6 +16,96 @@ import type { ReportListFilters } from '@/services/admin.service'
 
 type StatusFilter = ReportListFilters['status']
 type TargetFilter = ReportListFilters['targetType']
+type PendingAction = 'resolve' | 'block' | 'delete_match' | 'delete_result'
+
+function formatMatchDate(iso: string): string {
+  return new Date(iso).toLocaleString('es-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function matchStatusLabel(status: string): string {
+  switch (status) {
+    case 'planned':
+      return 'Planificada'
+    case 'in_progress':
+      return 'En curso'
+    case 'finished':
+      return 'Finalizada'
+    case 'finished_no_result':
+      return 'Sin resultado'
+    case 'cancelled':
+      return 'Cancelada'
+    default:
+      return status
+  }
+}
+
+function ReportTargetContext({ report }: { report: AdminReport }) {
+  if (report.target_type === 'user') {
+    const u = report.target_user
+    if (!u) {
+      return <Text style={styles.targetMissing}>Usuario no encontrado o eliminado</Text>
+    }
+    return (
+      <View style={styles.targetBox}>
+        <Text style={styles.targetLabel}>Usuario reportado</Text>
+        <Text style={styles.targetTitle}>{u.display_name}</Text>
+        <Text style={styles.targetMeta}>
+          {u.status === 'suspended' ? 'Cuenta suspendida' : 'Cuenta activa'}
+          {u.city ? ` · ${u.city}` : ''}
+        </Text>
+      </View>
+    )
+  }
+
+  if (report.target_type === 'match') {
+    const m = report.target_match
+    if (!m) {
+      return (
+        <View style={styles.targetBox}>
+          <Text style={styles.targetLabel}>Partida reportada</Text>
+          <Text style={styles.targetMissingInline}>
+            {report.status === 'resolved'
+              ? 'Partida eliminada o ya no disponible'
+              : 'Partida no encontrada (puede haberse eliminado antes de resolver el reporte)'}
+          </Text>
+        </View>
+      )
+    }
+    return (
+      <View style={styles.targetBox}>
+        <Text style={styles.targetLabel}>Partida reportada</Text>
+        <Text style={styles.targetTitle}>{m.title}</Text>
+        <Text style={styles.targetMeta}>
+          {formatMatchDate(m.start_at)} · {m.city} · {matchStatusLabel(m.status)}
+        </Text>
+      </View>
+    )
+  }
+
+  if (report.target_type === 'result') {
+    const r = report.target_result
+    if (!r) {
+      return <Text style={styles.targetMissing}>Resultado no encontrado o eliminado</Text>
+    }
+    return (
+      <View style={styles.targetBox}>
+        <Text style={styles.targetLabel}>Resultado reportado</Text>
+        <Text style={styles.targetTitle}>
+          {r.match_title ?? 'Partida sin título'} — {r.team_a_games}-{r.team_b_games}
+        </Text>
+        <Text style={styles.targetMeta}>Estado del resultado: {r.result_status}</Text>
+      </View>
+    )
+  }
+
+  return null
+}
 
 function FilterChip({
   label,
@@ -36,6 +128,7 @@ function FilterChip({
 }
 
 function ReportRow({ report }: { report: AdminReport }) {
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const resolveMutation = useResolveReport()
   const blockMutation = useBlockUser()
   const deleteMatchMutation = useDeleteMatch()
@@ -54,83 +147,73 @@ function ReportRow({ report }: { report: AdminReport }) {
     minute: '2-digit',
   })
 
-  const onResolve = () => {
-    Alert.alert('Resolver reporte', '¿Marcar este reporte como resuelto sin acción adicional?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Resolver',
-        onPress: () => {
+  const mutateAsync = (action: PendingAction) => {
+    switch (action) {
+      case 'resolve':
+        return new Promise<void>((resolve, reject) => {
           resolveMutation.mutate(
             { reportId: report.id, actionTaken: 'resolved_no_action' },
-            {
-              onError: (e) =>
-                Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo resolver'),
-            }
+            { onSuccess: () => resolve(), onError: (e) => reject(e) }
           )
-        },
-      },
-    ])
-  }
-
-  const onBlockUser = () => {
-    if (report.target_type !== 'user') return
-    Alert.alert('Bloquear usuario', '¿Suspender la cuenta del usuario reportado?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Bloquear',
-        style: 'destructive',
-        onPress: () => {
+        })
+      case 'block':
+        return new Promise<void>((resolve, reject) => {
           blockMutation.mutate(
             { userId: report.target_id, reportId: report.id },
-            {
-              onError: (e) =>
-                Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo bloquear'),
-            }
+            { onSuccess: () => resolve(), onError: (e) => reject(e) }
           )
-        },
-      },
-    ])
-  }
-
-  const onDeleteMatch = () => {
-    if (report.target_type !== 'match') return
-    Alert.alert('Eliminar partida', 'Esta acción no se puede deshacer. ¿Continuar?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
+        })
+      case 'delete_match':
+        return new Promise<void>((resolve, reject) => {
           deleteMatchMutation.mutate(
             { matchId: report.target_id, reportId: report.id },
-            {
-              onError: (e) =>
-                Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo eliminar'),
-            }
+            { onSuccess: () => resolve(), onError: (e) => reject(e) }
           )
-        },
-      },
-    ])
-  }
-
-  const onDeleteResult = () => {
-    if (report.target_type !== 'result') return
-    Alert.alert('Eliminar resultado', 'Esta acción no se puede deshacer. ¿Continuar?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => {
+        })
+      case 'delete_result':
+        return new Promise<void>((resolve, reject) => {
           deleteResultMutation.mutate(
             { resultId: report.target_id, reportId: report.id },
-            {
-              onError: (e) =>
-                Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo eliminar'),
-            }
+            { onSuccess: () => resolve(), onError: (e) => reject(e) }
           )
-        },
-      },
-    ])
+        })
+      default:
+        return Promise.resolve()
+    }
   }
+
+  const confirmConfig =
+    pendingAction === 'resolve'
+      ? {
+          title: 'Resolver reporte',
+          message:
+            'Marcará el reporte como resuelto sin bloquear usuarios ni eliminar contenido. Quedará registrado en el historial de auditoría.',
+          confirmLabel: 'Resolver',
+          confirmVariant: 'secondary' as const,
+        }
+      : pendingAction === 'block'
+        ? {
+            title: 'Bloquear usuario',
+            message:
+              'Suspenderá la cuenta del usuario reportado. No podrá iniciar sesión hasta que un admin reactive su perfil.',
+            confirmLabel: 'Bloquear',
+            confirmVariant: 'danger' as const,
+          }
+        : pendingAction === 'delete_match'
+          ? {
+              title: 'Eliminar partida',
+              message: 'Eliminará la partida reportada. Esta acción no se puede deshacer.',
+              confirmLabel: 'Eliminar',
+              confirmVariant: 'danger' as const,
+            }
+          : pendingAction === 'delete_result'
+            ? {
+                title: 'Eliminar resultado',
+                message: 'Eliminará el resultado reportado. Esta acción no se puede deshacer.',
+                confirmLabel: 'Eliminar',
+                confirmVariant: 'danger' as const,
+              }
+            : null
 
   return (
     <View style={styles.card}>
@@ -140,10 +223,10 @@ function ReportRow({ report }: { report: AdminReport }) {
       </View>
       <Text style={styles.reason}>{report.reason}</Text>
       {report.notes ? <Text style={styles.notes}>{report.notes}</Text> : null}
+      <ReportTargetContext report={report} />
       <Text style={styles.meta}>
         Reportado por {report.reporter_display_name ?? '—'} · {dateStr}
       </Text>
-      <Text style={styles.metaSmall}>ID objetivo: {report.target_id}</Text>
 
       {report.status === 'open' ? (
         <View style={styles.actions}>
@@ -151,7 +234,7 @@ function ReportRow({ report }: { report: AdminReport }) {
             title="Resolver"
             variant="secondary"
             loading={isPending}
-            onPress={onResolve}
+            onPress={() => setPendingAction('resolve')}
             style={styles.actionBtn}
           />
           {report.target_type === 'user' ? (
@@ -159,7 +242,7 @@ function ReportRow({ report }: { report: AdminReport }) {
               title="Bloquear usuario"
               variant="danger"
               loading={isPending}
-              onPress={onBlockUser}
+              onPress={() => setPendingAction('block')}
               style={styles.actionBtn}
             />
           ) : null}
@@ -168,7 +251,7 @@ function ReportRow({ report }: { report: AdminReport }) {
               title="Eliminar partida"
               variant="danger"
               loading={isPending}
-              onPress={onDeleteMatch}
+              onPress={() => setPendingAction('delete_match')}
               style={styles.actionBtn}
             />
           ) : null}
@@ -177,13 +260,26 @@ function ReportRow({ report }: { report: AdminReport }) {
               title="Eliminar resultado"
               variant="danger"
               loading={isPending}
-              onPress={onDeleteResult}
+              onPress={() => setPendingAction('delete_result')}
               style={styles.actionBtn}
             />
           ) : null}
         </View>
       ) : report.action_taken ? (
         <Text style={styles.resolvedNote}>Acción: {report.action_taken}</Text>
+      ) : null}
+
+      {confirmConfig && pendingAction ? (
+        <AdminConfirmModal
+          visible
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          confirmLabel={confirmConfig.confirmLabel}
+          confirmVariant={confirmConfig.confirmVariant}
+          loading={isPending}
+          onClose={() => setPendingAction(null)}
+          onConfirm={() => mutateAsync(pendingAction)}
+        />
       ) : null}
     </View>
   )
@@ -202,7 +298,9 @@ export default function AdminReportsScreen() {
 
   return (
     <View style={styles.container}>
+      <AdminCloseBar />
       <View style={styles.filters}>
+        <Text style={styles.screenTitle}>Reportes</Text>
         <Text style={styles.filterLabel}>Estado</Text>
         <View style={styles.chipRow}>
           <FilterChip
@@ -276,6 +374,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ddd',
     backgroundColor: '#fff',
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 4,
   },
   filterLabel: {
     fontSize: 12,
@@ -376,10 +480,43 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
-  metaSmall: {
+  targetBox: {
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#f6f7f4',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1a5f4a',
+  },
+  targetLabel: {
     fontSize: 11,
-    color: '#999',
+    fontWeight: '600',
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 4,
+  },
+  targetTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  targetMeta: {
+    fontSize: 13,
+    color: '#555',
     marginTop: 4,
+  },
+  targetMissing: {
+    fontSize: 13,
+    color: '#b42318',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  targetMissingInline: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   actions: {
     marginTop: 12,
