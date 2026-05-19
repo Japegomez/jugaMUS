@@ -1,0 +1,36 @@
+# Health check every 5 minutes for process-notifications Edge Function.
+# Pair with a Sentry Cron Monitor (see docs/sentry-observability.md).
+name: Sentry health — Edge Functions
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  edge-function-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping process-notifications
+        env:
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY repo secrets."
+            exit 0
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/process-notifications"
+          HTTP_CODE=$(curl -s -o /tmp/ef-body.txt -w "%{http_code}" \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            --max-time 30)
+          echo "HTTP $HTTP_CODE"
+          cat /tmp/ef-body.txt || true
+          if [ "$HTTP_CODE" -ge 500 ]; then
+            echo "::error::Edge function returned $HTTP_CODE"
+            exit 1
+          fi
