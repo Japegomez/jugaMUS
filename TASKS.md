@@ -1,4 +1,4 @@
-# Tareas - Mus Sin Fronteras
+# Tareas - Mussa Suerte
 
 > Actualizado: 18/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
@@ -52,12 +52,12 @@
 - [x] Pantalla de login con email/contraseña
   - Mensajes claros si Supabase devuelve 429 (rate limit por IP en plan gratuito).
 - [x] Pantalla de registro con aceptación de términos y política de privacidad
-  - Textos legales placeholder en `src/app/(auth)/terms.tsx` y `privacy.tsx` (sustituir antes de release).
+  - Textos estáticos en `src/app/(auth)/terms.tsx` y `privacy.tsx` con disclaimer jurídico; revisión legal pendiente antes de release.
   - En Supabase está **desactivada la confirmación por email** (dev / pruebas); **reactivar en producción** (proveedor Email + plantillas + URLs).
 - [x] Pantalla de recuperación de contraseña
 - [x] Login con Google (OAuth via Supabase)
   - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
-  - Redirects típicos: `exp://**` (Expo Go), `musapp://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
+  - Redirects típicos: `exp://**` (Expo Go), `mussasuerte://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
 - [x] Login con Apple ID (OAuth via Supabase)
   - iOS: `signInWithIdToken` + `expo-apple-authentication`. Web: OAuth Supabase.
   - **Pendiente manual:** Manual-3 y Manual-4 del plan (Apple Developer y Supabase provider).
@@ -246,8 +246,10 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ## Backlog general (sin fase asignada)
 
-- [ ] Pantalla de Términos y Condiciones (texto estático)
-- [ ] Pantalla de Política de Privacidad (texto estático)
+- [x] Pantalla de Términos y Condiciones (texto estático)
+  - Secciones en `src/app/(auth)/terms.tsx`; disclaimer «Texto legal definitivo pendiente de revisión jurídica.»
+- [x] Pantalla de Política de Privacidad (texto estático)
+  - Secciones en `src/app/(auth)/privacy.tsx`; mismo disclaimer. Rebrand app → **Mussa Suerte** (`src/constants/app.ts`, `app.json`).
 - [ ] Flujo de eliminación de cuenta (derecho de supresión RGPD)
 - [ ] Pantalla de configuración de notificaciones avanzada
 - [ ] Icono de app y splash screen

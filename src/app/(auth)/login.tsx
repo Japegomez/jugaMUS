@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Link } from 'expo-router'
 
+import { APP_DISPLAY_NAME } from '@/constants/app'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
@@ -68,7 +69,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Mus Sin Fronteras</Text>
+        <Text style={styles.heading}>{APP_DISPLAY_NAME}</Text>
         <Text style={styles.sub}>Inicia sesión para continuar</Text>
 
         <Controller

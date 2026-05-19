@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking'
 import * as WebBrowser from 'expo-web-browser'
 import { Platform } from 'react-native'
 
+import { APP_SCHEME } from '@/constants/app'
 import { getOAuthRedirectUrl } from '@/lib/authRedirect'
 import { parseAuthCallbackUrl } from '@/lib/parseAuthCallbackUrl'
 import { supabase } from '@/lib/supabase'
@@ -14,7 +15,9 @@ export type OAuthProvider = 'google' | 'apple'
 function isOAuthReturnUrl(url: string): boolean {
   const lower = url.toLowerCase()
   const schemeOk =
-    lower.startsWith('musapp://') || lower.startsWith('exp://') || lower.startsWith('exps://')
+    lower.startsWith(`${APP_SCHEME}://`) ||
+    lower.startsWith('exp://') ||
+    lower.startsWith('exps://')
   if (!schemeOk) return false
   return (
     lower.includes('auth/callback') ||
@@ -144,7 +147,7 @@ export async function signInWithOAuthProvider(
       }
       return {
         error: new Error(
-          'No se recibió la URL de retorno del navegador. En Supabase → Auth → URL, añade la redirect exacta que usa la app (p. ej. musapp://auth/callback o la exp://… de Expo Go) y reintenta.'
+          `No se recibió la URL de retorno del navegador. En Supabase → Auth → URL, añade la redirect exacta que usa la app (p. ej. ${APP_SCHEME}://auth/callback o la exp://… de Expo Go) y reintenta.`
         ),
       }
     }

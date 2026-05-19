@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "musApp",
-    "slug": "musapp",
-    "scheme": "musapp",
+    "name": "Mussa Suerte",
+    "slug": "mussa-suerte",
+    "scheme": "mussasuerte",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -55,7 +55,7 @@
         {
           "url": "https://de.sentry.io/",
           "organization": "javier-pena-gomez",
-          "project": "musapp"
+          "project": "mussa-suerte"
         }
       ]
     ],
