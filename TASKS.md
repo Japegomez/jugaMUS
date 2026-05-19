@@ -15,12 +15,6 @@
 
 ---
 
-## En progreso
-
-_Ninguna tarea en progreso actualmente._
-
----
-
 ## Fase 1 — Core
 
 ### Setup inicial del proyecto
@@ -212,8 +206,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` Android `production` → `eas submit` Android. Secrets: `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (genera `google-service-account.json` en el runner).
 - [ ] Configurar EAS Submit para publicación automática en App Store
   - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
-- [ ] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
-  - **Hecho parcial:** `ci.yml` en PRs (lint + type-check); `eas.yml` en `main` (build + submit Android). Falta encadenar tests y/o unificar criterios de release.
+- [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
+  - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android → submit Play. Tests iniciales en `src/utils/validators.test.ts` (E.164).
 
 ---
 
@@ -224,14 +218,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [ ] Crear tabla `audit_logs`
 - [ ] Añadir índices de auditoría
 
-### F8 - Panel de moderación
+### F9 - Panel de moderación
 
 - [ ] Pantalla de lista de reportes abiertos (solo admin)
 - [ ] Filtros por tipo de reporte y estado
 - [ ] Acciones: resolver reporte, bloquear usuario, eliminar partida/resultado
 - [ ] Registro automático en `audit_logs` de cada acción admin
 
-### F9 - Panel de analíticas
+### F10 - Panel de analíticas
 
 - [ ] Pantalla de métricas para admin:
   - [ ] MAU (usuarios activos mensuales)

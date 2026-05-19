@@ -1,15 +1,19 @@
-name: EAS Build & Submit (Android)
+name: Release (Android)
 
-# iOS omitido: requiere Apple Developer Program. Cuando lo tengas, añade job build-ios
-# y el paso eas submit --platform ios.
+# Pipeline: quality → EAS build → Google Play submit.
+# iOS omitido hasta Apple Developer Program.
 on:
   push:
     branches: [main]
 
 jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
   build-android:
     name: EAS Build — Android
     runs-on: ubuntu-latest
+    needs: [quality]
     steps:
       - uses: actions/checkout@v4
 
