@@ -1,17 +1,17 @@
 # Tareas - Mus Sin Fronteras
 
-> Actualizado: 18/05/2026 (cierre de sesión)
+> Actualizado: 19/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado    | Descripción                          |
-| ------------------- | --------- | ------------------------------------ |
-| Fase 1 - Core       | Pendiente | Auth, Perfil, Partidas, Descubrir    |
-| Fase 2 - Resultados | Pendiente | Notificaciones, Resultados, Reportes |
-| Fase 3 - Admin      | Pendiente | Panel admin, Analíticas, Disputas    |
+| Fase                | Estado     | Descripción                          |
+| ------------------- | ---------- | ------------------------------------ |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir    |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas    |
 
 ---
 
@@ -215,32 +215,48 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### Migraciones de base de datos
 
-- [ ] Crear tabla `audit_logs`
-- [ ] Añadir índices de auditoría
+- [x] Crear tabla `audit_logs`
+  - Migración `019_audit_logs_admin_rls.sql`: tabla, `auth_is_admin()`, RLS admin en `reports`, `profiles`, `matches`, `match_results`.
+- [x] Añadir índices de auditoría
+  - Índices en `audit_logs` (`admin_id`, `created_at`) en `019`.
+- [x] RPCs de analíticas admin
+  - Migración `020_admin_analytics_rpcs.sql`: `admin_get_analytics`, `admin_get_matches_by_week`, `admin_get_matches_by_city`, `admin_get_user_ranking`.
+- [x] RLS lectura de objetivos reportados (admin)
+  - Migración `021_admin_select_targets_rls.sql` (aplicada en remoto vía MCP).
 
 ### F9 - Panel de moderación
 
-- [ ] Pantalla de lista de reportes abiertos (solo admin)
-- [ ] Filtros por tipo de reporte y estado
-- [ ] Acciones: resolver reporte, bloquear usuario, eliminar partida/resultado
-- [ ] Registro automático en `audit_logs` de cada acción admin
+- [x] Pantalla de lista de reportes abiertos (solo admin)
+  - Ruta `/(admin)/reports`; guardia de rol en `(admin)/_layout.tsx`.
+- [x] Filtros por tipo de reporte y estado
+- [x] Acciones: resolver reporte, bloquear usuario, eliminar partida/resultado
+  - Confirmaciones con `AdminConfirmModal` (compatible web; sin `Alert.alert`).
+  - Contexto del objetivo reportado (usuario, partida, resultado) en la tarjeta.
+- [x] Registro automático en `audit_logs` de cada acción admin
+  - `admin.service.ts` → `writeAuditLog` en cada mutación.
 
 ### F10 - Panel de analíticas
 
-- [ ] Pantalla de métricas para admin:
-  - [ ] MAU (usuarios activos mensuales)
-  - [ ] Partidas creadas (total y por semana)
-  - [ ] % partidas con resultado confirmado
-  - [ ] % con disputa
-- [ ] Gráficas: serie temporal semanal de partidas
-- [ ] Gráficas: barras por ciudad/pueblo (top 10)
-- [ ] Ranking de usuarios por número de partidas
+- [x] Pantalla de métricas para admin:
+  - [x] MAU (usuarios activos mensuales — participantes en partida confirmada, últimos 30 días)
+  - [x] Partidas creadas (total y por semana)
+  - [x] % partidas con resultado confirmado
+  - [x] % con disputa
+  - Dashboard admin (`/(admin)/index`) solo enlaces a moderación y analíticas; **sin** resumen de métricas en portada.
+- [x] Gráficas: serie temporal semanal de partidas
+- [x] Gráficas: barras por ciudad/pueblo (top 10)
+- [x] Ranking de usuarios por número de partidas
+  - Ruta `/(admin)/analytics`; `react-native-chart-kit` + `react-native-svg`.
 
 ### Observabilidad avanzada
 
-- [ ] Health checks cada 5 minutos para Edge Functions críticas
-- [ ] Alertas en Sentry para errores 5xx y latencia alta
-- [ ] Dashboard de performance en Sentry
+- [x] Health checks cada 5 minutos para Edge Functions críticas
+  - Workflow `.github/workflows/sentry-health.yml` + check-in Sentry Cron Monitor (`process-notifications`).
+- [x] Alertas en Sentry para errores 5xx y latencia alta
+  - Configuradas en proyecto Sentry (workflow + reglas de alerta).
+- [x] Dashboard de performance en Sentry
+  - Cliente: `tracesSampleRate`, `profilesSampleRate`, auto-tracing en `src/lib/sentry.ts`.
+  - Pendiente: validar secret `SENTRY_AUTH_TOKEN` en GitHub Actions si el cron no reporta en Sentry.
 
 ---
 
