@@ -13,7 +13,11 @@ Sentry.init({
   enabled: Boolean(sentryDsn),
   ...(useJsTransportOnly ? { enableNative: false } : {}),
   sendDefaultPii: true,
-  tracesSampleRate: 0.1,
+  // Performance monitoring (CA_MON2)
+  tracesSampleRate: 0.2,
+  profilesSampleRate: 0.1,
+  enableAutoPerformanceTracing: true,
+  enableAppStartTracking: true,
   replaysOnErrorSampleRate: 1.0,
 })
 

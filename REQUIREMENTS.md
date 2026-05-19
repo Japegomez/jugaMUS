@@ -162,6 +162,7 @@ Solo dos roles en el MVP:
 - Interfaz de admin para ver y gestionar reportes abiertos
 - Acciones: bloquear/desactivar usuario, eliminar partida/resultado
 - Registro de auditoría de todas las acciones administrativas
+- **Portada admin (may. 2026):** solo navegación a moderación de reportes y analíticas detalladas; las métricas viven en la pantalla de analíticas, no en el dashboard.
 
 ### F9 - Analítica y panel (Fase 1 + 3)
 
