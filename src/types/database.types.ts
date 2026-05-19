@@ -8,6 +8,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'audit_logs_admin_id_fkey'
+            columns: ['admin_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       match_participants: {
         Row: {
           id: string
@@ -437,6 +475,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_get_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          mau: number
+          matches_this_week: number
+          pct_confirmed: number
+          pct_disputed: number
+          total_matches: number
+        }[]
+      }
+      admin_get_matches_by_city: {
+        Args: { p_lim?: number }
+        Returns: { city: string; count: number }[]
+      }
+      admin_get_matches_by_week: {
+        Args: { p_weeks?: number }
+        Returns: { count: number; week_start: string }[]
+      }
+      admin_get_user_ranking: {
+        Args: { p_lim?: number }
+        Returns: { display_name: string; match_count: number; user_id: string }[]
+      }
+      auth_is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       auth_can_read_match: {
         Args: { p_match_id: string }
         Returns: boolean

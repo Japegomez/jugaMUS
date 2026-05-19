@@ -10,7 +10,7 @@ import {
   Text,
   View,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
@@ -129,6 +129,15 @@ export default function ProfileScreen() {
       </View>
 
       {/* Actions */}
+      {profile.role === 'admin' ? (
+        <Pressable
+          style={styles.adminButton}
+          onPress={() => router.push('/(admin)' as Href)}
+          accessibilityRole="button">
+          <Text style={styles.adminButtonText}>Panel de administración</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable
         style={styles.editButton}
         onPress={() => router.push('/(tabs)/profile/edit')}
@@ -309,6 +318,18 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
     marginLeft: 8,
+  },
+  adminButton: {
+    backgroundColor: '#2c5282',
+    borderRadius: 10,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   editButton: {
     backgroundColor: '#1a5f4a',

@@ -35,11 +35,16 @@ function RootLayout() {
 
     const inAuthGroup = segments[0] === '(auth)'
 
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/login')
-    } else if (session && inAuthGroup) {
-      router.replace('/(tabs)/matches')
-    }
+    // Defer until the root Stack is mounted (avoids crash on web hard refresh).
+    const timeoutId = setTimeout(() => {
+      if (!session && !inAuthGroup) {
+        router.replace('/(auth)/login')
+      } else if (session && inAuthGroup) {
+        router.replace('/(tabs)/matches')
+      }
+    }, 0)
+
+    return () => clearTimeout(timeoutId)
   }, [session, initialized, segments, navigationState?.key, router])
 
   return (
