@@ -1,5 +1,5 @@
 # Health check every 5 minutes for process-notifications Edge Function.
-# Pair with a Sentry Cron Monitor (see docs/sentry-observability.md).
+# Requires Sentry Cron Monitor slug: process-notifications-health (Sentry → Crons).
 name: Sentry health — Edge Functions
 
 on:
@@ -12,12 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+
       - name: Ping process-notifications
+        id: ping
         env:
           SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY repo secrets."
             exit 0
           fi
@@ -30,7 +34,26 @@ jobs:
             --max-time 30)
           echo "HTTP $HTTP_CODE"
           cat /tmp/ef-body.txt || true
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
           if [ "$HTTP_CODE" -ge 500 ]; then
             echo "::error::Edge function returned $HTTP_CODE"
             exit 1
           fi
+
+      - name: Sentry cron check-in
+        if: steps.ping.outputs.skip != 'true' && secrets.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          npx @sentry/cli monitors run process-notifications-health \
+            --org javier-pena-gomez \
+            --status ok
+
+      - name: Sentry cron check-in (failure)
+        if: failure() && steps.ping.outputs.skip != 'true' && secrets.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          npx @sentry/cli monitors run process-notifications-health \
+            --org javier-pena-gomez \
+            --status error
