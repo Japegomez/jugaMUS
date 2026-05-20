@@ -21,6 +21,13 @@ export type ProfileRow = {
   updated_at: string
 }
 
+export type PublicProfileRow = {
+  id: string
+  display_name: string
+  photo_url: string | null
+  city: string | null
+}
+
 export type ProfileUpdate = Pick<
   TablesUpdate<'profiles'>,
   | 'display_name'
@@ -32,37 +39,65 @@ export type ProfileUpdate = Pick<
   | 'notify_on_match_change'
   | 'notify_on_result'
   | 'notify_on_reminder'
-  | 'photo_url'
 >
 
+const ALLOWED_AVATAR_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+
 export async function getProfile(userId: string): Promise<ProfileRow> {
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (error) throw new Error(error.message)
-  return data as ProfileRow
-}
+  if (user?.id === userId) {
+    const { data, error } = await supabase.rpc('get_own_profile')
+    if (error) throw new Error(error.message)
+    if (!data || data.length === 0) throw new Error('Perfil no encontrado')
+    return data[0] as ProfileRow
+  }
 
-export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<ProfileRow> {
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .select(
+      'id, display_name, city, photo_url, role, status, notify_email, notify_push, notify_on_join, notify_on_match_change, notify_on_result, notify_on_reminder, created_at, updated_at'
+    )
     .eq('id', userId)
-    .select()
     .single()
 
   if (error) throw new Error(error.message)
-  return data as ProfileRow
+  return { ...(data as Omit<ProfileRow, 'phone_e164'>), phone_e164: '' }
+}
+
+export async function getPublicProfile(profileId: string): Promise<PublicProfileRow | null> {
+  const { data, error } = await supabase.rpc('get_public_profile', {
+    p_profile_id: profileId,
+  })
+
+  if (error) return null
+  if (!data || data.length === 0) return null
+
+  return data[0] as PublicProfileRow
+}
+
+export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<ProfileRow> {
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+
+  if (error) throw new Error(error.message)
+  return getProfile(userId)
 }
 
 /**
  * Compress and upload an avatar image to Supabase Storage.
  * Resizes to 400×400 and reduces JPEG quality until the encoded size is ≤500 KB.
- *
- * Uses expo-image-manipulator's `base64: true` option to avoid Blob.arrayBuffer(),
- * which is not implemented in React Native's Hermes engine.
  */
-export async function uploadAvatar(userId: string, imageUri: string): Promise<string> {
-  // base64-encoded byte length ≈ base64.length * 0.75
+export async function uploadAvatar(
+  userId: string,
+  imageUri: string,
+  mimeType?: string | null
+): Promise<string> {
+  if (mimeType && !ALLOWED_AVATAR_MIME_TYPES.has(mimeType)) {
+    throw new Error('Formato de imagen no permitido')
+  }
+
   const MAX_BYTES = 500 * 1024
   const MAX_BASE64_LEN = Math.ceil(MAX_BYTES / 0.75)
 
@@ -82,7 +117,6 @@ export async function uploadAvatar(userId: string, imageUri: string): Promise<st
 
   if (!base64) throw new Error('No se pudo comprimir la imagen')
 
-  // Decode base64 → Uint8Array (works in Hermes without Blob.arrayBuffer)
   const binaryStr = atob(base64)
   const bytes = new Uint8Array(binaryStr.length)
   for (let i = 0; i < binaryStr.length; i++) {
@@ -99,7 +133,14 @@ export async function uploadAvatar(userId: string, imageUri: string): Promise<st
   if (uploadError) throw new Error(uploadError.message)
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
+  const photoUrl = `${data.publicUrl}?t=${Date.now()}`
 
-  // Bust CDN cache by appending a timestamp query param
-  return `${data.publicUrl}?t=${Date.now()}`
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({ photo_url: photoUrl })
+    .eq('id', userId)
+
+  if (profileError) throw new Error(profileError.message)
+
+  return photoUrl
 }

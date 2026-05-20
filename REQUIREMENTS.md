@@ -490,13 +490,26 @@ Supabase (PostgreSQL + Auth + Storage)
 
 ### Seguridad
 
-- OAuth2/OIDC para Google y Apple
+- OAuth2/OIDC para Google y Apple; PKCE explícito en cliente (`flowType: 'pkce'`)
 - Contraseñas con Argon2 (gestionado por Supabase Auth)
 - TLS extremo a extremo
 - JWT con expiración corta + refresh tokens
 - Rate limiting por IP y usuario (Supabase + Edge Functions)
 - Protección CSRF/XSS/SSRF, validación exhaustiva de inputs
 - Row Level Security (RLS) de PostgreSQL para aislar datos por usuario
+- **Hardening (may. 2026, migraciones 038–047):**
+  - Trigger anti-escalada: usuarios no pueden auto-modificar `role` ni `status` en `profiles`
+  - `match_results`: sin INSERT directo vía RLS; solo RPCs validadas (`submit_match_result`, etc.)
+  - REVOKE de RPCs internas (`enqueue_notification`, `advance_tournament_round`, etc.)
+  - PII: `phone_e164` y `push_token` ocultos en SELECT directo; RPCs `get_own_profile`, `get_public_profile`, `get_profile_with_phone`
+  - Vista `profiles_public`; whitelist de `photo_url` al bucket `avatars`
+  - `process-notifications`: autenticación por header `X-Cron-Secret` (no JWT público)
+  - Cron: URL y secreto en `private.runtime_config` (047)
+  - Explore: `list_public_matches` enmascara `place_text` si `location_privacy = participants_only`
+  - Torneos: no asignar `player_*_user_id` de terceros en parejas
+  - Join a partidas: solo `planned`, visibilidad `public`/`link`, máx. 4 confirmados
+  - Sentry: `sendDefaultPii: false`, replay reducido, filtrado de headers sensibles
+  - OAuth release: solo scheme `mussasuerte://` (Expo Go schemes solo en `__DEV__`)
 
 ### Privacidad (RGPD)
 

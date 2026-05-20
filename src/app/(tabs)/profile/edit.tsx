@@ -39,6 +39,7 @@ export default function EditProfileScreen() {
   const uploadAvatar = useUploadAvatar()
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null)
+  const [pendingMimeType, setPendingMimeType] = useState<string | null>(null)
 
   const {
     control,
@@ -80,7 +81,9 @@ export default function EditProfileScreen() {
     })
 
     if (!result.canceled && result.assets[0]) {
-      setAvatarUri(result.assets[0].uri)
+      const asset = result.assets[0]
+      setAvatarUri(asset.uri)
+      setPendingMimeType(asset.mimeType ?? null)
     }
   }
 
@@ -88,7 +91,7 @@ export default function EditProfileScreen() {
     try {
       // Upload avatar first if user picked a new one
       if (avatarUri) {
-        await uploadAvatar.mutateAsync(avatarUri)
+        await uploadAvatar.mutateAsync({ uri: avatarUri, mimeType: pendingMimeType })
       }
 
       await updateProfile.mutateAsync({

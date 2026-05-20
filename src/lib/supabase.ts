@@ -18,6 +18,7 @@ export const supabase = createClient<Database>(url, anonKey, {
     storage: getAuthStorage(),
     autoRefreshToken: true,
     persistSession: true,
+    flowType: 'pkce',
     // En web, dejar que supabase-js canjee el `?code=...` del URL al volver
     // del OAuth. En native lo hacemos manualmente desde oauth.ts.
     detectSessionInUrl: Platform.OS === 'web',

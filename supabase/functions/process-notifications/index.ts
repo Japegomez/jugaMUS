@@ -5,6 +5,7 @@
 // Env vars (set in Supabase Dashboard → Edge Functions → Secrets):
 //   SUPABASE_URL             — auto-injected by Supabase runtime
 //   SUPABASE_SERVICE_ROLE_KEY — auto-injected by Supabase runtime
+//   CRON_SECRET              — shared secret validated via X-Cron-Secret header
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -44,10 +45,30 @@ interface ExpoPushTicket {
   details?: { error?: string }
 }
 
+function unauthorized(): Response {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
+function validateCronSecret(req: Request): boolean {
+  const expected = Deno.env.get('CRON_SECRET')
+  if (!expected) {
+    console.error('[process-notifications] CRON_SECRET is not configured')
+    return false
+  }
+  const provided = req.headers.get('X-Cron-Secret')
+  return provided === expected
+}
+
 Deno.serve(async (req) => {
-  // Accept POST and GET (pg_cron uses http_post)
-  if (req.method !== 'POST' && req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 })
+  }
+
+  if (!validateCronSecret(req)) {
+    return unauthorized()
   }
 
   const supabase = createClient(
@@ -67,7 +88,7 @@ Deno.serve(async (req) => {
 
   if (fetchErr) {
     console.error('[process-notifications] fetch error:', fetchErr.message)
-    return new Response(JSON.stringify({ error: fetchErr.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 
   if (!rows || rows.length === 0) {
@@ -85,7 +106,7 @@ Deno.serve(async (req) => {
 
   if (profileErr) {
     console.error('[process-notifications] profiles error:', profileErr.message)
-    return new Response(JSON.stringify({ error: profileErr.message }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 
   const tokenMap = new Map<string, string | null>(
@@ -94,8 +115,8 @@ Deno.serve(async (req) => {
 
   // 3. Build Expo messages and map to notification IDs
   const messages: ExpoPushMessage[] = []
-  const messageToNotifId: string[] = [] // parallel array: messages[i] → notifId
-  const skippedIds: string[] = []       // notifications with no push token
+  const messageToNotifId: string[] = []
+  const skippedIds: string[] = []
 
   for (const notif of notifications) {
     const token = tokenMap.get(notif.user_id)
@@ -153,7 +174,6 @@ Deno.serve(async (req) => {
       tickets = Array.isArray(json.data) ? json.data : []
     } catch (err) {
       console.error('[process-notifications] Expo API error:', err)
-      // Network error — increment attempts without marking as failed yet
       for (let j = 0; j < chunkIds.length; j++) {
         const id = chunkIds[j]
         const notif = notifications.find((n) => n.id === id)!
@@ -184,7 +204,6 @@ Deno.serve(async (req) => {
           .eq('id', id)
         sent++
       } else {
-        // Expo returned an error for this token
         const isFinal = newAttempts >= notif.max_attempts
         await supabase
           .from('notification_queue')
@@ -195,7 +214,6 @@ Deno.serve(async (req) => {
           .eq('id', id)
         failed++
         if (ticket?.details?.error === 'DeviceNotRegistered') {
-          // Clean up stale token
           await supabase
             .from('profiles')
             .update({ push_token: null })

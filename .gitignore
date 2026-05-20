@@ -71,6 +71,8 @@ expo-env.d.ts
 
 .env.local
 google-services.json
+google-service-account.json
+*.serviceaccount.json
 *firebase*.json
 
 # Jest

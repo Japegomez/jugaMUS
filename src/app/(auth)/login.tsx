@@ -43,7 +43,7 @@ export default function LoginScreen() {
   const onSubmit = handleSubmit(async (values) => {
     const { error } = await signInWithPassword(values.email, values.password)
     if (error) {
-      Alert.alert('Error de acceso', error.message)
+      Alert.alert('Error de acceso', 'Email o contraseña incorrectos')
     }
   })
 

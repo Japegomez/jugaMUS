@@ -16,8 +16,7 @@ function isOAuthReturnUrl(url: string): boolean {
   const lower = url.toLowerCase()
   const schemeOk =
     lower.startsWith(`${APP_SCHEME}://`) ||
-    lower.startsWith('exp://') ||
-    lower.startsWith('exps://')
+    (__DEV__ && (lower.startsWith('exp://') || lower.startsWith('exps://')))
   if (!schemeOk) return false
   return (
     lower.includes('auth/callback') ||

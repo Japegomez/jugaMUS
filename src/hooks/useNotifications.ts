@@ -95,14 +95,14 @@ export function useNotifications() {
       .catch((err) => console.error('[useNotifications] registration error:', err))
 
     // Listener for notifications received while app is in foreground
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('[useNotifications] foreground notification:', notification.request.identifier)
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      // Foreground notifications are handled by the OS banner.
     })
 
     // Listener for when the user taps a notification
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as Record<string, unknown>
-      console.log('[useNotifications] notification tapped, data:', data)
+      void data
       // Navigation to specific match can be wired here via expo-router:
       //   if (data?.match_id) router.push(`/(tabs)/matches/${data.match_id}`)
     })
