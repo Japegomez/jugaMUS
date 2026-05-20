@@ -14,7 +14,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="matches/edit/[id]" options={{ href: null }} />
       <Tabs.Screen name="profile/index" options={{ title: 'Perfil' }} />
       <Tabs.Screen name="profile/edit" options={{ href: null }} />
-      <Tabs.Screen name="profile/settings" options={{ href: null }} />
     </Tabs>
   )
 }
