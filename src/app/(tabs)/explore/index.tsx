@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
+import { CreateFab } from '@/components/ui/CreateFab'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import {
   dateToEndOfLocalDayIso,
@@ -24,9 +25,11 @@ import {
   parseIsoToDate,
 } from '@/components/ui/dateTimePickerUtils'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
-import { MATCH_STATUS } from '@/constants'
-import { useInfinitePublicMatches } from '@/hooks/useMatches'
+import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/constants'
+import { useInfinitePublicMatches, usePublicTournamentsExplore } from '@/hooks/useMatches'
 import type { PublicMatchExplorerRow, PublicMatchesListFilters } from '@/services/matches.service'
+import type { PublicTournamentsListFilters, TournamentRow } from '@/services/tournaments.service'
+import { formatCityAndPlace } from '@/utils/location'
 
 const DEFAULT_FILTERS = (): PublicMatchesListFilters => ({
   search: '',
@@ -35,6 +38,7 @@ const DEFAULT_FILTERS = (): PublicMatchesListFilters => ({
   startAfter: new Date().toISOString(),
   startBefore: null,
   minFreeSlots: 0,
+  contentType: 'all',
 })
 
 function statusLabel(status: string) {
@@ -53,6 +57,23 @@ function statusLabel(status: string) {
       return status
   }
 }
+
+function tournamentStatusLabel(tournament: TournamentRow) {
+  switch (tournament.status) {
+    case TOURNAMENT_STATUS.REGISTRATION:
+      return tournament.bracket_generated_at ? 'Inscripción' : 'Inscripción abierta'
+    case TOURNAMENT_STATUS.IN_PROGRESS:
+      return 'En curso'
+    case TOURNAMENT_STATUS.FINISHED:
+      return 'Finalizado'
+    default:
+      return tournament.status
+  }
+}
+
+type ExploreItem =
+  | { kind: 'match'; id: string; start_at: string; row: PublicMatchExplorerRow }
+  | { kind: 'tournament'; id: string; start_at: string; row: TournamentRow }
 
 function ExploreMatchCard({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
   return (
@@ -76,6 +97,31 @@ function ExploreMatchCard({ row, onPress }: { row: PublicMatchExplorerRow; onPre
   )
 }
 
+function ExploreTournamentCard({ row, onPress }: { row: TournamentRow; onPress: () => void }) {
+  return (
+    <Pressable
+      style={[styles.card, styles.tournamentCard]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Torneo: ${row.title}`}>
+      <Text style={styles.tournamentKind}>Torneo</Text>
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {row.title}
+      </Text>
+      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
+      <Text style={styles.cardMeta}>
+        {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+      </Text>
+      <View style={styles.cardRow}>
+        <Text style={styles.badge}>{tournamentStatusLabel(row)}</Text>
+        <Text style={styles.slots}>
+          {row.status === TOURNAMENT_STATUS.REGISTRATION ? 'Cuadro pendiente' : 'Ver cuadro'}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
 export default function ExploreScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -89,6 +135,7 @@ export default function ExploreScreen() {
   const [draftHidePast, setDraftHidePast] = useState(true)
   const [draftDateFromIso, setDraftDateFromIso] = useState<string | null>(null)
   const [draftDateToIso, setDraftDateToIso] = useState<string | null>(null)
+  const [draftContentType, setDraftContentType] = useState<ExploreContentType>('all')
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -111,12 +158,56 @@ export default function ExploreScreen() {
     refetch,
   } = useInfinitePublicMatches(filters)
 
-  const rows = useMemo(() => data?.pages.flatMap((p) => p.rows) ?? [], [data?.pages])
+  const tournamentFilters: PublicTournamentsListFilters = useMemo(
+    () => ({
+      search: filters.search,
+      city: filters.city,
+      status: filters.status,
+      startAfter: filters.startAfter,
+      startBefore: filters.startBefore,
+      minFreeSlots: filters.minFreeSlots,
+      contentType: filters.contentType,
+    }),
+    [filters]
+  )
+
+  const {
+    data: tournaments,
+    isLoading: tournamentsLoading,
+    isRefetching: tournamentsRefetching,
+    refetch: refetchTournaments,
+  } = usePublicTournamentsExplore(tournamentFilters)
+
+  const matchRows = useMemo(() => data?.pages.flatMap((p) => p.rows) ?? [], [data?.pages])
+
+  const exploreItems = useMemo((): ExploreItem[] => {
+    const matchItems: ExploreItem[] = matchRows.map((row) => ({
+      kind: 'match',
+      id: row.id,
+      start_at: row.start_at,
+      row,
+    }))
+    const tournamentItems: ExploreItem[] = (tournaments ?? []).map((row) => ({
+      kind: 'tournament',
+      id: row.id,
+      start_at: row.start_at,
+      row,
+    }))
+    return [...matchItems, ...tournamentItems].sort(
+      (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    )
+  }, [matchRows, tournaments])
+
+  const refetchAll = useCallback(() => {
+    void refetch()
+    void refetchTournaments()
+  }, [refetch, refetchTournaments])
 
   const openFilterModal = useCallback(() => {
     setDraftCity(filters.city)
     setDraftStatus(filters.status)
     setDraftMinFree(filters.minFreeSlots)
+    setDraftContentType(filters.contentType)
     setDraftHidePast(filters.startAfter !== null)
     setDraftDateFromIso(null)
     setDraftDateToIso(null)
@@ -141,11 +232,20 @@ export default function ExploreScreen() {
       city: draftCity.trim(),
       status: draftStatus,
       minFreeSlots: draftMinFree,
+      contentType: draftContentType,
       startAfter,
       startBefore,
     }))
     setFilterModalOpen(false)
-  }, [draftCity, draftDateFromIso, draftDateToIso, draftHidePast, draftMinFree, draftStatus])
+  }, [
+    draftCity,
+    draftContentType,
+    draftDateFromIso,
+    draftDateToIso,
+    draftHidePast,
+    draftMinFree,
+    draftStatus,
+  ])
 
   const clearFilters = useCallback(() => {
     setDraftCity('')
@@ -154,6 +254,7 @@ export default function ExploreScreen() {
     setDraftHidePast(true)
     setDraftDateFromIso(null)
     setDraftDateToIso(null)
+    setDraftContentType('all')
     setFilters(DEFAULT_FILTERS())
     setSearchDraft('')
     setFilterModalOpen(false)
@@ -166,6 +267,7 @@ export default function ExploreScreen() {
     if (filters.minFreeSlots > 0) n += 1
     if (filters.startBefore) n += 1
     if (filters.startAfter === null) n += 1
+    if (filters.contentType !== 'all') n += 1
     return n
   }, [filters])
 
@@ -176,7 +278,7 @@ export default function ExploreScreen() {
   const listHeader = (
     <View style={styles.listHeader}>
       <Text style={styles.screenTitle}>Descubrir</Text>
-      <Text style={styles.subtitle}>Partidas públicas cerca de ti</Text>
+      <Text style={styles.subtitle}>Partidas y torneos públicos</Text>
 
       <TextInput
         style={styles.search}
@@ -204,23 +306,29 @@ export default function ExploreScreen() {
     </View>
   )
 
+  const showMatches = filters.contentType !== 'tournaments'
+  const showTournaments = filters.contentType !== 'matches'
+
   const listFooter = isFetchingNextPage ? (
     <View style={styles.footerLoad}>
       <ActivityIndicator color="#1a5f4a" />
     </View>
-  ) : hasNextPage ? (
+  ) : hasNextPage && showMatches ? (
     <View style={styles.footerLoad}>
       <Button title="Cargar más" variant="outline" onPress={() => void fetchNextPage()} />
     </View>
-  ) : rows.length > 0 ? (
+  ) : exploreItems.length > 0 ? (
     <Text style={styles.endHint}>No hay más resultados</Text>
   ) : null
 
-  if (isLoading && !data) {
+  if (
+    (showMatches && isLoading && !data) ||
+    (showTournaments && tournamentsLoading && !tournaments)
+  ) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top + 24 }]}>
         <ActivityIndicator size="large" color="#1a5f4a" />
-        <Text style={styles.loadingHint}>Cargando partidas…</Text>
+        <Text style={styles.loadingHint}>Cargando partidas y torneos…</Text>
       </View>
     )
   }
@@ -244,24 +352,38 @@ export default function ExploreScreen() {
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <FlatList
-        data={rows}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ExploreMatchCard row={item} onPress={() => router.push(`/(tabs)/matches/${item.id}`)} />
-        )}
+        data={exploreItems}
+        keyExtractor={(item) => `${item.kind}-${item.id}`}
+        renderItem={({ item }) =>
+          item.kind === 'match' ? (
+            <ExploreMatchCard
+              row={item.row}
+              onPress={() => router.push(`/(tabs)/matches/${item.id}`)}
+            />
+          ) : (
+            <ExploreTournamentCard
+              row={item.row}
+              onPress={() => router.push(`/(tabs)/tournaments/${item.id}`)}
+            />
+          )
+        }
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
         contentContainerStyle={styles.listContent}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.35}
-        refreshing={isRefetching && !isFetchingNextPage}
-        onRefresh={() => void refetch()}
+        refreshing={(isRefetching && !isFetchingNextPage) || tournamentsRefetching}
+        onRefresh={refetchAll}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>Nada por aquí</Text>
             <Text style={styles.emptyText}>
-              No hay partidas públicas que coincidan con tu búsqueda y filtros. Prueba a ampliar
-              fechas o quitar filtros.
+              {filters.contentType === 'matches'
+                ? 'No hay partidas públicas que coincidan con tu búsqueda y filtros.'
+                : filters.contentType === 'tournaments'
+                  ? 'No hay torneos públicos que coincidan con tu búsqueda y filtros.'
+                  : 'No hay partidas ni torneos públicos que coincidan con tu búsqueda y filtros.'}{' '}
+              Prueba a ampliar fechas o quitar filtros.
             </Text>
             <Button
               title="Limpiar filtros"
@@ -273,13 +395,7 @@ export default function ExploreScreen() {
         }
       />
 
-      <Pressable
-        style={styles.fab}
-        onPress={() => router.push('/(tabs)/matches/create')}
-        accessibilityRole="button"
-        accessibilityLabel="Crear partida">
-        <Text style={styles.fabIcon}>＋</Text>
-      </Pressable>
+      <CreateFab />
 
       <Modal visible={filterModalOpen} animationType="slide" presentationStyle="pageSheet">
         <View style={[styles.modalRoot, { paddingTop: insets.top + 8 }]}>
@@ -296,6 +412,29 @@ export default function ExploreScreen() {
             style={styles.modalScroll}
             contentContainerStyle={styles.modalScrollContent}
             keyboardShouldPersistTaps="handled">
+            <Text style={styles.fieldLabel}>Mostrar</Text>
+            <View style={styles.chipsWrap}>
+              {(
+                [
+                  { id: 'all', label: 'Todo', value: 'all' as ExploreContentType },
+                  { id: 'm', label: 'Partidas', value: 'matches' as ExploreContentType },
+                  { id: 't', label: 'Torneos', value: 'tournaments' as ExploreContentType },
+                ] as const
+              ).map((opt) => {
+                const selected = draftContentType === opt.value
+                return (
+                  <Pressable
+                    key={opt.id}
+                    style={[styles.chip, selected && styles.chipOn]}
+                    onPress={() => setDraftContentType(opt.value)}>
+                    <Text style={[styles.chipText, selected && styles.chipTextOn]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+
             <MunicipalityPicker
               label="Ciudad o pueblo"
               value={draftCity}
@@ -459,6 +598,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e8ebe8',
   },
+  tournamentCard: { borderColor: '#c5ddd4' },
+  tournamentKind: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1a5f4a',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
   cardTitle: { fontSize: 17, fontWeight: '600', color: '#1a1a1a' },
   cardMeta: { fontSize: 14, color: '#555', marginTop: 4 },
   cardRow: {
@@ -536,23 +684,6 @@ const styles = StyleSheet.create({
   helpMuted: { fontSize: 12, color: '#888', marginTop: 6, lineHeight: 16 },
   clearLink: { marginTop: 8 },
   clearLinkText: { color: '#1a5f4a', fontSize: 14 },
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1a5f4a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
-  },
-  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
   modalActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,

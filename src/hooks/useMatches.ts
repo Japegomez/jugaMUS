@@ -14,8 +14,13 @@ import {
   updateMatch,
 } from '@/services/matches.service'
 import type { MatchInsert, MatchUpdate, PublicMatchesListFilters } from '@/services/matches.service'
+import {
+  listPublicTournamentsFiltered,
+  type PublicTournamentsListFilters,
+} from '@/services/tournaments.service'
 import { useAuthStore } from '@/hooks/useAuth'
-import { MATCH_PAGE_SIZE, QUERY_STALE_TIME } from '@/constants'
+import { invalidateTournamentQueries } from '@/hooks/useTournaments'
+import { MATCH_PAGE_SIZE, QUERY_STALE_TIME, TOURNAMENT_QUERY_STALE_TIME } from '@/constants'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
@@ -42,10 +47,12 @@ export function invalidateMyMatchesDashboard(queryClient: QueryClient, userId?: 
 }
 
 export const PUBLIC_MATCHES_EXPLORE_ROOT = 'public-matches-explore' as const
+export const PUBLIC_TOURNAMENTS_EXPLORE_ROOT = 'public-tournaments-explore' as const
 
-export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) {
+export function publicTournamentsExploreQueryKey(filters: PublicTournamentsListFilters) {
   return [
-    PUBLIC_MATCHES_EXPLORE_ROOT,
+    PUBLIC_TOURNAMENTS_EXPLORE_ROOT,
+    filters.contentType,
     filters.search.trim(),
     filters.city.trim(),
     filters.status ?? '',
@@ -60,6 +67,31 @@ function invalidatePublicMatchesExplore(queryClient: QueryClient) {
     queryKey: [PUBLIC_MATCHES_EXPLORE_ROOT],
     exact: false,
   })
+}
+
+function invalidatePublicTournamentsExplore(queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    queryKey: [PUBLIC_TOURNAMENTS_EXPLORE_ROOT],
+    exact: false,
+  })
+}
+
+export function invalidatePublicExplore(queryClient: QueryClient) {
+  invalidatePublicMatchesExplore(queryClient)
+  invalidatePublicTournamentsExplore(queryClient)
+}
+
+export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) {
+  return [
+    PUBLIC_MATCHES_EXPLORE_ROOT,
+    filters.contentType,
+    filters.search.trim(),
+    filters.city.trim(),
+    filters.status ?? '',
+    filters.startAfter ?? '',
+    filters.startBefore ?? '',
+    filters.minFreeSlots,
+  ] as const
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────────────
@@ -92,7 +124,9 @@ export function useMyMatchesDashboard() {
     queryKey: myMatchesDashboardQueryKey(sessionUserId ?? ''),
     queryFn: () => getMyMatchesDashboard(sessionUserId!),
     enabled: Boolean(sessionUserId),
-    staleTime: QUERY_STALE_TIME,
+    staleTime: TOURNAMENT_QUERY_STALE_TIME,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -112,7 +146,19 @@ export function useInfinitePublicMatches(filters: PublicMatchesListFilters) {
       if (lastPage.total <= 0 || loaded >= lastPage.total) return undefined
       return loaded
     },
+    enabled: filters.contentType !== 'tournaments',
     staleTime: QUERY_STALE_TIME,
+  })
+}
+
+export function usePublicTournamentsExplore(filters: PublicTournamentsListFilters) {
+  return useQuery({
+    queryKey: publicTournamentsExploreQueryKey(filters),
+    queryFn: () => listPublicTournamentsFiltered(filters),
+    enabled: filters.contentType !== 'matches',
+    staleTime: TOURNAMENT_QUERY_STALE_TIME,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -178,7 +224,10 @@ export function useCancelMatch() {
         })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
-      invalidatePublicMatchesExplore(queryClient)
+      if (updated.tournament_id) {
+        invalidateTournamentQueries(queryClient, updated.tournament_id)
+      }
+      invalidatePublicExplore(queryClient)
     },
   })
 }

@@ -14,7 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
 import type { AwaitingResultMatchRow, UserMatchSummary } from '@/services/matches.service'
+import type { UserTournamentSummary } from '@/services/tournaments.service'
+import { TOURNAMENT_STATUS } from '@/constants'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
+import { CreateFab } from '@/components/ui/CreateFab'
+import { formatCityAndPlace } from '@/utils/location'
 
 function MatchRowCard({
   row,
@@ -37,6 +41,44 @@ function MatchRowCard({
       <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
       <Text style={styles.cardMeta}>{row.city}</Text>
       {subtitle ? <Text style={styles.cardHint}>{subtitle}</Text> : null}
+    </Pressable>
+  )
+}
+
+function TournamentRowCard({
+  row,
+  subtitle,
+  onPress,
+}: {
+  row: UserTournamentSummary
+  subtitle?: string
+  onPress: () => void
+}) {
+  const statusLabel =
+    row.status === TOURNAMENT_STATUS.REGISTRATION
+      ? row.bracket_generated_at
+        ? 'Inscripción'
+        : 'Inscripción abierta'
+      : row.status === TOURNAMENT_STATUS.IN_PROGRESS
+        ? 'En curso'
+        : row.status
+
+  return (
+    <Pressable
+      style={[styles.card, styles.tournamentCard]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Torneo: ${row.title}`}>
+      <Text style={styles.tournamentKind}>Torneo</Text>
+      <Text style={styles.cardTitle} numberOfLines={2}>
+        {row.title}
+      </Text>
+      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
+      <Text style={styles.cardMeta}>
+        {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+      </Text>
+      {subtitle ? <Text style={styles.cardHint}>{subtitle}</Text> : null}
+      <Text style={styles.tournamentStatus}>{statusLabel}</Text>
     </Pressable>
   )
 }
@@ -64,15 +106,7 @@ export default function MatchesScreen() {
     )
   }
 
-  const createFab = (
-    <Pressable
-      style={styles.fab}
-      onPress={() => router.push('/(tabs)/matches/create')}
-      accessibilityRole="button"
-      accessibilityLabel="Crear partida">
-      <Text style={styles.fabIcon}>＋</Text>
-    </Pressable>
-  )
+  const createFab = <CreateFab />
 
   if (isLoading) {
     return (
@@ -99,11 +133,21 @@ export default function MatchesScreen() {
     )
   }
 
-  const { upcoming, inProgress, awaitingResultValidation } = data
+  const {
+    upcoming,
+    inProgress,
+    awaitingResultValidation,
+    upcomingTournaments,
+    inProgressTournaments,
+  } = data
   const awaitingIds = new Set(awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = inProgress.filter((m) => !awaitingIds.has(m.id))
   const hasAny =
-    upcoming.length > 0 || inProgressDeduped.length > 0 || awaitingResultValidation.length > 0
+    upcoming.length > 0 ||
+    inProgressDeduped.length > 0 ||
+    awaitingResultValidation.length > 0 ||
+    upcomingTournaments.length > 0 ||
+    inProgressTournaments.length > 0
 
   return (
     <View style={styles.root}>
@@ -118,13 +162,46 @@ export default function MatchesScreen() {
         }>
         <Text style={styles.screenTitle}>Mis partidas</Text>
         <Text style={styles.screenSubtitle}>
-          Próximas fechas, partidas en curso y acciones pendientes. El historial está en Perfil.
+          Próximas fechas, torneos, partidas en curso y acciones pendientes. El historial está en
+          Perfil.
         </Text>
 
         {!hasAny ? (
           <Text style={styles.emptyBlock}>
-            No tienes partidas activas aquí. Explora en Descubrir o crea una nueva partida.
+            No tienes partidas ni torneos activos aquí. Explora en Descubrir o crea uno nuevo.
           </Text>
+        ) : null}
+
+        {inProgressTournaments.length > 0 ? (
+          <Section title="Torneos en curso">
+            {inProgressTournaments.map((t) => (
+              <TournamentRowCard
+                key={t.id}
+                row={t}
+                subtitle={t.isOrganizer ? 'Organizas este torneo' : 'Participas en este torneo'}
+                onPress={() => router.push(`/(tabs)/tournaments/${t.id}`)}
+              />
+            ))}
+          </Section>
+        ) : null}
+
+        {upcomingTournaments.length > 0 ? (
+          <Section title="Torneos próximos">
+            {upcomingTournaments.map((t) => (
+              <TournamentRowCard
+                key={t.id}
+                row={t}
+                subtitle={
+                  t.isOrganizer
+                    ? t.bracket_generated_at
+                      ? 'Organizas este torneo'
+                      : 'Organizas este torneo · cuadro pendiente de generar'
+                    : 'Participas en este torneo'
+                }
+                onPress={() => router.push(`/(tabs)/tournaments/${t.id}`)}
+              />
+            ))}
+          </Section>
         ) : null}
 
         {awaitingResultValidation.length > 0 ? (
@@ -174,23 +251,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: '#f6f7f4' },
   scrollContent: { paddingHorizontal: 20 },
   container: { flex: 1, backgroundColor: '#f6f7f4' },
-  fab: {
-    position: 'absolute',
-    bottom: 28,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#1a5f4a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
-  },
-  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32 },
   centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
   screenTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
   screenSubtitle: { fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 20 },
@@ -209,6 +269,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e8e8e8',
   },
+  tournamentCard: { borderColor: '#c5ddd4' },
+  tournamentKind: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1a5f4a',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  tournamentStatus: { fontSize: 12, color: '#1a5f4a', fontWeight: '600', marginTop: 8 },
   cardTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
   cardMeta: { fontSize: 13, color: '#666', marginTop: 4 },
   cardHint: { fontSize: 12, color: '#c07000', marginTop: 8, fontStyle: 'italic' },

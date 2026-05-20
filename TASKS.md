@@ -1,6 +1,6 @@
 # Tareas - Mussa Suerte
 
-> Actualizado: 19/05/2026 (cierre de sesión)
+> Actualizado: 20/05/2026 (cierre de sesión — torneos UX)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -12,6 +12,7 @@
 | Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir    |
 | Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes |
 | Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas    |
+| Fase 4 - Torneos    | En curso   | Cuadros, parejas, explore, UX móvil  |
 
 ---
 
@@ -68,6 +69,11 @@
   - Tabs: rutas `matches/index`, `profile/index`, etc. en `(tabs)/_layout.tsx` (Expo Router web).
 - [x] Hook `useAuth.ts` con Zustand para estado global de sesión
 - [x] Cerrar sesión desde pantalla de perfil
+- [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
+  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
+  - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
+  - UI: `DeleteAccountModal` + botón en perfil; `deleteAccount()` en `useAuth`.
+  - PR #21 mergeado en `develop`.
 
 ### F2 - Perfil de usuario
 
@@ -76,6 +82,11 @@
 - [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
 - [x] Preferencias de notificación (email y push)
+- [x] Preferencias granulares de notificación en pantalla de perfil (canal + por evento)
+  - Migración `022`: `notify_on_join`, `notify_on_match_change`, `notify_on_result`, `notify_on_reminder` en `profiles` (aplicada en remoto).
+  - Toggles editables en `profile/index.tsx` (grupos **Canal** y **Por evento**); guardado inmediato. Sin pantalla `settings` separada.
+  - Enlaces a Términos y Política de privacidad en sección **Legal** del perfil (debajo del historial).
+  - PR #19 mergeado en `develop`.
 - [x] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
   - RPC `get_profile_with_phone` usada en detalle de partida (pantalla `[id].tsx`).
 
@@ -135,6 +146,9 @@
   - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
 - [x] Configurar Expo EAS Build (primer build de prueba en Android)
   - Perfil `production` en Android; FCM vía `google-services.json` + `eas credentials`.
+- [x] Icono de app y splash screen (baraja española minimalista)
+  - Assets unificados en `assets/` (`icon`, `adaptive-icon`, `splash-icon`, `favicon`); fondo de marca `#1a5f4a` en `app.json`.
+  - PR #20 mergeado en `develop`.
 - [ ] Configurar Expo EAS Build para iOS
   - **Bloqueado:** requiere Apple Developer Program (cuenta de pago). Reanudar cuando haya membresía activa.
 
@@ -260,15 +274,50 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ---
 
+## Fase 4 — Torneos
+
+### Migraciones de base de datos
+
+- [x] Tablas `tournaments`, `tournament_pairs`; columnas `tournament_*` en `matches` (migración `026`)
+- [x] RPCs: `add_tournament_pair`, `join_tournament_pair`, `generate_tournament_bracket`, `advance_tournament_round`, `list_tournament_bracket`, `record_tournament_match_result_as_referee`
+- [x] Aplicar migración `026` en Supabase remoto
+- [x] Migraciones `027`–`037` en repo y remoto: RLS matches, RPC `create_tournament`, UX cuadro (bye, avance parcial, cierre final), explore sin partidas de torneo, stats sin bye, títulos de ronda, una pareja por jugador registrado
+
+### F11 - Torneos (UI + flujo)
+
+- [x] FAB speed-dial: crear partida / organizar torneo
+- [x] Wizard crear torneo (paso 1 parámetros, paso 2 parejas); reset del wizard al abandonar la pantalla
+- [x] Detalle torneo: pestañas Cuadro (`BracketCanvas` SVG) y Partidos pendientes
+- [x] Añadir pareja (mixta texto/registrado); unirse a pareja con hueco libre (botón **Unirme** dentro de la tarjeta)
+- [x] Un jugador registrado solo puede estar en **una pareja** por torneo (validación RPC + UI)
+- [x] Organizar cuadro (organizador): eliminación directa, byes, partidos `in_progress` con hora actual
+- [x] Avance automático de ronda al confirmar resultado; propagación bye; relleno parcial del cuadro
+- [x] Cierre del torneo al terminar/cancelar la final
+- [x] Árbitro: registrar resultado en partidos solo-texto; auto-confirmación si rival es solo texto
+- [x] Badge de torneo en ficha de partida del cuadro; sin unirse/abandonar manual en partidas de torneo
+- [x] Descubrir: filtro Todo / Partidas / Torneos; torneos en inscripción; partidas del cuadro excluidas
+- [x] Mis partidas: torneos del usuario junto a partidas activas
+- [x] Detalle y tarjetas: organizador, ciudad + lugar; títulos de ronda (Cuartos, Semifinal…)
+- [x] Historial perfil: victoria/derrota con fondo verde/rojo; partidas bye excluidas de historial y stats admin
+- [x] Crear/editar partida y torneo: lugar obligatorio o casilla «Lugar por definir»
+- [x] Sincronización multi-dispositivo: refetch al foco, polling 30 s y pull-to-refresh en detalle torneo
+- [x] Test unitario `buildBracketLayout`
+
+### F11 - Pendiente / opcional
+
+- [ ] Supabase Realtime en torneos (sync instantáneo entre web y móvil sin esperar polling)
+
+---
+
 ## Backlog general (sin fase asignada)
 
 - [x] Pantalla de Términos y Condiciones (texto estático)
   - Secciones en `src/app/(auth)/terms.tsx`; disclaimer «Texto legal definitivo pendiente de revisión jurídica.»
 - [x] Pantalla de Política de Privacidad (texto estático)
   - Secciones en `src/app/(auth)/privacy.tsx`; mismo disclaimer. Rebrand app → **Mussa Suerte** (`src/constants/app.ts`, `app.json`).
-- [ ] Flujo de eliminación de cuenta (derecho de supresión RGPD)
-- [ ] Pantalla de configuración de notificaciones avanzada
-- [ ] Icono de app y splash screen
+- [x] Flujo de eliminación de cuenta (derecho de supresión RGPD) — ver F1 / PR #21
+- [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
+- [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
 - [ ] Onboarding (primeras pantallas para nuevos usuarios)
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
 - [ ] README de desarrollo con instrucciones de setup local

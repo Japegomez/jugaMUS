@@ -3,6 +3,17 @@ import type { Tables } from '@/types/database.types'
 
 export type MatchResultRow = Tables<'match_results'>
 
+export function mapResultRpcError(message: string): string {
+  if (message.includes('tie_not_allowed')) return 'No puede haber empate.'
+  if (message.includes('winner_must_reach_target')) {
+    return 'El ganador debe alcanzar el número de juegos configurado en la partida.'
+  }
+  if (message.includes('invalid_scores')) return 'Marcador no válido.'
+  if (message.includes('result_already_exists'))
+    return 'Ya hay un resultado registrado para esta partida.'
+  return message
+}
+
 export type MatchResultBundle = {
   result: MatchResultRow | null
   /** Current user's confirmation for the latest result row, if any. */
@@ -61,19 +72,14 @@ export async function fetchMatchResultBundle(
 }
 
 export async function submitResult(input: SubmitResultInput): Promise<MatchResultRow> {
-  const { data, error } = await supabase
-    .from('match_results')
-    .insert({
-      match_id: input.matchId,
-      team_a_games: input.teamAGames,
-      team_b_games: input.teamBGames,
-      submitted_by_team: input.submittedByTeam,
-      submitted_by_user_id: input.submittedByUserId,
-    })
-    .select()
-    .single()
+  const { data, error } = await supabase.rpc('submit_match_result', {
+    p_match_id: input.matchId,
+    p_team_a_games: input.teamAGames,
+    p_team_b_games: input.teamBGames,
+  })
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(mapResultRpcError(error.message))
+  if (!data) throw new Error('No se pudo registrar el resultado')
   return data as MatchResultRow
 }
 

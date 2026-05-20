@@ -1,3 +1,8 @@
+import { mapResultRpcError } from '@/services/results.service'
+import {
+  getUserTournamentsDashboard,
+  type UserTournamentSummary,
+} from '@/services/tournaments.service'
 import { supabase } from '@/lib/supabase'
 import {
   DEFAULT_TEAM_A_NAME,
@@ -7,8 +12,10 @@ import {
   MATCH_PAGE_SIZE,
   RESULT_STATUS,
   TEAM,
+  type ExploreContentType,
 } from '@/constants'
 import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
+import { resolveMatchOutcome, type MatchOutcome } from '@/utils/matchDisplay'
 
 /** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
 function startAtToTimestamptzIso(startAt: string): string {
@@ -56,6 +63,13 @@ export type MatchRow = {
   team_b_name: string
   team_b_player_1: string | null
   team_b_player_2: string | null
+  tournament_id: string | null
+  tournament_round_size: number | null
+  tournament_bracket_position: number | null
+  tournament_pair_a_id: string | null
+  tournament_pair_b_id: string | null
+  tournament_winner_pair_id: string | null
+  tournament_is_bye: boolean
   created_at: string
   updated_at: string
 }
@@ -400,6 +414,17 @@ export async function joinMatch(
   userId: string,
   team: string
 ): Promise<ParticipantRow> {
+  const { data: matchMeta, error: matchError } = await supabase
+    .from('matches')
+    .select('tournament_id')
+    .eq('id', matchId)
+    .maybeSingle()
+
+  if (matchError) throw new Error(matchError.message)
+  if (matchMeta?.tournament_id) {
+    throw new Error('Esta partida pertenece a un torneo. Accede desde la ficha del torneo.')
+  }
+
   const { data: existing, error: lookupError } = await supabase
     .from('match_participants')
     .select('id, left_at, state')
@@ -493,6 +518,11 @@ export type UserMatchSummary = {
   status: string
   visibility: string
   creator_id: string
+  tournament_round_size?: number | null
+  user_team?: 'A' | 'B' | null
+  team_a_games?: number | null
+  team_b_games?: number | null
+  outcome?: MatchOutcome
 }
 
 /**
@@ -505,14 +535,19 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
       .from('matches')
       .select('id, title, start_at, city, status, visibility, creator_id')
       .eq('creator_id', userId)
+      .is('tournament_id', null)
+      .eq('tournament_is_bye', false)
       .order('start_at', { ascending: false })
       .limit(MATCH_PAGE_SIZE),
 
     supabase
       .from('match_participants')
-      .select(`match:matches(id, title, start_at, city, status, visibility, creator_id)`)
+      .select(
+        `match:matches!inner(id, title, start_at, city, status, visibility, creator_id, tournament_round_size)`
+      )
       .eq('user_id', userId)
       .is('left_at', null)
+      .eq('match.tournament_is_bye', false)
       .limit(MATCH_PAGE_SIZE),
   ])
 
@@ -528,15 +563,64 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
     })
     .filter((m): m is UserMatchSummary => m !== null)
 
-  // Merge, deduplicate by id, sort by start_at desc
   const byId = new Map<string, UserMatchSummary>()
   for (const m of [...creatorRows, ...participantRows]) {
     byId.set(m.id, m)
   }
 
-  return Array.from(byId.values()).sort(
-    (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
-  )
+  const matchIds = Array.from(byId.keys())
+  if (matchIds.length === 0) return []
+
+  const [teamsRes, resultsRes] = await Promise.all([
+    supabase
+      .from('match_participants')
+      .select('match_id, team')
+      .eq('user_id', userId)
+      .in('match_id', matchIds)
+      .is('left_at', null),
+    supabase
+      .from('match_results')
+      .select('match_id, team_a_games, team_b_games, created_at')
+      .in('match_id', matchIds)
+      .eq('status', RESULT_STATUS.CONFIRMED)
+      .order('created_at', { ascending: false }),
+  ])
+
+  if (teamsRes.error) throw new Error(teamsRes.error.message)
+  if (resultsRes.error) throw new Error(resultsRes.error.message)
+
+  const teamByMatch = new Map<string, 'A' | 'B'>()
+  for (const row of teamsRes.data ?? []) {
+    if (row.team === 'A' || row.team === 'B') {
+      teamByMatch.set(row.match_id, row.team)
+    }
+  }
+
+  const resultByMatch = new Map<string, { team_a_games: number; team_b_games: number }>()
+  for (const row of resultsRes.data ?? []) {
+    if (!resultByMatch.has(row.match_id)) {
+      resultByMatch.set(row.match_id, {
+        team_a_games: row.team_a_games,
+        team_b_games: row.team_b_games,
+      })
+    }
+  }
+
+  return Array.from(byId.values())
+    .map((m) => {
+      const user_team = teamByMatch.get(m.id) ?? null
+      const result = resultByMatch.get(m.id)
+      const team_a_games = result?.team_a_games ?? null
+      const team_b_games = result?.team_b_games ?? null
+      const outcome = resolveMatchOutcome({
+        status: m.status,
+        user_team,
+        team_a_games,
+        team_b_games,
+      })
+      return { ...m, user_team, team_a_games, team_b_games, outcome }
+    })
+    .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
 }
 
 /** Row from `list_matches_awaiting_my_result_action` — same shape as `UserMatchSummary` + result id. */
@@ -546,6 +630,8 @@ export type MyMatchesDashboard = {
   upcoming: UserMatchSummary[]
   inProgress: UserMatchSummary[]
   awaitingResultValidation: AwaitingResultMatchRow[]
+  upcomingTournaments: UserTournamentSummary[]
+  inProgressTournaments: UserTournamentSummary[]
 }
 
 /**
@@ -575,10 +661,11 @@ async function listAwaitingResultValidationClientFallback(
     .from('match_results')
     .select(
       `id, match_id, submitted_by_team, created_at,
-       match:matches(id, title, start_at, city, status, visibility, creator_id)`
+       match:matches!inner(id, title, start_at, city, status, visibility, creator_id, tournament_is_bye)`
     )
     .in('match_id', matchIds)
     .eq('status', RESULT_STATUS.PENDING_VALIDATION)
+    .eq('match.tournament_is_bye', false)
     .order('created_at', { ascending: false })
 
   if (resultsError) throw new Error(resultsError.message)
@@ -627,15 +714,17 @@ async function listAwaitingResultValidationClientFallback(
  * and matches where the user must approve or dispute a submitted result.
  */
 export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
-  const [awaitingRes, participantRes] = await Promise.all([
+  const [awaitingRes, participantRes, tournamentsRes] = await Promise.all([
     supabase.rpc('list_matches_awaiting_my_result_action'),
     supabase
       .from('match_participants')
-      .select(`match:matches(id, title, start_at, city, status, visibility, creator_id)`)
+      .select(`match:matches!inner(id, title, start_at, city, status, visibility, creator_id)`)
       .eq('user_id', userId)
       .is('left_at', null)
       .eq('state', 'confirmed')
+      .eq('match.tournament_is_bye', false)
       .limit(120),
+    getUserTournamentsDashboard(userId),
   ])
 
   let awaitingResultValidation: AwaitingResultMatchRow[]
@@ -668,7 +757,13 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
   )
 
-  return { upcoming, inProgress, awaitingResultValidation }
+  return {
+    upcoming,
+    inProgress,
+    awaitingResultValidation,
+    upcomingTournaments: tournamentsRes.upcoming,
+    inProgressTournaments: tournamentsRes.inProgress,
+  }
 }
 
 // ─── Public explore (F5) — RPC list_public_matches ───────────────────────────
@@ -680,6 +775,8 @@ export type PublicMatchExplorerRow = MatchRow & {
 
 type ListPublicMatchesRpc = Database['public']['Functions']['list_public_matches']
 
+export type { ExploreContentType } from '@/constants'
+
 export type PublicMatchesListFilters = {
   search: string
   city: string
@@ -689,6 +786,7 @@ export type PublicMatchesListFilters = {
   startBefore: string | null
   /** 0 = no filter; otherwise require at least N free slots (of 4). */
   minFreeSlots: number
+  contentType: ExploreContentType
 }
 
 function emptyToUndefined(s: string | null | undefined): string | undefined {
@@ -709,7 +807,7 @@ export async function recordMatchResultDirect(
     p_team_b_games: teamBGames,
   })
 
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(mapResultRpcError(error.message))
 }
 
 /**
