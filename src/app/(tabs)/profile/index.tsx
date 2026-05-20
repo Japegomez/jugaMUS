@@ -13,6 +13,7 @@ import {
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
@@ -42,10 +43,13 @@ export default function ProfileScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const signOut = useAuthStore((s) => s.signOut)
+  const deleteAccount = useAuthStore((s) => s.deleteAccount)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading, isError } = useProfile(sessionUserId)
   const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
   const [signingOut, setSigningOut] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   const onSignOut = async () => {
     setSigningOut(true)
@@ -56,6 +60,20 @@ export default function ProfileScreen() {
       Alert.alert('Cerrar sesión', message)
     } finally {
       setSigningOut(false)
+    }
+  }
+
+  const onDeleteAccount = async () => {
+    setDeletingAccount(true)
+    try {
+      const { error } = await deleteAccount()
+      if (error) throw error
+      setShowDeleteModal(false)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'No se pudo eliminar la cuenta'
+      throw new Error(message)
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -152,6 +170,20 @@ export default function ProfileScreen() {
         onPress={onSignOut}
         style={styles.signOutBtn}
         textStyle={styles.signOutLabel}
+      />
+
+      <Button
+        title="Eliminar cuenta"
+        variant="danger"
+        onPress={() => setShowDeleteModal(true)}
+        style={styles.deleteAccountBtn}
+      />
+
+      <DeleteAccountModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        loading={deletingAccount}
+        onConfirm={onDeleteAccount}
       />
     </ScrollView>
   )
@@ -348,6 +380,9 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     color: '#b42318',
+  },
+  deleteAccountBtn: {
+    marginTop: -4,
   },
   matchesLoader: { marginVertical: 12 },
   matchesEmpty: {

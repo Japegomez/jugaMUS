@@ -55,6 +55,7 @@ export interface AuthState {
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (params: SignUpParams) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  deleteAccount: () => Promise<{ error: Error | null }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signInWithApple: () => Promise<{ error: Error | null }>
@@ -142,6 +143,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ session: null })
+  },
+
+  deleteAccount: async () => {
+    const { data, error } = await supabase.functions.invoke('delete-account')
+
+    if (error) {
+      return { error: new Error(error.message || 'No se pudo eliminar la cuenta') }
+    }
+
+    const payload = data as { error?: string; success?: boolean } | null
+    if (payload?.error) {
+      return { error: new Error(payload.error) }
+    }
+
+    await supabase.auth.signOut()
+    set({ session: null })
+    return { error: null }
   },
 
   resetPassword: async (email) => {
