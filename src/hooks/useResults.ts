@@ -7,7 +7,9 @@ import {
   matchResultQueryKey,
   userMatchesQueryKey,
   invalidateMyMatchesDashboard,
+  invalidatePublicExplore,
 } from '@/hooks/useMatches'
+import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import {
   fetchMatchResultBundle,
   submitConfirmation,
@@ -33,11 +35,20 @@ export function useSubmitResult() {
 
   return useMutation({
     mutationFn: (input: SubmitResultInput) => submitResult(input),
-    onSuccess: (_row, variables) => {
+    onSuccess: (row, variables) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(variables.matchId) })
       queryClient.invalidateQueries({
         queryKey: matchResultQueryKey(variables.matchId, sessionUserId),
       })
+      const cached = queryClient.getQueryData<{ tournament_id?: string | null }>(
+        matchQueryKey(variables.matchId)
+      )
+      const tournamentId = cached?.tournament_id ?? null
+      if (tournamentId && row.status === 'confirmed') {
+        invalidateTournamentQueries(queryClient, tournamentId)
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+        invalidatePublicExplore(queryClient)
+      }
       if (sessionUserId) {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
@@ -57,6 +68,14 @@ export function useSubmitConfirmation() {
       queryClient.invalidateQueries({
         queryKey: matchResultQueryKey(variables.matchId, sessionUserId),
       })
+      const cached = queryClient.getQueryData<{ tournament_id?: string | null }>(
+        matchQueryKey(variables.matchId)
+      )
+      if (cached?.tournament_id) {
+        invalidateTournamentQueries(queryClient, cached.tournament_id)
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+        invalidatePublicExplore(queryClient)
+      }
       if (sessionUserId) {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
