@@ -41,19 +41,27 @@ jobs:
           fi
 
       - name: Sentry cron check-in
-        if: steps.ping.outputs.skip != 'true' && secrets.SENTRY_AUTH_TOKEN != ''
+        if: steps.ping.outputs.skip != 'true'
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "Skip: set SENTRY_AUTH_TOKEN repo secret."
+            exit 0
+          fi
           npx @sentry/cli monitors run process-notifications-health \
             --org javier-pena-gomez \
             --status ok
 
       - name: Sentry cron check-in (failure)
-        if: failure() && steps.ping.outputs.skip != 'true' && secrets.SENTRY_AUTH_TOKEN != ''
+        if: failure() && steps.ping.outputs.skip != 'true'
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "Skip: set SENTRY_AUTH_TOKEN repo secret."
+            exit 0
+          fi
           npx @sentry/cli monitors run process-notifications-health \
             --org javier-pena-gomez \
             --status error
