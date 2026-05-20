@@ -10,7 +10,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from 'react-native'
@@ -28,8 +27,6 @@ const editProfileSchema = z.object({
   display_name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
   phone_e164: phoneE164Schema,
   city: z.string().trim().max(100, 'Ciudad demasiado larga').optional().or(z.literal('')),
-  notify_email: z.boolean(),
-  notify_push: z.boolean(),
 })
 
 type EditProfileValues = z.infer<typeof editProfileSchema>
@@ -54,8 +51,6 @@ export default function EditProfileScreen() {
       display_name: '',
       phone_e164: '',
       city: '',
-      notify_email: true,
-      notify_push: true,
     },
   })
 
@@ -66,8 +61,6 @@ export default function EditProfileScreen() {
         display_name: profile.display_name,
         phone_e164: profile.phone_e164,
         city: profile.city ?? '',
-        notify_email: profile.notify_email,
-        notify_push: profile.notify_push,
       })
     }
   }, [profile, reset])
@@ -102,8 +95,6 @@ export default function EditProfileScreen() {
         display_name: values.display_name,
         phone_e164: values.phone_e164,
         city: values.city || null,
-        notify_email: values.notify_email,
-        notify_push: values.notify_push,
       })
 
       router.back()
@@ -205,43 +196,6 @@ export default function EditProfileScreen() {
         />
       </View>
 
-      {/* Notification toggles */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Notificaciones</Text>
-
-        <Controller
-          control={control}
-          name="notify_email"
-          render={({ field: { onChange, value } }) => (
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Correo electrónico</Text>
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                thumbColor={value ? '#1a5f4a' : '#ccc'}
-                trackColor={{ true: '#a8d5c2', false: '#e0e0e0' }}
-              />
-            </View>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="notify_push"
-          render={({ field: { onChange, value } }) => (
-            <View style={[styles.toggleRow, styles.toggleRowLast]}>
-              <Text style={styles.toggleLabel}>Notificaciones push</Text>
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                thumbColor={value ? '#1a5f4a' : '#ccc'}
-                trackColor={{ true: '#a8d5c2', false: '#e0e0e0' }}
-              />
-            </View>
-          )}
-        />
-      </View>
-
       {/* Actions */}
       <Button
         title="Guardar cambios"
@@ -333,41 +287,5 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: 8,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  cardTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
-  },
-  toggleRowLast: {
-    borderBottomWidth: 0,
-    marginBottom: 4,
-  },
-  toggleLabel: {
-    fontSize: 15,
-    color: '#333',
   },
 })

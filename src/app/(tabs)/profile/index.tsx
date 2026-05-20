@@ -145,6 +145,14 @@ export default function ProfileScreen() {
         <Text style={styles.editButtonText}>Editar perfil</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.settingsButton}
+        onPress={() => router.push('/(tabs)/profile/settings' as Href)}
+        accessibilityRole="button">
+        <Text style={styles.settingsButtonText}>Configuración</Text>
+        <Text style={styles.settingsChevron}>›</Text>
+      </Pressable>
+
       <Button
         title="Cerrar sesión"
         variant="outline"
@@ -342,6 +350,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  settingsButton: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ddd',
+  },
+  settingsButtonText: {
+    color: '#1a1a1a',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingsChevron: {
+    fontSize: 22,
+    color: '#888',
+    lineHeight: 22,
   },
   signOutBtn: {
     borderColor: '#b42318',
