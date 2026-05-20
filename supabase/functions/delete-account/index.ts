@@ -1,5 +1,5 @@
 // Edge Function: delete-account
-// GDPR right-to-erasure: deletes the caller's avatar and auth user (profiles cascade).
+// GDPR right-to-erasure: anonymizes historical data, removes avatar, deletes auth user.
 //
 // Env vars (auto-injected by Supabase runtime):
 //   SUPABASE_URL
@@ -63,6 +63,18 @@ Deno.serve(async (req) => {
 
   if (storageError) {
     console.warn('[delete-account] avatar cleanup failed:', storageError.message)
+  }
+
+  const { error: cleanupError } = await adminClient.rpc('delete_user_account_data', {
+    p_user_id: user.id,
+  })
+
+  if (cleanupError) {
+    console.error('[delete-account] cleanup failed:', cleanupError.message)
+    return new Response(JSON.stringify({ error: cleanupError.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   }
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id)
