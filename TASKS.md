@@ -1,6 +1,6 @@
 # Tareas - Mussa Suerte
 
-> Actualizado: 20/05/2026 (cierre de sesión)
+> Actualizado: 20/05/2026 (cierre de sesión — torneos UX)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -12,6 +12,7 @@
 | Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir    |
 | Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes |
 | Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas    |
+| Fase 4 - Torneos    | En curso   | Cuadros, parejas, explore, UX móvil  |
 
 ---
 
@@ -270,6 +271,41 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Dashboard de performance en Sentry
   - Cliente: `tracesSampleRate`, `profilesSampleRate`, auto-tracing en `src/lib/sentry.ts`.
   - Pendiente: validar secret `SENTRY_AUTH_TOKEN` en GitHub Actions si el cron no reporta en Sentry.
+
+---
+
+## Fase 4 — Torneos
+
+### Migraciones de base de datos
+
+- [x] Tablas `tournaments`, `tournament_pairs`; columnas `tournament_*` en `matches` (migración `026`)
+- [x] RPCs: `add_tournament_pair`, `join_tournament_pair`, `generate_tournament_bracket`, `advance_tournament_round`, `list_tournament_bracket`, `record_tournament_match_result_as_referee`
+- [x] Aplicar migración `026` en Supabase remoto
+- [x] Migraciones `027`–`037` en repo y remoto: RLS matches, RPC `create_tournament`, UX cuadro (bye, avance parcial, cierre final), explore sin partidas de torneo, stats sin bye, títulos de ronda, una pareja por jugador registrado
+
+### F11 - Torneos (UI + flujo)
+
+- [x] FAB speed-dial: crear partida / organizar torneo
+- [x] Wizard crear torneo (paso 1 parámetros, paso 2 parejas); reset del wizard al abandonar la pantalla
+- [x] Detalle torneo: pestañas Cuadro (`BracketCanvas` SVG) y Partidos pendientes
+- [x] Añadir pareja (mixta texto/registrado); unirse a pareja con hueco libre (botón **Unirme** dentro de la tarjeta)
+- [x] Un jugador registrado solo puede estar en **una pareja** por torneo (validación RPC + UI)
+- [x] Organizar cuadro (organizador): eliminación directa, byes, partidos `in_progress` con hora actual
+- [x] Avance automático de ronda al confirmar resultado; propagación bye; relleno parcial del cuadro
+- [x] Cierre del torneo al terminar/cancelar la final
+- [x] Árbitro: registrar resultado en partidos solo-texto; auto-confirmación si rival es solo texto
+- [x] Badge de torneo en ficha de partida del cuadro; sin unirse/abandonar manual en partidas de torneo
+- [x] Descubrir: filtro Todo / Partidas / Torneos; torneos en inscripción; partidas del cuadro excluidas
+- [x] Mis partidas: torneos del usuario junto a partidas activas
+- [x] Detalle y tarjetas: organizador, ciudad + lugar; títulos de ronda (Cuartos, Semifinal…)
+- [x] Historial perfil: victoria/derrota con fondo verde/rojo; partidas bye excluidas de historial y stats admin
+- [x] Crear/editar partida y torneo: lugar obligatorio o casilla «Lugar por definir»
+- [x] Sincronización multi-dispositivo: refetch al foco, polling 30 s y pull-to-refresh en detalle torneo
+- [x] Test unitario `buildBracketLayout`
+
+### F11 - Pendiente / opcional
+
+- [ ] Supabase Realtime en torneos (sync instantáneo entre web y móvil sin esperar polling)
 
 ---
 

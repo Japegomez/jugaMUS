@@ -17,6 +17,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI.
 - **Notificaciones en perfil (may. 2026):** preferencias por **canal** (email, push) y por **evento** (unión, cambio de partida, resultado, recordatorios) editables en la pantalla de perfil; enlaces legales (términos, privacidad) en la misma pantalla.
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
+- **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final. Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Cache de torneos: refetch al foco + polling 30 s en detalle (multi-dispositivo).
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
@@ -33,6 +34,7 @@ El desarrollo se organiza en tres fases para que sea viable para un único desar
 | **Fase 1 - Core**       | Auth, Perfil, Partidas, Descubrir    | Lo mínimo para que la app sea funcional |
 | **Fase 2 - Resultados** | Notificaciones, Resultados, Reportes | Ciclo de vida completo de una partida   |
 | **Fase 3 - Admin**      | Panel admin, Analíticas, Disputas    | Herramientas de gestión y moderación    |
+| **Fase 4 - Torneos**    | Cuadros, parejas, avance automático  | Organización de torneos eliminatorios   |
 
 ### Fuera del alcance total
 
