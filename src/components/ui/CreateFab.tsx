@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 
 type CreateFabProps = {
@@ -20,7 +20,7 @@ export function CreateFab({ bottom = 28, right = 24 }: CreateFabProps) {
     <>
       {open ? (
         <Pressable
-          style={styles.backdrop}
+          style={[styles.backdrop, Platform.OS === 'web' ? webFixedBackdrop : null]}
           onPress={() => setOpen(false)}
           accessibilityRole="button"
           accessibilityLabel="Cerrar menú"
@@ -59,21 +59,13 @@ export function CreateFab({ bottom = 28, right = 24 }: CreateFabProps) {
   )
 }
 
+const webFixedBackdrop = { position: 'fixed' } as unknown as ViewStyle
+
 const styles = StyleSheet.create({
-  backdrop: Platform.select({
-    web: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 9,
-    },
-    default: {
-      ...StyleSheet.absoluteFillObject,
-      zIndex: 9,
-    },
-  }),
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9,
+  },
   wrap: {
     position: 'absolute',
     alignItems: 'flex-end',
