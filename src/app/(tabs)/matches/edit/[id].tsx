@@ -27,46 +27,58 @@ import {
   freeTeamSlots,
   validateTextRosterCapacity,
 } from '@/services/matches.service'
+import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
 
 // ─── Schema (same as create) ──────────────────────────────────────────────────
 
-const editMatchSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(3, 'El título debe tener al menos 3 caracteres')
-    .max(80, 'El título es demasiado largo'),
-  description: z
-    .string()
-    .trim()
-    .max(300, 'Descripción demasiado larga')
-    .optional()
-    .or(z.literal('')),
-  start_at: z.string().min(1, 'Selecciona fecha y hora'),
-  city: z.string().trim().min(1, 'Selecciona una ciudad o pueblo'),
-  place_defined: z.boolean(),
-  place_text: z
-    .string()
-    .trim()
-    .max(150, 'Texto de lugar demasiado largo')
-    .optional()
-    .or(z.literal('')),
-  duration_target_games: z.number().int().min(1).max(6),
-  visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
-  team_a_name: z
-    .string()
-    .trim()
-    .min(1, 'Nombre del equipo requerido')
-    .max(40, 'Nombre demasiado largo'),
-  team_b_name: z
-    .string()
-    .trim()
-    .min(1, 'Nombre del equipo requerido')
-    .max(40, 'Nombre demasiado largo'),
-  team_a_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
-  team_b_player_1: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
-  team_b_player_2: z.string().trim().max(80, 'Nombre demasiado largo').optional().or(z.literal('')),
-})
+const editMatchSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, 'El título debe tener al menos 3 caracteres')
+      .max(80, 'El título es demasiado largo'),
+    description: z
+      .string()
+      .trim()
+      .max(300, 'Descripción demasiado larga')
+      .optional()
+      .or(z.literal('')),
+    start_at: z.string().min(1, 'Selecciona fecha y hora'),
+    city: z.string().trim().min(1, 'Selecciona una ciudad o pueblo'),
+    ...placeFormFields,
+    duration_target_games: z.number().int().min(1).max(6),
+    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    team_a_name: z
+      .string()
+      .trim()
+      .min(1, 'Nombre del equipo requerido')
+      .max(40, 'Nombre demasiado largo'),
+    team_b_name: z
+      .string()
+      .trim()
+      .min(1, 'Nombre del equipo requerido')
+      .max(40, 'Nombre demasiado largo'),
+    team_a_player_2: z
+      .string()
+      .trim()
+      .max(80, 'Nombre demasiado largo')
+      .optional()
+      .or(z.literal('')),
+    team_b_player_1: z
+      .string()
+      .trim()
+      .max(80, 'Nombre demasiado largo')
+      .optional()
+      .or(z.literal('')),
+    team_b_player_2: z
+      .string()
+      .trim()
+      .max(80, 'Nombre demasiado largo')
+      .optional()
+      .or(z.literal('')),
+  })
+  .superRefine(refinePlaceRequired)
 
 function textPlayerOrNull(value?: string): string | null {
   const trimmed = value?.trim()
@@ -239,8 +251,7 @@ export default function EditMatchScreen() {
           description: values.description || null,
           start_at: values.start_at,
           city: values.city,
-          place_defined: values.place_defined,
-          place_text: values.place_defined ? values.place_text || null : null,
+          ...placePayload(values),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           team_a_name: values.team_a_name.trim(),
@@ -372,7 +383,10 @@ export default function EditMatchScreen() {
           render={({ field }) => (
             <Switch
               value={!field.value}
-              onValueChange={(v) => field.onChange(!v)}
+              onValueChange={(v) => {
+                field.onChange(!v)
+                if (v) setValue('place_text', '', { shouldValidate: true })
+              }}
               trackColor={{ true: '#1a5f4a', false: '#ccc' }}
               thumbColor="#fff"
             />
@@ -387,7 +401,7 @@ export default function EditMatchScreen() {
           name="place_text"
           render={({ field }) => (
             <Input
-              label="Lugar"
+              label="Lugar *"
               placeholder="Ej. Bar El Rincón, Mesa del fondo"
               value={field.value ?? ''}
               onChangeText={field.onChange}

@@ -20,6 +20,7 @@ import { useUserMatches } from '@/hooks/useMatches'
 import { MATCH_STATUS } from '@/constants'
 import type { ProfileUpdate } from '@/services/profiles.service'
 import type { UserMatchSummary } from '@/services/matches.service'
+import { displayMatchTitle, matchHistoryBackground } from '@/utils/matchDisplay'
 
 type NotifField = Pick<
   ProfileUpdate,
@@ -277,21 +278,28 @@ function matchStatusLabel(status: string): { text: string; color: string } {
 
 function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
   const status = matchStatusLabel(match.status)
+  const outcomeBg = matchHistoryBackground(match.outcome ?? null)
   const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   })
+  const outcomeHint =
+    match.outcome === 'won' ? ', victoria' : match.outcome === 'lost' ? ', derrota' : ''
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.matchRow, pressed && styles.matchRowPressed]}
+      style={({ pressed }) => [
+        styles.matchRow,
+        outcomeBg != null && { backgroundColor: outcomeBg },
+        pressed && styles.matchRowPressed,
+      ]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={match.title}>
+      accessibilityLabel={`${displayMatchTitle(match)}${outcomeHint}`}>
       <View style={styles.matchRowMain}>
         <Text style={styles.matchTitle} numberOfLines={1}>
-          {match.title}
+          {displayMatchTitle(match)}
         </Text>
         <Text style={styles.matchMeta}>
           {dateStr} · {match.city}
@@ -540,6 +548,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginHorizontal: -10,
+    borderRadius: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eee',
     gap: 10,
