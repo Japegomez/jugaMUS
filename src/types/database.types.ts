@@ -213,6 +213,13 @@ export type Database = {
           team_b_player_1: string | null
           team_b_player_2: string | null
           title: string
+          tournament_bracket_position: number | null
+          tournament_id: string | null
+          tournament_is_bye: boolean
+          tournament_pair_a_id: string | null
+          tournament_pair_b_id: string | null
+          tournament_round_size: number | null
+          tournament_winner_pair_id: string | null
           updated_at: string
           visibility: string
         }
@@ -235,6 +242,13 @@ export type Database = {
           team_b_player_1?: string | null
           team_b_player_2?: string | null
           title: string
+          tournament_bracket_position?: number | null
+          tournament_id?: string | null
+          tournament_is_bye?: boolean
+          tournament_pair_a_id?: string | null
+          tournament_pair_b_id?: string | null
+          tournament_round_size?: number | null
+          tournament_winner_pair_id?: string | null
           updated_at?: string
           visibility?: string
         }
@@ -257,12 +271,141 @@ export type Database = {
           team_b_player_1?: string | null
           team_b_player_2?: string | null
           title?: string
+          tournament_bracket_position?: number | null
+          tournament_id?: string | null
+          tournament_is_bye?: boolean
+          tournament_pair_a_id?: string | null
+          tournament_pair_b_id?: string | null
+          tournament_round_size?: number | null
+          tournament_winner_pair_id?: string | null
           updated_at?: string
           visibility?: string
         }
         Relationships: [
           {
             foreignKeyName: 'matches_creator_id_fkey'
+            columns: ['creator_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matches_tournament_id_fkey'
+            columns: ['tournament_id']
+            isOneToOne: false
+            referencedRelation: 'tournaments'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      tournament_pairs: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          id: string
+          is_eliminated: boolean
+          name: string
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          is_eliminated?: boolean
+          name: string
+          player_a_text?: string | null
+          player_a_user_id?: string | null
+          player_b_text?: string | null
+          player_b_user_id?: string | null
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          is_eliminated?: boolean
+          name?: string
+          player_a_text?: string | null
+          player_a_user_id?: string | null
+          player_b_text?: string | null
+          player_b_user_id?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'tournament_pairs_tournament_id_fkey'
+            columns: ['tournament_id']
+            isOneToOne: false
+            referencedRelation: 'tournaments'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          bracket_generated_at: string | null
+          city: string
+          created_at: string
+          creator_id: string
+          creator_joins_as_player: boolean
+          description: string | null
+          duration_target_games: number
+          id: string
+          location_privacy: string
+          notes: string | null
+          place_defined: boolean
+          place_text: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          bracket_generated_at?: string | null
+          city: string
+          created_at?: string
+          creator_id: string
+          creator_joins_as_player?: boolean
+          description?: string | null
+          duration_target_games: number
+          id?: string
+          location_privacy?: string
+          notes?: string | null
+          place_defined?: boolean
+          place_text?: string | null
+          start_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          bracket_generated_at?: string | null
+          city?: string
+          created_at?: string
+          creator_id?: string
+          creator_joins_as_player?: boolean
+          description?: string | null
+          duration_target_games?: number
+          id?: string
+          location_privacy?: string
+          notes?: string | null
+          place_defined?: boolean
+          place_text?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'tournaments_creator_id_fkey'
             columns: ['creator_id']
             isOneToOne: false
             referencedRelation: 'profiles'
@@ -509,9 +652,66 @@ export type Database = {
         Args: { p_lim?: number }
         Returns: { display_name: string; match_count: number; user_id: string }[]
       }
+      add_tournament_pair: {
+        Args: {
+          p_name: string
+          p_player_a_text?: string
+          p_player_a_user_id?: string
+          p_player_b_text?: string
+          p_player_b_user_id?: string
+          p_tournament_id: string
+        }
+        Returns: Database['public']['Tables']['tournament_pairs']['Row']
+      }
+      create_tournament: {
+        Args: {
+          p_title: string
+          p_start_at: string
+          p_city: string
+          p_duration_target_games: number
+          p_description?: string | null
+          p_notes?: string | null
+          p_place_defined?: boolean
+          p_place_text?: string | null
+          p_visibility?: string
+          p_location_privacy?: string
+          p_creator_joins_as_player?: boolean
+        }
+        Returns: Database['public']['Tables']['tournaments']['Row']
+      }
       auth_is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      generate_tournament_bracket: {
+        Args: { p_tournament_id: string }
+        Returns: undefined
+      }
+      join_tournament_pair: {
+        Args: { p_as_text?: string; p_pair_id: string; p_slot: string }
+        Returns: Database['public']['Tables']['tournament_pairs']['Row']
+      }
+      list_tournament_bracket: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          bracket_position: number
+          is_bye: boolean
+          match_id: string
+          match_status: string
+          pair_a_id: string
+          pair_a_name: string
+          pair_b_id: string
+          pair_b_name: string
+          round_size: number
+          start_at: string
+          team_a_games: number
+          team_b_games: number
+          winner_pair_id: string
+        }[]
+      }
+      record_tournament_match_result_as_referee: {
+        Args: { p_match_id: string; p_team_a_games: number; p_team_b_games: number }
+        Returns: undefined
       }
       auth_can_read_match: {
         Args: { p_match_id: string }
@@ -590,6 +790,14 @@ export type Database = {
           p_team_b_games: number
         }
         Returns: undefined
+      }
+      submit_match_result: {
+        Args: {
+          p_match_id: string
+          p_team_a_games: number
+          p_team_b_games: number
+        }
+        Returns: Database['public']['Tables']['match_results']['Row']
       }
       list_public_matches: {
         Args: {
