@@ -330,6 +330,10 @@ export type Database = {
           display_name: string
           id: string
           notify_email: boolean
+          notify_on_join: boolean
+          notify_on_match_change: boolean
+          notify_on_reminder: boolean
+          notify_on_result: boolean
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
@@ -344,6 +348,10 @@ export type Database = {
           display_name: string
           id: string
           notify_email?: boolean
+          notify_on_join?: boolean
+          notify_on_match_change?: boolean
+          notify_on_reminder?: boolean
+          notify_on_result?: boolean
           notify_push?: boolean
           phone_e164: string
           photo_url?: string | null
@@ -358,6 +366,10 @@ export type Database = {
           display_name?: string
           id?: string
           notify_email?: boolean
+          notify_on_join?: boolean
+          notify_on_match_change?: boolean
+          notify_on_reminder?: boolean
+          notify_on_result?: boolean
           notify_push?: boolean
           phone_e164?: string
           photo_url?: string | null

@@ -13,13 +13,26 @@ export type ProfileRow = {
   status: string
   notify_email: boolean
   notify_push: boolean
+  notify_on_join: boolean
+  notify_on_match_change: boolean
+  notify_on_result: boolean
+  notify_on_reminder: boolean
   created_at: string
   updated_at: string
 }
 
 export type ProfileUpdate = Pick<
   TablesUpdate<'profiles'>,
-  'display_name' | 'phone_e164' | 'city' | 'notify_email' | 'notify_push' | 'photo_url'
+  | 'display_name'
+  | 'phone_e164'
+  | 'city'
+  | 'notify_email'
+  | 'notify_push'
+  | 'notify_on_join'
+  | 'notify_on_match_change'
+  | 'notify_on_result'
+  | 'notify_on_reminder'
+  | 'photo_url'
 >
 
 export async function getProfile(userId: string): Promise<ProfileRow> {

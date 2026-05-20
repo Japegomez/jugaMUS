@@ -12,14 +12,24 @@ import {
 } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
-import { useProfile } from '@/hooks/useProfile'
+import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useUserMatches } from '@/hooks/useMatches'
 import { MATCH_STATUS } from '@/constants'
+import type { ProfileUpdate } from '@/services/profiles.service'
 import type { UserMatchSummary } from '@/services/matches.service'
+
+type NotifField = Pick<
+  ProfileUpdate,
+  | 'notify_email'
+  | 'notify_push'
+  | 'notify_on_join'
+  | 'notify_on_match_change'
+  | 'notify_on_result'
+  | 'notify_on_reminder'
+>
 
 function AvatarCircle({ uri, name }: { uri: string | null; name: string }) {
   const initials = name
@@ -47,7 +57,9 @@ export default function ProfileScreen() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading, isError } = useProfile(sessionUserId)
   const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
+  const updateProfile = useUpdateProfile()
   const [signingOut, setSigningOut] = useState(false)
+  const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
 
@@ -60,6 +72,18 @@ export default function ProfileScreen() {
       Alert.alert('Cerrar sesión', message)
     } finally {
       setSigningOut(false)
+    }
+  }
+
+  const onNotifChange = async (field: keyof NotifField, value: boolean) => {
+    setSavingField(field)
+    try {
+      await updateProfile.mutateAsync({ [field]: value })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'No se pudo guardar la preferencia'
+      Alert.alert('Notificaciones', message)
+    } finally {
+      setSavingField(null)
     }
   }
 
@@ -100,35 +124,68 @@ export default function ProfileScreen() {
     )
   }
 
+  const notifDisabled = updateProfile.isPending
+
   return (
     <ScrollView
-      contentContainerStyle={[
-        styles.scroll,
-        // Espacio extra para que los botones finales no queden bajo la tab bar
-        { paddingBottom: 32 + insets.bottom + 72 },
-      ]}
+      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom + 72 }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
-      {/* Header */}
       <View style={styles.header}>
         <AvatarCircle uri={profile.photo_url} name={profile.display_name} />
         <Text style={styles.displayName}>{profile.display_name}</Text>
         {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
       </View>
 
-      {/* Info rows */}
       <View style={styles.card}>
         <InfoRow label="Teléfono" value={profile.phone_e164 || '—'} />
       </View>
 
-      {/* Notification prefs */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Notificaciones</Text>
-        <NotifRow label="Correo electrónico" value={profile.notify_email} />
-        <NotifRow label="Push" value={profile.notify_push} />
+
+        <Text style={styles.cardSubtitle}>Canal</Text>
+        <NotifToggleRow
+          label="Correo electrónico"
+          value={profile.notify_email}
+          disabled={notifDisabled && savingField === 'notify_email'}
+          onValueChange={(value) => void onNotifChange('notify_email', value)}
+        />
+        <NotifToggleRow
+          label="Notificaciones push"
+          value={profile.notify_push}
+          disabled={notifDisabled && savingField === 'notify_push'}
+          onValueChange={(value) => void onNotifChange('notify_push', value)}
+        />
+
+        <Text style={styles.cardSubtitle}>Por evento</Text>
+        <NotifToggleRow
+          label="Alguien se une a tu partida"
+          value={profile.notify_on_join}
+          disabled={notifDisabled && savingField === 'notify_on_join'}
+          onValueChange={(value) => void onNotifChange('notify_on_join', value)}
+        />
+        <NotifToggleRow
+          label="Partida editada o cancelada"
+          value={profile.notify_on_match_change}
+          disabled={notifDisabled && savingField === 'notify_on_match_change'}
+          onValueChange={(value) => void onNotifChange('notify_on_match_change', value)}
+        />
+        <NotifToggleRow
+          label="Resultado enviado o confirmado"
+          value={profile.notify_on_result}
+          disabled={notifDisabled && savingField === 'notify_on_result'}
+          onValueChange={(value) => void onNotifChange('notify_on_result', value)}
+        />
+        <NotifToggleRow
+          label="Recordatorios de partida"
+          value={profile.notify_on_reminder}
+          disabled={notifDisabled && savingField === 'notify_on_reminder'}
+          onValueChange={(value) => void onNotifChange('notify_on_reminder', value)}
+          isLast
+        />
       </View>
 
-      {/* Match history */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
         {matchesLoading ? (
@@ -146,7 +203,19 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Actions */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Legal</Text>
+        <LinkRow
+          label="Términos y condiciones"
+          onPress={() => router.push('/(auth)/terms' as Href)}
+        />
+        <LinkRow
+          label="Política de privacidad"
+          onPress={() => router.push('/(auth)/privacy' as Href)}
+          isLast
+        />
+      </View>
+
       {profile.role === 'admin' ? (
         <Pressable
           style={styles.adminButton}
@@ -244,17 +313,54 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function NotifRow({ label, value }: { label: string; value: boolean }) {
+function NotifToggleRow({
+  label,
+  value,
+  onValueChange,
+  disabled = false,
+  isLast = false,
+}: {
+  label: string
+  value: boolean
+  onValueChange: (next: boolean) => void
+  disabled?: boolean
+  isLast?: boolean
+}) {
   return (
-    <View style={styles.infoRow}>
+    <View style={[styles.infoRow, isLast && styles.infoRowLast]}>
       <Text style={styles.infoLabel}>{label}</Text>
       <Switch
         value={value}
-        disabled
+        onValueChange={onValueChange}
+        disabled={disabled}
         thumbColor={value ? '#1a5f4a' : '#ccc'}
         trackColor={{ true: '#a8d5c2', false: '#e0e0e0' }}
       />
     </View>
+  )
+}
+
+function LinkRow({
+  label,
+  onPress,
+  isLast = false,
+}: {
+  label: string
+  onPress: () => void
+  isLast?: boolean
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.linkRow,
+        isLast && styles.linkRowLast,
+        pressed && styles.linkRowPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="button">
+      <Text style={styles.linkLabel}>{label}</Text>
+      <Text style={styles.linkChevron}>›</Text>
+    </Pressable>
   )
 }
 
@@ -332,6 +438,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 6,
   },
+  cardSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#aaa',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginTop: 10,
+    marginBottom: 2,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -340,9 +455,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eee',
   },
+  infoRowLast: {
+    borderBottomWidth: 0,
+    marginBottom: 4,
+  },
   infoLabel: {
     fontSize: 15,
     color: '#333',
+    flex: 1,
+    paddingRight: 12,
   },
   infoValue: {
     fontSize: 15,
@@ -350,6 +471,29 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
     marginLeft: 8,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#eee',
+  },
+  linkRowLast: {
+    borderBottomWidth: 0,
+    marginBottom: 4,
+  },
+  linkRowPressed: { opacity: 0.7 },
+  linkLabel: {
+    fontSize: 15,
+    color: '#1a5f4a',
+    fontWeight: '500',
+  },
+  linkChevron: {
+    fontSize: 22,
+    color: '#888',
+    lineHeight: 22,
   },
   adminButton: {
     backgroundColor: '#2c5282',
