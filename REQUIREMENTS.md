@@ -14,6 +14,9 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **CI/CD (may. 2026):** el workflow de EAS en GitHub Actions está limitado a **Android** (build + submit a Play) hasta contar con **Apple Developer Program**; iOS en CI y APNs quedan fuera hasta entonces.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
+- **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI.
+- **Notificaciones en perfil (may. 2026):** preferencias por **canal** (email, push) y por **evento** (unión, cambio de partida, resultado, recordatorios) editables en la pantalla de perfil; enlaces legales (términos, privacidad) en la misma pantalla.
+- **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
@@ -48,10 +51,10 @@ El desarrollo se organiza en tres fases para que sea viable para un único desar
 
 Solo dos roles en el MVP:
 
-| Rol         | Capacidades                                                                                                                                                  |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **`user`**  | Crear, editar y cancelar sus partidas; unirse y abandonar partidas; ver teléfonos de participantes de sus partidas; editar su perfil; recibir notificaciones |
-| **`admin`** | Todo lo anterior + gestionar reportes, bloquear/desactivar usuarios, eliminar partidas y resultados                                                          |
+| Rol         | Capacidades                                                                                                                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`user`**  | Crear, editar y cancelar sus partidas; unirse y abandonar partidas; ver teléfonos de participantes de sus partidas; editar su perfil; configurar notificaciones; eliminar su cuenta; recibir notificaciones |
+| **`admin`** | Todo lo anterior + gestionar reportes, bloquear/desactivar usuarios, eliminar partidas y resultados                                                                                                         |
 
 - **Sin invitados**: registro obligatorio para cualquier acción
 - Los privilegios de creador de partida se gestionan por el campo `creator_id` (no es un rol separado)
@@ -70,6 +73,7 @@ Solo dos roles en el MVP:
 - Recuperación de contraseña para usuarios de email
 - Gestión de sesiones con JWT y refresh tokens (gestionado por Supabase Auth)
 - Estado de sesión persistente entre cierres de la app
+- Eliminación de cuenta (RGPD): borrado de identidad + anonimización del historial en partidas/resultados
 
 ### F2 - Perfil de usuario (Fase 1)
 
@@ -77,9 +81,13 @@ Solo dos roles en el MVP:
 - Teléfono (obligatorio, validación formato E.164; en la app: selector de prefijo por país + validación genérica ITU-T, ej. `+34612345678` u otros países del listado)
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
-- Preferencias de notificación: email y/o push
+- Preferencias de notificación en pantalla de perfil:
+  - **Canal:** email y/o push
+  - **Por evento:** unión a partida, edición/cancelación, resultado, recordatorios (columnas `notify_on_*` en `profiles`, migración `022`)
+- Enlaces a términos y política de privacidad desde el perfil
 - **El teléfono solo es visible para participantes de la misma partida confirmada**
 - Opción de ocultar ubicación exacta a no participantes
+- Eliminación de cuenta con confirmación modal (`DeleteAccountModal`)
 
 ### F3 - Ubicaciones (Fase 1)
 
@@ -136,6 +144,7 @@ Solo dos roles en el MVP:
 - Push + email cuando alguien se une a tu partida
 - Push + email cuando la partida es editada o cancelada
 - Push + email al ser expulsado o cuando alguien abandona
+- Preferencias granulares en cliente (canal + evento); **pendiente:** que triggers/cron respeten `notify_on_*` además de `notify_push`/`notify_email`
 
 **Notificaciones automáticas (Fase 2)**
 
@@ -198,14 +207,14 @@ Solo dos roles en el MVP:
 
 ### Backend
 
-| Tecnología              | Propósito                                                    |
-| ----------------------- | ------------------------------------------------------------ |
-| Supabase                | BaaS: base de datos, auth, storage, edge functions, realtime |
-| PostgreSQL              | Base de datos relacional (vía Supabase)                      |
-| Supabase Auth           | Autenticación (Google, Apple, email) con JWT                 |
-| Supabase Storage        | Fotos de perfil con transformaciones automáticas             |
-| Supabase Edge Functions | Lógica del servidor, cron jobs, disparador de notificaciones |
-| `pg_cron`               | Jobs programados para transiciones automáticas de estado     |
+| Tecnología              | Propósito                                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| Supabase                | BaaS: base de datos, auth, storage, edge functions, realtime                                           |
+| PostgreSQL              | Base de datos relacional (vía Supabase)                                                                |
+| Supabase Auth           | Autenticación (Google, Apple, email) con JWT                                                           |
+| Supabase Storage        | Fotos de perfil con transformaciones automáticas                                                       |
+| Supabase Edge Functions | Lógica del servidor, cron jobs, disparador de notificaciones, eliminación de cuenta (`delete-account`) |
+| `pg_cron`               | Jobs programados para transiciones automáticas de estado                                               |
 
 ### Servicios externos
 
@@ -242,6 +251,12 @@ CREATE TABLE profiles (
   photo_url   TEXT,
   notify_email BOOLEAN NOT NULL DEFAULT TRUE,
   notify_push  BOOLEAN NOT NULL DEFAULT TRUE,
+  -- Migración 022 (may. 2026):
+  notify_on_join BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_match_change BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_result BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_reminder BOOLEAN NOT NULL DEFAULT TRUE,
+  push_token   TEXT,
   role        TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -402,7 +417,7 @@ src/
 │   │   │   ├── index.tsx   # Listado y filtros
 │   │   │   ├── [id].tsx    # Detalle de partida
 │   │   │   └── create.tsx  # Formulario de creación
-│   │   └── profile/        # Perfil y configuración
+│   │   └── profile/        # Perfil (notificaciones, legal, historial)
 │   │       ├── index.tsx
 │   │       └── edit.tsx
 │   └── admin/              # Panel admin (Fase 3, acceso restringido)
@@ -484,9 +499,9 @@ Supabase (PostgreSQL + Auth + Storage)
 ### Privacidad (RGPD)
 
 - Consentimiento explícito en el registro
-- Derecho de supresión completa (borrado de cuenta y todos sus datos)
+- Derecho de supresión: borrado de cuenta (auth + perfil + avatar + reportes personales). El historial agregado de partidas **se anonimiza** (perfil sentinel «Usuario eliminado»), no se destruye, para no perjudicar a otros jugadores.
 - Minimización de datos: teléfono visible solo para participantes de la misma partida
-- Política de privacidad y términos visibles en la app
+- Política de privacidad y términos visibles en la app (registro y perfil)
 - DPA agreements con servicios externos (Supabase, PostHog, Sentry)
 
 ### Observabilidad
@@ -527,12 +542,14 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH4: Un usuario puede recuperar su contraseña por email
 - CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
+- CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas/resultados (perfil sentinel «Usuario eliminado»)
 
 **Perfil**
 
 - CA_PROF1: El teléfono se valida en formato E.164 antes de guardar
 - CA_PROF2: La foto de perfil se redimensiona automáticamente a ≤ 500KB al subir
 - CA_PROF3: El teléfono solo aparece visible para participantes de la misma partida confirmada
+- CA_PROF4: Las preferencias de notificación (canal y por evento) se editan desde el perfil y persisten en `profiles`
 
 **Partidas**
 
@@ -558,6 +575,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_NOTIF2: Los participantes reciben push si la partida es editada o cancelada
 - CA_NOTIF3: Recordatorio automático 24h y 2h antes de la partida
 - CA_NOTIF4: El usuario puede desactivar notificaciones push y/o email desde el perfil
+- CA_NOTIF5: El usuario puede desactivar tipos concretos de notificación por evento desde el perfil
 
 **Resultados**
 
@@ -585,19 +603,19 @@ Supabase (PostgreSQL + Auth + Storage)
 
 Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para versiones futuras:
 
-| Funcionalidad                           | Motivo del aplazamiento                                               |
-| --------------------------------------- | --------------------------------------------------------------------- |
-| Ligas y clasificaciones                 | Alta complejidad (calendario, brackets, puntuaciones)                 |
-| Chat interno                            | Requiere moderación constante; se delega en WhatsApp                  |
-| Geolocalización GPS exacta              | Sacrifica privacidad sin aportar valor suficiente en el MVP           |
-| Autenticación con Apple ID              | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store)          |
-| Soporte multilenguaje completo (i18n)   | No prioritario hasta tener masa crítica de usuarios                   |
-| Notificaciones personalizadas avanzadas | Fase 3 cubre lo básico; personalización avanzada es complejidad extra |
-| Sistema de reputación y valoraciones    | Necesita masa crítica de usuarios para ser útil                       |
-| Integración con redes sociales          | No crítico para el MVP                                                |
-| Modo offline/sincronización             | Alta complejidad de sincronización; conexión asumida                  |
-| Verificación de teléfono por SMS        | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2          |
-| Compartir partida en redes sociales     | Útil para crecimiento orgánico; valorar en Fase 2 o 3                 |
+| Funcionalidad                           | Motivo del aplazamiento                                                                                                                                         |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ligas y clasificaciones                 | Alta complejidad (calendario, brackets, puntuaciones)                                                                                                           |
+| Chat interno                            | Requiere moderación constante; se delega en WhatsApp                                                                                                            |
+| Geolocalización GPS exacta              | Sacrifica privacidad sin aportar valor suficiente en el MVP                                                                                                     |
+| Autenticación con Apple ID              | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store)                                                                                                    |
+| Soporte multilenguaje completo (i18n)   | No prioritario hasta tener masa crítica de usuarios                                                                                                             |
+| Notificaciones personalizadas avanzadas | ~~Fase 3~~ **Implementado (may. 2026):** toggles por canal y evento en perfil; pendiente cablear triggers/cron a `notify_on_*` si se desea filtrado en servidor |
+| Sistema de reputación y valoraciones    | Necesita masa crítica de usuarios para ser útil                                                                                                                 |
+| Integración con redes sociales          | No crítico para el MVP                                                                                                                                          |
+| Modo offline/sincronización             | Alta complejidad de sincronización; conexión asumida                                                                                                            |
+| Verificación de teléfono por SMS        | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2                                                                                                    |
+| Compartir partida en redes sociales     | Útil para crecimiento orgánico; valorar en Fase 2 o 3                                                                                                           |
 
 ---
 

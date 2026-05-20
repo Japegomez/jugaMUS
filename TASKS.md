@@ -1,6 +1,6 @@
 # Tareas - Mussa Suerte
 
-> Actualizado: 19/05/2026 (cierre de sesión)
+> Actualizado: 20/05/2026 (cierre de sesión)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -68,6 +68,11 @@
   - Tabs: rutas `matches/index`, `profile/index`, etc. en `(tabs)/_layout.tsx` (Expo Router web).
 - [x] Hook `useAuth.ts` con Zustand para estado global de sesión
 - [x] Cerrar sesión desde pantalla de perfil
+- [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
+  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
+  - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
+  - UI: `DeleteAccountModal` + botón en perfil; `deleteAccount()` en `useAuth`.
+  - PR #21 mergeado en `develop`.
 
 ### F2 - Perfil de usuario
 
@@ -76,6 +81,11 @@
 - [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
 - [x] Preferencias de notificación (email y push)
+- [x] Preferencias granulares de notificación en pantalla de perfil (canal + por evento)
+  - Migración `022`: `notify_on_join`, `notify_on_match_change`, `notify_on_result`, `notify_on_reminder` en `profiles` (aplicada en remoto).
+  - Toggles editables en `profile/index.tsx` (grupos **Canal** y **Por evento**); guardado inmediato. Sin pantalla `settings` separada.
+  - Enlaces a Términos y Política de privacidad en sección **Legal** del perfil (debajo del historial).
+  - PR #19 mergeado en `develop`.
 - [x] Lógica de visibilidad del teléfono: solo visible para participantes de la misma partida
   - RPC `get_profile_with_phone` usada en detalle de partida (pantalla `[id].tsx`).
 
@@ -135,6 +145,9 @@
   - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
 - [x] Configurar Expo EAS Build (primer build de prueba en Android)
   - Perfil `production` en Android; FCM vía `google-services.json` + `eas credentials`.
+- [x] Icono de app y splash screen (baraja española minimalista)
+  - Assets unificados en `assets/` (`icon`, `adaptive-icon`, `splash-icon`, `favicon`); fondo de marca `#1a5f4a` en `app.json`.
+  - PR #20 mergeado en `develop`.
 - [ ] Configurar Expo EAS Build para iOS
   - **Bloqueado:** requiere Apple Developer Program (cuenta de pago). Reanudar cuando haya membresía activa.
 
@@ -266,9 +279,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Secciones en `src/app/(auth)/terms.tsx`; disclaimer «Texto legal definitivo pendiente de revisión jurídica.»
 - [x] Pantalla de Política de Privacidad (texto estático)
   - Secciones en `src/app/(auth)/privacy.tsx`; mismo disclaimer. Rebrand app → **Mussa Suerte** (`src/constants/app.ts`, `app.json`).
-- [ ] Flujo de eliminación de cuenta (derecho de supresión RGPD)
-- [ ] Pantalla de configuración de notificaciones avanzada
-- [ ] Icono de app y splash screen
+- [x] Flujo de eliminación de cuenta (derecho de supresión RGPD) — ver F1 / PR #21
+- [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
+- [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
 - [ ] Onboarding (primeras pantallas para nuevos usuarios)
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
 - [ ] README de desarrollo con instrucciones de setup local
