@@ -321,4 +321,6 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [ ] Onboarding (primeras pantallas para nuevos usuarios)
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
 - [ ] README de desarrollo con instrucciones de setup local
-- [ ] Documentación de variables de entorno (`.env.example`)
+- [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
+- [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
+  - Pendiente manual: configurar `CRON_SECRET` en Supabase Dashboard → Edge Functions (mismo valor que `private.runtime_config.cron_secret`) y secret `EDGE_CRON_SECRET` en GitHub

@@ -36,17 +36,16 @@ export function useUpdateProfile() {
   })
 }
 
-/** Mutation to upload a new avatar image. Returns the public URL. */
+/** Mutation to upload a new avatar image. Returns the updated profile. */
 export function useUploadAvatar() {
   const queryClient = useQueryClient()
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: async (imageUri: string) => {
+    mutationFn: async (input: { uri: string; mimeType?: string | null }) => {
       if (!sessionUserId) throw new Error('No autenticado')
-      const photoUrl = await uploadAvatar(sessionUserId, imageUri)
-      const updated = await updateProfile(sessionUserId, { photo_url: photoUrl })
-      return updated
+      await uploadAvatar(sessionUserId, input.uri, input.mimeType)
+      return getProfile(sessionUserId)
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(profileQueryKey(updated.id), updated)

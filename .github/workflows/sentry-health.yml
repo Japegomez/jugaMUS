@@ -18,22 +18,21 @@ jobs:
         id: ping
         env:
           SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          CRON_SECRET: ${{ secrets.EDGE_CRON_SECRET }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+          if [ -z "$SUPABASE_URL" ] || [ -z "$CRON_SECRET" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY repo secrets."
+            echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EDGE_CRON_SECRET repo secrets."
             exit 0
           fi
           URL="${SUPABASE_URL%/}/functions/v1/process-notifications"
-          HTTP_CODE=$(curl -s -o /tmp/ef-body.txt -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "$URL" \
-            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
             -d '{}' \
             --max-time 30)
           echo "HTTP $HTTP_CODE"
-          cat /tmp/ef-body.txt || true
           echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
           if [ "$HTTP_CODE" -ge 500 ]; then
             echo "::error::Edge function returned $HTTP_CODE"

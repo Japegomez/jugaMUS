@@ -1,3 +1,18 @@
+import { APP_SCHEME } from '@/constants/app'
+
+const ALLOWED_SCHEMES = new Set([APP_SCHEME])
+
+function isAllowedCallbackScheme(url: string): boolean {
+  const lower = url.toLowerCase()
+  if (ALLOWED_SCHEMES.has(APP_SCHEME) && lower.startsWith(`${APP_SCHEME}://`)) {
+    return true
+  }
+  if (__DEV__ && (lower.startsWith('exp://') || lower.startsWith('exps://'))) {
+    return true
+  }
+  return false
+}
+
 /**
  * Parses access/refresh tokens or PKCE `code` from the URL returned by the OAuth browser session.
  */
@@ -6,6 +21,10 @@ export function parseAuthCallbackUrl(url: string): {
   refresh_token: string | null
   code: string | null
 } {
+  if (!isAllowedCallbackScheme(url)) {
+    return { access_token: null, refresh_token: null, code: null }
+  }
+
   let access_token: string | null = null
   let refresh_token: string | null = null
   let code: string | null = null
