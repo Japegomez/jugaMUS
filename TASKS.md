@@ -1,6 +1,6 @@
 # Tareas - Mussa Suerte
 
-> Actualizado: 20/05/2026 (cierre de sesión — torneos UX)
+> Actualizado: 22/05/2026 (cierre de sesión — UX Mis partidas + migración 049)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -12,7 +12,8 @@
 | Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir    |
 | Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes |
 | Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas    |
-| Fase 4 - Torneos    | En curso   | Cuadros, parejas, explore, UX móvil  |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil  |
+| UI — Ultra Limpio   | Completada | Rediseño visual                      |
 
 ---
 
@@ -306,6 +307,26 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ### F11 - Pendiente / opcional
 
 - [ ] Supabase Realtime en torneos (sync instantáneo entre web y móvil sin esperar polling)
+
+---
+
+## UI — Rediseño Ultra Limpio (may. 2026)
+
+> Rama de trabajo: `feature/ui-redesign` (cambios locales sin commit al cierre de sesión).
+
+- [x] Tokens centralizados (`src/theme/colors.ts`, `typography.ts`, `layout.ts`)
+- [x] Fuente DM Sans (`@expo-google-fonts/dm-sans`, carga en `_layout.tsx`)
+- [x] Mis partidas y Descubrir: listas con filas, separadores y `StatusDot` (sin tarjetas)
+- [x] `ScreenHeader` + resto de pantallas/modales migrados al nuevo palette
+- [x] FAB speed-dial (`CreateFab`) anclado justo encima de la tab bar (`useBottomTabBarHeight`)
+- [x] Espaciado superior unificado (`screenTopPadding`, +12 px extra)
+- [x] Toggle mostrar/ocultar contraseña en registro (`Input` + `@expo/vector-icons`)
+- [x] Switches de notificaciones en perfil con mayor contraste (y filtros Descubrir al mismo estilo)
+- [x] Preview Mis partidas y Descubrir: `ciudad · lugar` (`formatCityAndPlace` + `attachPlaceFields` en dashboard)
+- [x] Migración `049` (`list_matches_awaiting_my_result_action` incluye lugar) — aplicada en Supabase remoto
+- [x] Cabecera Mis partidas: solo título, sin contador de activas
+- [ ] Commit + PR `feature/ui-redesign` → `develop` (revisor/asignado Japegomez)
+- [ ] QA visual rápida en Android / iOS / web tras merge
 
 ---
 
