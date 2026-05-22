@@ -5,6 +5,8 @@ import Svg, { G, Line, Rect, Text as SvgText } from 'react-native-svg'
 import { MATCH_STATUS } from '@/constants'
 import type { BracketNodeRow } from '@/services/tournaments.service'
 import { buildBracketLayout, isPlaceholderNode, truncateName } from '@/utils/bracketLayout'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 type BracketCanvasProps = {
   nodes: BracketNodeRow[]
@@ -25,18 +27,18 @@ const PLACEHOLDER_NAMES = new Set(['por determinar', 'tbd', '—', '-'])
 
 function nodeColors(node: BracketNodeRow) {
   if (isPlaceholderNode(node)) {
-    return { fill: '#fafafa', stroke: '#ddd', strokeDash: '4 4' }
+    return { fill: Colors.surface, stroke: Colors.border, strokeDash: '4 4' }
   }
   if (node.is_bye) {
-    return { fill: '#f0f0f0', stroke: '#bbb', strokeDash: '4 4' }
+    return { fill: Colors.surface, stroke: Colors.textSecondary, strokeDash: '4 4' }
   }
   if (node.match_status === MATCH_STATUS.IN_PROGRESS) {
-    return { fill: '#fff8e6', stroke: '#c07000', strokeDash: undefined }
+    return { fill: Colors.wonBackground, stroke: Colors.warning, strokeDash: undefined }
   }
   if (node.match_status === MATCH_STATUS.FINISHED || node.winner_pair_id) {
-    return { fill: '#eef7f3', stroke: '#1a5f4a', strokeDash: undefined }
+    return { fill: Colors.wonBackground, stroke: Colors.primary, strokeDash: undefined }
   }
-  return { fill: '#fff', stroke: '#ccc', strokeDash: undefined }
+  return { fill: Colors.surface, stroke: Colors.border, strokeDash: undefined }
 }
 
 function scoreLabel(node: BracketNodeRow): string {
@@ -85,7 +87,7 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                 y={20}
                 fontSize={13}
                 fontWeight="700"
-                fill="#1a5f4a"
+                fill={Colors.primary}
                 textAnchor="middle">
                 {rl.label}
               </SvgText>
@@ -98,7 +100,7 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                 y1={c.y1}
                 x2={c.x2}
                 y2={c.y2}
-                stroke="#bbb"
+                stroke={Colors.textSecondary}
                 strokeWidth={1.5}
               />
             ))}
@@ -109,7 +111,7 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                 y1={c.y2}
                 x2={c.x3}
                 y2={c.y3}
-                stroke="#bbb"
+                stroke={Colors.textSecondary}
                 strokeWidth={1.5}
               />
             ))}
@@ -138,14 +140,20 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                     y={node.y + 22}
                     fontSize={12}
                     fontWeight={aWinner ? '700' : '500'}
-                    fill={placeholder ? '#999' : aWinner ? '#1a5f4a' : '#333'}>
+                    fill={
+                      placeholder
+                        ? Colors.textSecondary
+                        : aWinner
+                          ? Colors.primary
+                          : Colors.textPrimary
+                    }>
                     {slotLabel(node, 'a')}
                   </SvgText>
                   <SvgText
                     x={node.x + node.width / 2}
                     y={node.y + 38}
                     fontSize={11}
-                    fill="#666"
+                    fill={Colors.textSecondary}
                     textAnchor="middle">
                     {scoreLabel(node)}
                   </SvgText>
@@ -155,7 +163,13 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                       y={node.y + 58}
                       fontSize={12}
                       fontWeight={bWinner ? '700' : '500'}
-                      fill={placeholder ? '#999' : bWinner ? '#1a5f4a' : '#333'}>
+                      fill={
+                        placeholder
+                          ? Colors.textSecondary
+                          : bWinner
+                            ? Colors.primary
+                            : Colors.textPrimary
+                      }>
                       {slotLabel(node, 'b')}
                     </SvgText>
                   ) : null}
@@ -189,14 +203,14 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
 const styles = StyleSheet.create({
   canvasWrap: {
     marginVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
     overflow: 'hidden',
   },
   nodePress: { position: 'absolute' },
   emptyWrap: { padding: 16 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 8 },
-  emptyHint: { fontSize: 14, color: '#666', lineHeight: 20 },
+  emptyTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
 })

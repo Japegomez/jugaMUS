@@ -11,6 +11,8 @@ import {
 } from 'react-native'
 
 import { searchMunicipalities, type Municipality } from '@/utils/municipalities'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface MunicipalityPickerProps {
   label?: string
@@ -127,7 +129,7 @@ export function MunicipalityPicker({
               value={query}
               onChangeText={handleSearch}
               placeholder="Escribe el nombre del municipio"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={Colors.textSecondary}
               autoCorrect={false}
               clearButtonMode="while-editing"
               returnKeyType="search"
@@ -177,51 +179,51 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginBottom: 6,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
   fieldError: {
-    borderColor: '#b00020',
+    borderColor: Colors.danger,
   },
   fieldText: {
     flex: 1,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   fieldPlaceholder: {
-    color: '#888',
+    color: Colors.textSecondary,
   },
   clearBtn: {
     fontSize: 14,
-    color: '#888',
+    color: Colors.textSecondary,
     paddingLeft: 8,
   },
   chevron: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.textSecondary,
     paddingLeft: 8,
   },
   error: {
-    color: '#b00020',
+    color: Colors.danger,
     fontSize: 13,
     marginTop: 4,
   },
   // Modal
   modal: {
     flex: 1,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -229,18 +231,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
   },
   modalClose: {
     fontSize: 18,
-    color: '#555',
+    color: Colors.textSecondary,
     padding: 4,
   },
   searchWrap: {
@@ -248,10 +250,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     margin: 12,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     gap: 8,
   },
   searchIcon: {
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 11,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   emptyState: {
     flex: 1,
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#888',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
   resultItem: {
@@ -279,27 +281,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
   resultItemPressed: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: Colors.surface,
   },
   resultItemSelected: {
-    backgroundColor: '#eef7f3',
+    backgroundColor: Colors.wonBackground,
   },
   resultName: {
     flex: 1,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   checkmark: {
     fontSize: 16,
-    color: '#1a5f4a',
-    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#eee',
+    backgroundColor: Colors.border,
     marginLeft: 20,
   },
 })

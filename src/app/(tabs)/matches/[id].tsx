@@ -38,6 +38,9 @@ import { freeTeamSlots, getParticipantProfile, resolveTeamName } from '@/service
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
 import type { ReportTargetType } from '@/services/reports.service'
 import { MATCH_STATUS, MATCH_VISIBILITY, RESULT_STATUS, TEAM } from '@/constants'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,17 +63,17 @@ function submitterDisplayName(participants: ParticipantWithProfile[], userId: st
 function statusLabel(status: string) {
   switch (status) {
     case MATCH_STATUS.PLANNED:
-      return { text: 'Planificada', color: '#1a5f4a' }
+      return { text: 'Planificada', color: Colors.primary }
     case MATCH_STATUS.IN_PROGRESS:
-      return { text: 'En curso', color: '#c07000' }
+      return { text: 'En curso', color: Colors.warning }
     case MATCH_STATUS.FINISHED:
-      return { text: 'Finalizada', color: '#555' }
+      return { text: 'Finalizada', color: Colors.textSecondary }
     case MATCH_STATUS.FINISHED_NO_RESULT:
-      return { text: 'Sin resultado', color: '#999' }
+      return { text: 'Sin resultado', color: Colors.textSecondary }
     case MATCH_STATUS.CANCELLED:
-      return { text: 'Cancelada', color: '#b00020' }
+      return { text: 'Cancelada', color: Colors.danger }
     default:
-      return { text: status, color: '#888' }
+      return { text: status, color: Colors.textSecondary }
   }
 }
 
@@ -150,34 +153,34 @@ const card = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 14,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: Colors.border,
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarInitial: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  avatarInitial: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
   info: { flex: 1, marginLeft: 12 },
-  name: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  city: { fontSize: 12, color: '#888', marginTop: 1 },
-  phone: { fontSize: 13, color: '#1a5f4a', marginTop: 3, fontWeight: '500' },
+  name: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+  city: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+  phone: { fontSize: 13, color: Colors.primary, marginTop: 3, fontFamily: Fonts.medium },
   revealPhone: {
     fontSize: 13,
-    color: '#007AFF',
+    color: Colors.primary,
     marginTop: 3,
     textDecorationLine: 'underline',
   },
   reportBtn: { marginTop: 8, alignSelf: 'flex-start' },
-  reportText: { fontSize: 13, color: '#b00020', fontWeight: '600' },
+  reportText: { fontSize: 13, color: Colors.danger, fontFamily: Fonts.semiBold },
 })
 
 // ─── Team section ─────────────────────────────────────────────────────────────
@@ -255,21 +258,21 @@ const team_s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  title: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  slots: { fontSize: 13, color: '#888' },
-  empty: { fontSize: 14, color: '#bbb', paddingVertical: 8 },
+  title: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  slots: { fontSize: 13, color: Colors.textSecondary },
+  empty: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
 })
 
 const textPlayer_s = StyleSheet.create({
   row: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
   },
-  name: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
+  name: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
 })
 
 // ─── Join Modal ───────────────────────────────────────────────────────────────
@@ -339,35 +342,35 @@ function JoinModal({
 }
 
 const jm = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20 },
-  subtitle: { fontSize: 15, color: '#555', marginBottom: 16 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 16 },
   option: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 18,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#1a5f4a',
+    borderColor: Colors.primary,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  optionDisabled: { borderColor: '#ddd' },
-  optionLabel: { fontSize: 17, fontWeight: '700', color: '#1a5f4a' },
-  optionLabelDisabled: { color: '#bbb' },
-  optionSlots: { fontSize: 13, color: '#2a8f6f' },
+  optionDisabled: { borderColor: Colors.border },
+  optionLabel: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.primary },
+  optionLabelDisabled: { color: Colors.textSecondary },
+  optionSlots: { fontSize: 13, color: Colors.primary },
 })
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -606,7 +609,7 @@ export default function MatchDetailScreen() {
         style={s.scroll}
         contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled">
-        <View style={[s.closeBar, { paddingTop: Math.max(insets.top, 8) }]}>
+        <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
           <View style={{ flex: 1 }} />
           <Pressable
             onPress={() => router.back()}
@@ -964,14 +967,14 @@ function InfoRow({ icon, text, muted }: { icon: string; text: string; muted?: bo
 const ir = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   icon: { fontSize: 15, marginRight: 8, marginTop: 1 },
-  text: { flex: 1, fontSize: 15, color: '#1a1a1a' },
-  textMuted: { color: '#999', fontStyle: 'italic' },
+  text: { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  textMuted: { color: Colors.textSecondary, fontStyle: 'italic' },
 })
 
 const s = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorText: { fontSize: 16, color: '#888', textAlign: 'center' },
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
   closeBar: {
     flexDirection: 'row',
@@ -979,10 +982,10 @@ const s = StyleSheet.create({
     marginBottom: 8,
     marginHorizontal: -4,
   },
-  closeX: { fontSize: 22, color: '#555', padding: 8 },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   headerRow: { marginBottom: 16 },
   headerText: { gap: 8 },
-  title: { fontSize: 22, fontWeight: '800', color: '#1a1a1a' },
+  title: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary },
   statusBadge: {
     alignSelf: 'flex-start',
     borderWidth: 1,
@@ -990,41 +993,41 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  statusText: { fontSize: 12, fontWeight: '600' },
+  statusText: { fontSize: 12, fontFamily: Fonts.semiBold },
   tournamentBadge: {
     alignSelf: 'flex-start',
     marginTop: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#e8f2ef',
+    backgroundColor: Colors.wonBackground,
   },
-  tournamentBadgeText: { fontSize: 12, fontWeight: '600', color: '#1a5f4a' },
+  tournamentBadgeText: { fontSize: 12, fontFamily: Fonts.semiBold, color: Colors.primary },
   infoBlock: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: Colors.border,
   },
   section: { marginBottom: 20 },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginBottom: 12,
   },
-  descText: { fontSize: 15, color: '#444', lineHeight: 22 },
-  resultEmpty: { fontSize: 14, color: '#999', fontStyle: 'italic' },
-  resultHint: { fontSize: 14, color: '#555', marginTop: 10, lineHeight: 20 },
+  descText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
+  resultEmpty: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic' },
+  resultHint: { fontSize: 14, color: Colors.textSecondary, marginTop: 10, lineHeight: 20 },
   actions: { gap: 10 },
   actionBtn: {},
   reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   reportMatchLink: {
     fontSize: 14,
-    color: '#b00020',
-    fontWeight: '600',
+    color: Colors.danger,
+    fontFamily: Fonts.semiBold,
     textDecorationLine: 'underline',
   },
 })

@@ -1,15 +1,24 @@
 import { useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
+import { Modal, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useRouter, type Href } from 'expo-router'
+
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 type CreateFabProps = {
   bottom?: number
   right?: number
 }
 
-export function CreateFab({ bottom = 28, right = 24 }: CreateFabProps) {
+const FAB_SIZE = 56
+const FAB_GAP_ABOVE_TAB_BAR = 6
+
+export function CreateFab({ bottom, right = 20 }: CreateFabProps) {
   const router = useRouter()
+  const tabBarHeight = useBottomTabBarHeight()
   const [open, setOpen] = useState(false)
+  const bottomOffset = bottom ?? tabBarHeight + FAB_GAP_ABOVE_TAB_BAR
 
   const navigate = (href: Href) => {
     setOpen(false)
@@ -18,38 +27,34 @@ export function CreateFab({ bottom = 28, right = 24 }: CreateFabProps) {
 
   return (
     <>
-      {open ? (
-        <Pressable
-          style={[styles.backdrop, Platform.OS === 'web' ? webFixedBackdrop : null]}
-          onPress={() => setOpen(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar menú"
-        />
-      ) : null}
-
-      <View style={[styles.wrap, { bottom, right }]} pointerEvents="box-none">
-        {open ? (
-          <View style={styles.menu}>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => navigate('/(tabs)/matches/create')}
-              accessibilityRole="button"
-              accessibilityLabel="Crear partida">
-              <Text style={styles.menuText}>Crear partida</Text>
-            </Pressable>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => navigate('/(tabs)/tournaments/create')}
-              accessibilityRole="button"
-              accessibilityLabel="Organizar torneo">
-              <Text style={styles.menuText}>Organizar torneo</Text>
-            </Pressable>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.backdropContainer}>
+          <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
+          <View style={[styles.menuWrap, { bottom: bottomOffset + FAB_SIZE + 8, right }]}>
+            <View style={styles.menu}>
+              <Pressable
+                style={styles.menuItem}
+                onPress={() => navigate('/(tabs)/matches/create')}
+                accessibilityRole="button"
+                accessibilityLabel="Crear partida">
+                <Text style={styles.menuText}>Crear partida</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.menuItem, styles.menuItemLast]}
+                onPress={() => navigate('/(tabs)/tournaments/create')}
+                accessibilityRole="button"
+                accessibilityLabel="Organizar torneo">
+                <Text style={styles.menuText}>Organizar torneo</Text>
+              </Pressable>
+            </View>
           </View>
-        ) : null}
+        </View>
+      </Modal>
 
+      <View style={[styles.wrap, { bottom: bottomOffset, right }]} pointerEvents="box-none">
         <Pressable
           style={[styles.fab, open && styles.fabOpen]}
-          onPress={() => setOpen((v) => !v)}
+          onPress={() => setOpen((value) => !value)}
           accessibilityRole="button"
           accessibilityLabel={open ? 'Cerrar menú de creación' : 'Abrir menú de creación'}>
           <Text style={styles.fabIcon}>{open ? '×' : '+'}</Text>
@@ -62,49 +67,64 @@ export function CreateFab({ bottom = 28, right = 24 }: CreateFabProps) {
 const webFixedBackdrop = { position: 'fixed' } as unknown as ViewStyle
 
 const styles = StyleSheet.create({
+  backdropContainer: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 9,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    ...(Platform.OS === 'web' ? webFixedBackdrop : null),
+  },
+  menuWrap: {
+    position: 'absolute',
+    alignItems: 'flex-end',
+  },
+  menu: {
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 180,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
+  menuText: {
+    fontSize: 15,
+    fontFamily: Fonts.medium,
+    color: Colors.textPrimary,
   },
   wrap: {
     position: 'absolute',
-    alignItems: 'flex-end',
     zIndex: 10,
   },
-  menu: {
-    marginBottom: 12,
-    gap: 8,
-    alignItems: 'flex-end',
-  },
-  menuItem: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#1a5f4a',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : null),
-  },
-  menuText: { fontSize: 15, fontWeight: '600', color: '#1a5f4a' },
   fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : null),
   },
-  fabOpen: { backgroundColor: '#555' },
-  fabIcon: { color: '#fff', fontSize: 28, lineHeight: 32, fontWeight: '300' },
+  fabOpen: {
+    backgroundColor: Colors.textSecondary,
+    borderColor: Colors.textSecondary,
+  },
+  fabIcon: {
+    color: Colors.white,
+    fontSize: 28,
+    lineHeight: 32,
+    fontFamily: Fonts.regular,
+    fontWeight: '300',
+  },
 })

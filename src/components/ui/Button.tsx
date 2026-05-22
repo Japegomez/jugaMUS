@@ -9,6 +9,9 @@ import {
   type ViewStyle,
 } from 'react-native'
 
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger'
 
 export interface ButtonProps extends Omit<PressableProps, 'style'> {
@@ -48,7 +51,7 @@ export function Button({
       {...rest}>
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' ? '#1a1a1a' : '#fff'}
+          color={variant === 'outline' ? Colors.textPrimary : Colors.white}
           accessibilityLabel="Cargando"
         />
       ) : (
@@ -70,25 +73,26 @@ const styles = StyleSheet.create({
   base: {
     minHeight: 48,
     paddingHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primary: {
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
   },
   secondary: {
-    backgroundColor: '#2d6a4f',
+    backgroundColor: Colors.primary,
+    opacity: 0.9,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   danger: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#b00020',
+    borderWidth: 1,
+    borderColor: Colors.danger,
   },
   pressed: {
     opacity: 0.88,
@@ -97,14 +101,14 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   label: {
-    color: '#fff',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
   },
   labelOutline: {
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   labelDanger: {
-    color: '#b00020',
+    color: Colors.danger,
   },
 })

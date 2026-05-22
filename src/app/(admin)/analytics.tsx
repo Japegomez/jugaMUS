@@ -3,24 +3,25 @@ import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } fro
 import { BarChart, LineChart } from 'react-native-chart-kit'
 
 import { AdminCloseBar } from '@/components/admin/AdminCloseBar'
-
 import {
   useAnalyticsSummary,
   useMatchesByCity,
   useMatchesByWeek,
   useUserRanking,
 } from '@/hooks/useAnalytics'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 const screenWidth = Dimensions.get('window').width - 40
 
 const chartConfig = {
-  backgroundColor: '#ffffff',
-  backgroundGradientFrom: '#ffffff',
-  backgroundGradientTo: '#ffffff',
+  backgroundColor: Colors.white,
+  backgroundGradientFrom: Colors.white,
+  backgroundGradientTo: Colors.white,
   decimalPlaces: 0,
   color: (opacity = 1) => `rgba(26, 95, 74, ${opacity})`,
   labelColor: (opacity = 1) => `rgba(102, 102, 102, ${opacity})`,
-  propsForDots: { r: '4', strokeWidth: '2', stroke: '#1a5f4a' },
+  propsForDots: { r: '4', strokeWidth: '2', stroke: Colors.primary },
 }
 
 function StatCard({ label, value }: { label: string; value: string }) {
@@ -63,7 +64,7 @@ export default function AdminAnalyticsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.screenTitle}>Analíticas</Text>
         {summaryLoading ? (
-          <ActivityIndicator size="large" color="#1a5f4a" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         ) : summary ? (
           <View style={styles.statsGrid}>
             <StatCard label="MAU" value={String(summary.mau)} />
@@ -75,7 +76,7 @@ export default function AdminAnalyticsScreen() {
 
         <Text style={styles.sectionTitle}>Partidas por semana</Text>
         {weekLoading ? (
-          <ActivityIndicator color="#1a5f4a" />
+          <ActivityIndicator color={Colors.primary} />
         ) : (
           <LineChart
             data={lineData}
@@ -91,7 +92,7 @@ export default function AdminAnalyticsScreen() {
 
         <Text style={styles.sectionTitle}>Top ciudades</Text>
         {cityLoading ? (
-          <ActivityIndicator color="#1a5f4a" />
+          <ActivityIndicator color={Colors.primary} />
         ) : (
           <BarChart
             data={barData}
@@ -108,7 +109,7 @@ export default function AdminAnalyticsScreen() {
 
         <Text style={styles.sectionTitle}>Ranking de usuarios</Text>
         {rankingLoading ? (
-          <ActivityIndicator color="#1a5f4a" />
+          <ActivityIndicator color={Colors.primary} />
         ) : !ranking?.length ? (
           <Text style={styles.empty}>Sin datos de participación.</Text>
         ) : (
@@ -130,18 +131,18 @@ export default function AdminAnalyticsScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f6f7f4' },
+  root: { flex: 1, backgroundColor: Colors.background },
   screenTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   scroll: {
     flexGrow: 1,
     padding: 20,
     gap: 16,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
     paddingBottom: 40,
   },
   statsGrid: {
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
     minWidth: '47%',
@@ -158,18 +159,18 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1a5f4a',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
     marginTop: 8,
   },
   chart: {
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   rankingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 8,
   },
@@ -187,27 +188,27 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
     gap: 10,
   },
   rankNum: {
     width: 24,
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1a5f4a',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
   },
   rankName: {
     flex: 1,
     fontSize: 15,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   rankCount: {
     fontSize: 13,
-    color: '#666',
+    color: Colors.textSecondary,
   },
   empty: {
     fontSize: 14,
-    color: '#888',
+    color: Colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 16,
   },

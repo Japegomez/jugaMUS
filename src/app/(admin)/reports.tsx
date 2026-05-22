@@ -13,6 +13,8 @@ import {
 } from '@/hooks/useAdmin'
 import type { AdminReport } from '@/services/admin.service'
 import type { ReportListFilters } from '@/services/admin.service'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 type StatusFilter = ReportListFilters['status']
 type TargetFilter = ReportListFilters['targetType']
@@ -345,7 +347,7 @@ export default function AdminReportsScreen() {
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color="#1a5f4a" style={styles.loader} />
+        <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
       ) : isError ? (
         <Text style={styles.errorText}>No se pudieron cargar los reportes.</Text>
       ) : (
@@ -366,25 +368,25 @@ export default function AdminReportsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
   filters: {
     padding: 16,
     gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
-    backgroundColor: '#fff',
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.surface,
   },
   screenTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   filterLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#888',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -398,23 +400,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    backgroundColor: '#eee',
+    backgroundColor: Colors.border,
   },
   chipActive: {
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
   },
   chipText: {
     fontSize: 13,
-    color: '#444',
+    color: Colors.textSecondary,
   },
   chipTextActive: {
-    color: '#fff',
-    fontWeight: '600',
+    color: Colors.white,
+    fontFamily: Fonts.semiBold,
   },
   loader: { marginTop: 32 },
   errorText: {
     padding: 24,
-    color: '#b42318',
+    color: Colors.danger,
     textAlign: 'center',
   },
   list: {
@@ -424,20 +426,15 @@ const styles = StyleSheet.create({
   },
   empty: {
     textAlign: 'center',
-    color: '#888',
+    color: Colors.textSecondary,
     marginTop: 32,
     fontSize: 15,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -446,9 +443,9 @@ const styles = StyleSheet.create({
   },
   badge: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#1a5f4a',
-    backgroundColor: '#e8f5ef',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    backgroundColor: Colors.wonBackground,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -456,9 +453,9 @@ const styles = StyleSheet.create({
   },
   typeBadge: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#555',
-    backgroundColor: '#f0f0f0',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+    backgroundColor: Colors.surface,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -467,54 +464,54 @@ const styles = StyleSheet.create({
   },
   reason: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
   },
   notes: {
     fontSize: 14,
-    color: '#555',
+    color: Colors.textSecondary,
     marginTop: 6,
   },
   meta: {
     fontSize: 13,
-    color: '#666',
+    color: Colors.textSecondary,
     marginTop: 8,
   },
   targetBox: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#1a5f4a',
+    borderLeftColor: Colors.primary,
   },
   targetLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#888',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginBottom: 4,
   },
   targetTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
   },
   targetMeta: {
     fontSize: 13,
-    color: '#555',
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   targetMissing: {
     fontSize: 13,
-    color: '#b42318',
+    color: Colors.danger,
     marginTop: 10,
     fontStyle: 'italic',
   },
   targetMissingInline: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 2,
   },
@@ -525,7 +522,7 @@ const styles = StyleSheet.create({
   actionBtn: { minHeight: 40 },
   resolvedNote: {
     fontSize: 13,
-    color: '#555',
+    color: Colors.textSecondary,
     marginTop: 8,
     fontStyle: 'italic',
   },

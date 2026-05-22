@@ -1,11 +1,23 @@
 import { Tabs } from 'expo-router'
 
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
+        tabBarActiveTintColor: Colors.tabActive,
+        tabBarInactiveTintColor: Colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: Colors.background,
+          borderTopColor: Colors.border,
+        },
+        tabBarLabelStyle: {
+          fontFamily: Fonts.medium,
+          fontSize: 11,
+        },
       }}>
       <Tabs.Screen name="explore/index" options={{ title: 'Descubrir' }} />
       <Tabs.Screen name="matches/index" options={{ title: 'Mis partidas' }} />

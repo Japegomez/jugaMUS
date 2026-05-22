@@ -11,76 +11,111 @@ import {
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { useAuthStore } from '@/hooks/useAuth'
-import { useMyMatchesDashboard } from '@/hooks/useMatches'
-import type { AwaitingResultMatchRow, UserMatchSummary } from '@/services/matches.service'
-import type { UserTournamentSummary } from '@/services/tournaments.service'
-import { TOURNAMENT_STATUS } from '@/constants'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
+import { TOURNAMENT_STATUS } from '@/constants'
+import { useAuthStore } from '@/hooks/useAuth'
+import { useMyMatchesDashboard } from '@/hooks/useMatches'
+import type { UserMatchSummary } from '@/services/matches.service'
+import type { UserTournamentSummary } from '@/services/tournaments.service'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 import { formatCityAndPlace } from '@/utils/location'
 
-function MatchRowCard({
-  row,
-  subtitle,
+function matchLocation(row: Pick<UserMatchSummary, 'city' | 'place_defined' | 'place_text'>) {
+  return formatCityAndPlace(row.city, row.place_defined ?? true, row.place_text)
+}
+
+function MatchListRow({
+  title,
+  location,
+  startAt,
+  tone,
+  statusLabel,
+  hint,
   onPress,
 }: {
-  row: UserMatchSummary | AwaitingResultMatchRow
-  subtitle?: string
+  title: string
+  location: string
+  startAt: string
+  tone: StatusDotTone
+  statusLabel: string
+  hint?: string
   onPress: () => void
 }) {
   return (
     <Pressable
-      style={styles.card}
+      style={styles.row}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Partida: ${row.title}`}>
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {row.title}
-      </Text>
-      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
-      <Text style={styles.cardMeta}>{row.city}</Text>
-      {subtitle ? <Text style={styles.cardHint}>{subtitle}</Text> : null}
+      accessibilityLabel={`Partida: ${title}`}>
+      <StatusDot tone={tone} />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {title}
+        </Text>
+        <Text style={styles.rowMeta}>{location}</Text>
+        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
+      </View>
+      <View style={styles.rowTrailing}>
+        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
+          {statusLabel}
+        </Text>
+        <Text style={styles.rowDate}>{formatDisplay(startAt)}</Text>
+      </View>
     </Pressable>
   )
 }
 
-function TournamentRowCard({
+function TournamentListRow({
   row,
-  subtitle,
+  tone,
+  statusLabel,
+  hint,
   onPress,
 }: {
   row: UserTournamentSummary
-  subtitle?: string
+  tone: StatusDotTone
+  statusLabel: string
+  hint?: string
   onPress: () => void
 }) {
-  const statusLabel =
-    row.status === TOURNAMENT_STATUS.REGISTRATION
-      ? row.bracket_generated_at
-        ? 'Inscripción'
-        : 'Inscripción abierta'
-      : row.status === TOURNAMENT_STATUS.IN_PROGRESS
-        ? 'En curso'
-        : row.status
-
   return (
     <Pressable
-      style={[styles.card, styles.tournamentCard]}
+      style={styles.row}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Torneo: ${row.title}`}>
-      <Text style={styles.tournamentKind}>Torneo</Text>
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {row.title}
-      </Text>
-      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
-      <Text style={styles.cardMeta}>
-        {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
-      </Text>
-      {subtitle ? <Text style={styles.cardHint}>{subtitle}</Text> : null}
-      <Text style={styles.tournamentStatus}>{statusLabel}</Text>
+      <StatusDot tone={tone} />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowKind}>Torneo</Text>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {row.title}
+        </Text>
+        <Text style={styles.rowMeta}>
+          {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+        </Text>
+        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
+      </View>
+      <View style={styles.rowTrailing}>
+        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
+          {statusLabel}
+        </Text>
+        <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
+      </View>
     </Pressable>
   )
+}
+
+function tournamentStatusLabel(row: UserTournamentSummary) {
+  if (row.status === TOURNAMENT_STATUS.REGISTRATION) {
+    return row.bracket_generated_at ? 'Inscripción' : 'Inscripción abierta'
+  }
+  if (row.status === TOURNAMENT_STATUS.IN_PROGRESS) return 'En curso'
+  return row.status
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -98,6 +133,13 @@ export default function MatchesScreen() {
   const userId = useAuthStore((s) => s.session?.user.id)
   const { data, isLoading, isError, refetch, isRefetching } = useMyMatchesDashboard()
 
+  const contentPadding = {
+    paddingTop: screenTopPadding(insets.top, 16),
+    paddingBottom: insets.bottom + 88,
+  }
+
+  const createFab = <CreateFab />
+
   if (!userId) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -106,13 +148,11 @@ export default function MatchesScreen() {
     )
   }
 
-  const createFab = <CreateFab />
-
   if (isLoading) {
     return (
-      <View style={styles.root}>
-        <View style={[styles.container, styles.centered]}>
-          <ActivityIndicator size="large" color="#1a5f4a" />
+      <View style={styles.container}>
+        <View style={[styles.centered, { flex: 1 }]}>
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
         {createFab}
       </View>
@@ -121,8 +161,8 @@ export default function MatchesScreen() {
 
   if (isError || !data) {
     return (
-      <View style={styles.root}>
-        <View style={[styles.container, styles.centered]}>
+      <View style={styles.container}>
+        <View style={[styles.centered, { flex: 1 }]}>
           <Text style={styles.empty}>No se pudieron cargar tus partidas.</Text>
           <Pressable onPress={() => refetch()} style={styles.retry}>
             <Text style={styles.retryText}>Reintentar</Text>
@@ -150,21 +190,14 @@ export default function MatchesScreen() {
     inProgressTournaments.length > 0
 
   return (
-    <View style={styles.root}>
+    <View style={styles.container}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: Math.max(insets.top, 16), paddingBottom: insets.bottom + 88 },
-        ]}
+        contentContainerStyle={[styles.scrollContent, contentPadding]}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
         }>
-        <Text style={styles.screenTitle}>Mis partidas</Text>
-        <Text style={styles.screenSubtitle}>
-          Próximas fechas, torneos, partidas en curso y acciones pendientes. El historial está en
-          Perfil.
-        </Text>
+        <ScreenHeader title="Mis partidas" />
 
         {!hasAny ? (
           <Text style={styles.emptyBlock}>
@@ -175,10 +208,12 @@ export default function MatchesScreen() {
         {inProgressTournaments.length > 0 ? (
           <Section title="Torneos en curso">
             {inProgressTournaments.map((t) => (
-              <TournamentRowCard
+              <TournamentListRow
                 key={t.id}
                 row={t}
-                subtitle={t.isOrganizer ? 'Organizas este torneo' : 'Participas en este torneo'}
+                tone="active"
+                statusLabel="En curso"
+                hint={t.isOrganizer ? 'Organizas este torneo' : 'Participas en este torneo'}
                 onPress={() => router.push(`/(tabs)/tournaments/${t.id}`)}
               />
             ))}
@@ -188,10 +223,12 @@ export default function MatchesScreen() {
         {upcomingTournaments.length > 0 ? (
           <Section title="Torneos próximos">
             {upcomingTournaments.map((t) => (
-              <TournamentRowCard
+              <TournamentListRow
                 key={t.id}
                 row={t}
-                subtitle={
+                tone="upcoming"
+                statusLabel={tournamentStatusLabel(t)}
+                hint={
                   t.isOrganizer
                     ? t.bracket_generated_at
                       ? 'Organizas este torneo'
@@ -207,10 +244,14 @@ export default function MatchesScreen() {
         {awaitingResultValidation.length > 0 ? (
           <Section title="Pendiente: validar resultado">
             {awaitingResultValidation.map((m) => (
-              <MatchRowCard
+              <MatchListRow
                 key={m.id}
-                row={m}
-                subtitle="Tienes que aprobar o disputar el marcador enviado por el rival."
+                title={m.title}
+                location={matchLocation(m)}
+                startAt={m.start_at}
+                tone="pending"
+                statusLabel="Pendiente"
+                hint="Tienes que aprobar o disputar el marcador enviado por el rival."
                 onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
               />
             ))}
@@ -220,9 +261,13 @@ export default function MatchesScreen() {
         {inProgressDeduped.length > 0 ? (
           <Section title="En curso">
             {inProgressDeduped.map((m) => (
-              <MatchRowCard
+              <MatchListRow
                 key={m.id}
-                row={m}
+                title={m.title}
+                location={matchLocation(m)}
+                startAt={m.start_at}
+                tone="active"
+                statusLabel="En curso"
                 onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
               />
             ))}
@@ -232,9 +277,13 @@ export default function MatchesScreen() {
         {upcoming.length > 0 ? (
           <Section title="Próximas">
             {upcoming.map((m) => (
-              <MatchRowCard
+              <MatchListRow
                 key={m.id}
-                row={m}
+                title={m.title}
+                location={matchLocation(m)}
+                startAt={m.start_at}
+                tone="upcoming"
+                statusLabel="Próxima"
                 onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
               />
             ))}
@@ -247,49 +296,90 @@ export default function MatchesScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f6f7f4' },
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { paddingHorizontal: 20 },
-  container: { flex: 1, backgroundColor: '#f6f7f4' },
+  container: { flex: 1, backgroundColor: Colors.background },
   centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  screenTitle: { fontSize: 24, fontWeight: '800', color: '#1a1a1a', marginBottom: 6 },
-  screenSubtitle: { fontSize: 14, color: '#666', marginBottom: 20, lineHeight: 20 },
-  section: { marginBottom: 28 },
+  section: { marginBottom: 24 },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a5f4a',
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-  },
-  tournamentCard: { borderColor: '#c5ddd4' },
-  tournamentKind: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#1a5f4a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1.2,
     marginBottom: 4,
+    marginTop: 8,
   },
-  tournamentStatus: { fontSize: 12, color: '#1a5f4a', fontWeight: '600', marginTop: 8 },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
-  cardMeta: { fontSize: 13, color: '#666', marginTop: 4 },
-  cardHint: { fontSize: 12, color: '#c07000', marginTop: 8, fontStyle: 'italic' },
-  empty: { fontSize: 15, color: '#888', textAlign: 'center' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  rowBody: { flex: 1, minWidth: 0 },
+  rowKind: {
+    fontSize: 10,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  rowTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  rowMeta: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  rowHint: {
+    fontSize: 12,
+    fontFamily: Fonts.regular,
+    color: Colors.warning,
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  rowTrailing: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 96 },
+  rowStatus: {
+    fontSize: 11,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+  },
+  rowStatusActive: {
+    color: Colors.primary,
+  },
+  rowDate: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  empty: {
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
   emptyBlock: {
     fontSize: 15,
-    color: '#888',
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 22,
   },
   retry: { marginTop: 16, paddingVertical: 10, paddingHorizontal: 20 },
-  retryText: { color: '#007AFF', fontSize: 16, fontWeight: '600' },
+  retryText: {
+    color: Colors.primary,
+    fontSize: 16,
+    fontFamily: Fonts.semiBold,
+  },
 })

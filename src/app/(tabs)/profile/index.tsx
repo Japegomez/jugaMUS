@@ -21,6 +21,9 @@ import { MATCH_STATUS } from '@/constants'
 import type { ProfileUpdate } from '@/services/profiles.service'
 import type { UserMatchSummary } from '@/services/matches.service'
 import { displayMatchTitle, matchHistoryBackground } from '@/utils/matchDisplay'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 type NotifField = Pick<
   ProfileUpdate,
@@ -105,7 +108,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     )
   }
@@ -129,7 +132,10 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.scroll, { paddingBottom: 32 + insets.bottom + 72 }]}
+      contentContainerStyle={[
+        styles.scroll,
+        { paddingTop: screenTopPadding(insets.top, 24), paddingBottom: 32 + insets.bottom + 72 },
+      ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
@@ -190,7 +196,7 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
         {matchesLoading ? (
-          <ActivityIndicator size="small" color="#1a5f4a" style={styles.matchesLoader} />
+          <ActivityIndicator size="small" color={Colors.primary} style={styles.matchesLoader} />
         ) : !userMatches || userMatches.length === 0 ? (
           <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
         ) : (
@@ -262,17 +268,17 @@ export default function ProfileScreen() {
 function matchStatusLabel(status: string): { text: string; color: string } {
   switch (status) {
     case MATCH_STATUS.PLANNED:
-      return { text: 'Planificada', color: '#1a5f4a' }
+      return { text: 'Planificada', color: Colors.primary }
     case MATCH_STATUS.IN_PROGRESS:
-      return { text: 'En curso', color: '#c07000' }
+      return { text: 'En curso', color: Colors.warning }
     case MATCH_STATUS.FINISHED:
-      return { text: 'Finalizada', color: '#555' }
+      return { text: 'Finalizada', color: Colors.textSecondary }
     case MATCH_STATUS.FINISHED_NO_RESULT:
-      return { text: 'Sin resultado', color: '#999' }
+      return { text: 'Sin resultado', color: Colors.textSecondary }
     case MATCH_STATUS.CANCELLED:
-      return { text: 'Cancelada', color: '#b00020' }
+      return { text: 'Cancelada', color: Colors.danger }
     default:
-      return { text: status, color: '#888' }
+      return { text: status, color: Colors.textSecondary }
   }
 }
 
@@ -341,8 +347,9 @@ function NotifToggleRow({
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
-        thumbColor={value ? '#1a5f4a' : '#ccc'}
-        trackColor={{ true: '#a8d5c2', false: '#e0e0e0' }}
+        trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+        thumbColor={Colors.white}
+        ios_backgroundColor={Colors.switchTrackOff}
       />
     </View>
   )
@@ -376,8 +383,8 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 32,
-    backgroundColor: '#f6f7f4',
+    paddingTop: 0,
+    backgroundColor: Colors.background,
     gap: 16,
   },
   centered: {
@@ -385,12 +392,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
     gap: 16,
   },
   errorText: {
     fontSize: 15,
-    color: '#666',
+    color: Colors.textSecondary,
   },
   header: {
     alignItems: 'center',
@@ -401,46 +408,41 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#ddd',
+    backgroundColor: Colors.border,
   },
   avatarFallback: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: Fonts.bold,
+    color: Colors.white,
   },
   displayName: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginTop: 4,
   },
   city: {
     fontSize: 15,
-    color: '#555',
+    color: Colors.textSecondary,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   cardTitle: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#888',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -448,8 +450,8 @@ const styles = StyleSheet.create({
   },
   cardSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#aaa',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     marginTop: 10,
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
   },
   infoRowLast: {
     borderBottomWidth: 0,
@@ -469,13 +471,13 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 15,
-    color: '#333',
+    color: Colors.textPrimary,
     flex: 1,
     paddingRight: 12,
   },
   infoValue: {
     fontSize: 15,
-    color: '#555',
+    color: Colors.textSecondary,
     flexShrink: 1,
     textAlign: 'right',
     marginLeft: 8,
@@ -486,7 +488,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
   },
   linkRowLast: {
     borderBottomWidth: 0,
@@ -495,43 +497,43 @@ const styles = StyleSheet.create({
   linkRowPressed: { opacity: 0.7 },
   linkLabel: {
     fontSize: 15,
-    color: '#1a5f4a',
-    fontWeight: '500',
+    color: Colors.primary,
+    fontFamily: Fonts.medium,
   },
   linkChevron: {
     fontSize: 22,
-    color: '#888',
+    color: Colors.textSecondary,
     lineHeight: 22,
   },
   adminButton: {
-    backgroundColor: '#2c5282',
+    backgroundColor: Colors.admin,
     borderRadius: 10,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   adminButtonText: {
-    color: '#fff',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
   },
   editButton: {
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     borderRadius: 10,
     minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   editButtonText: {
-    color: '#fff',
+    color: Colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
   },
   signOutBtn: {
-    borderColor: '#b42318',
+    borderColor: Colors.danger,
   },
   signOutLabel: {
-    color: '#b42318',
+    color: Colors.danger,
   },
   deleteAccountBtn: {
     marginTop: -4,
@@ -539,7 +541,7 @@ const styles = StyleSheet.create({
   matchesLoader: { marginVertical: 12 },
   matchesEmpty: {
     fontSize: 14,
-    color: '#999',
+    color: Colors.textSecondary,
     paddingVertical: 12,
     textAlign: 'center',
   },
@@ -552,18 +554,18 @@ const styles = StyleSheet.create({
     marginHorizontal: -10,
     borderRadius: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    borderBottomColor: Colors.border,
     gap: 10,
   },
   matchRowPressed: { opacity: 0.7 },
   matchRowMain: { flex: 1 },
-  matchTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  matchMeta: { fontSize: 12, color: '#888', marginTop: 2 },
+  matchTitle: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+  matchMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   matchBadge: {
     borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  matchBadgeText: { fontSize: 11, fontWeight: '600' },
+  matchBadgeText: { fontSize: 11, fontFamily: Fonts.semiBold },
 })

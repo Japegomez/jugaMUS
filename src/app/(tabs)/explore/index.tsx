@@ -17,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '@/components/ui/Button'
 import { CreateFab } from '@/components/ui/CreateFab'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
 import {
   dateToEndOfLocalDayIso,
   dateToLocalIsoString,
@@ -29,6 +31,9 @@ import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/cons
 import { useInfinitePublicMatches, usePublicTournamentsExplore } from '@/hooks/useMatches'
 import type { PublicMatchExplorerRow, PublicMatchesListFilters } from '@/services/matches.service'
 import type { PublicTournamentsListFilters, TournamentRow } from '@/services/tournaments.service'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 import { formatCityAndPlace } from '@/utils/location'
 
 const DEFAULT_FILTERS = (): PublicMatchesListFilters => ({
@@ -75,21 +80,41 @@ type ExploreItem =
   | { kind: 'match'; id: string; start_at: string; row: PublicMatchExplorerRow }
   | { kind: 'tournament'; id: string; start_at: string; row: TournamentRow }
 
-function ExploreMatchCard({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
+function matchStatusTone(status: string): StatusDotTone {
+  if (status === MATCH_STATUS.IN_PROGRESS) return 'active'
+  if (status === MATCH_STATUS.PLANNED) return 'upcoming'
+  return 'upcoming'
+}
+
+function tournamentStatusTone(tournament: TournamentRow): StatusDotTone {
+  if (tournament.status === TOURNAMENT_STATUS.IN_PROGRESS) return 'active'
+  if (tournament.status === TOURNAMENT_STATUS.REGISTRATION) return 'upcoming'
+  return 'upcoming'
+}
+
+function ExploreMatchRow({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
+  const tone = matchStatusTone(row.status)
   return (
     <Pressable
-      style={styles.card}
+      style={styles.row}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Partida: ${row.title}`}>
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {row.title}
-      </Text>
-      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
-      <Text style={styles.cardMeta}>{row.city}</Text>
-      <View style={styles.cardRow}>
-        <Text style={styles.badge}>{statusLabel(row.status)}</Text>
-        <Text style={styles.slots}>
+      <StatusDot tone={tone} />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {row.title}
+        </Text>
+        <Text style={styles.rowMeta}>
+          {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+        </Text>
+      </View>
+      <View style={styles.rowTrailing}>
+        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
+          {statusLabel(row.status)}
+        </Text>
+        <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
+        <Text style={styles.rowExtra}>
           {row.free_slots > 0 ? `${row.free_slots} plazas libres` : 'Completa'}
         </Text>
       </View>
@@ -97,24 +122,30 @@ function ExploreMatchCard({ row, onPress }: { row: PublicMatchExplorerRow; onPre
   )
 }
 
-function ExploreTournamentCard({ row, onPress }: { row: TournamentRow; onPress: () => void }) {
+function ExploreTournamentRow({ row, onPress }: { row: TournamentRow; onPress: () => void }) {
+  const tone = tournamentStatusTone(row)
   return (
     <Pressable
-      style={[styles.card, styles.tournamentCard]}
+      style={styles.row}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Torneo: ${row.title}`}>
-      <Text style={styles.tournamentKind}>Torneo</Text>
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {row.title}
-      </Text>
-      <Text style={styles.cardMeta}>{formatDisplay(row.start_at)}</Text>
-      <Text style={styles.cardMeta}>
-        {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
-      </Text>
-      <View style={styles.cardRow}>
-        <Text style={styles.badge}>{tournamentStatusLabel(row)}</Text>
-        <Text style={styles.slots}>
+      <StatusDot tone={tone} />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowKind}>Torneo</Text>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {row.title}
+        </Text>
+        <Text style={styles.rowMeta}>
+          {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+        </Text>
+      </View>
+      <View style={styles.rowTrailing}>
+        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
+          {tournamentStatusLabel(row)}
+        </Text>
+        <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
+        <Text style={styles.rowExtra}>
           {row.status === TOURNAMENT_STATUS.REGISTRATION ? 'Cuadro pendiente' : 'Ver cuadro'}
         </Text>
       </View>
@@ -277,13 +308,12 @@ export default function ExploreScreen() {
 
   const listHeader = (
     <View style={styles.listHeader}>
-      <Text style={styles.screenTitle}>Descubrir</Text>
-      <Text style={styles.subtitle}>Partidas y torneos públicos</Text>
+      <ScreenHeader title="Descubrir" subtitle="Partidas y torneos públicos" />
 
       <TextInput
         style={styles.search}
         placeholder="Buscar por título…"
-        placeholderTextColor="#999"
+        placeholderTextColor={Colors.textSecondary}
         value={searchDraft}
         onChangeText={setSearchDraft}
         autoCapitalize="none"
@@ -311,7 +341,7 @@ export default function ExploreScreen() {
 
   const listFooter = isFetchingNextPage ? (
     <View style={styles.footerLoad}>
-      <ActivityIndicator color="#1a5f4a" />
+      <ActivityIndicator color={Colors.primary} />
     </View>
   ) : hasNextPage && showMatches ? (
     <View style={styles.footerLoad}>
@@ -326,8 +356,8 @@ export default function ExploreScreen() {
     (showTournaments && tournamentsLoading && !tournaments)
   ) {
     return (
-      <View style={[styles.centered, { paddingTop: insets.top + 24 }]}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
+      <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingHint}>Cargando partidas y torneos…</Text>
       </View>
     )
@@ -335,7 +365,11 @@ export default function ExploreScreen() {
 
   if (isError) {
     return (
-      <View style={[styles.centered, { paddingTop: insets.top + 24, paddingHorizontal: 24 }]}>
+      <View
+        style={[
+          styles.centered,
+          { paddingTop: screenTopPadding(insets.top, 24), paddingHorizontal: 24 },
+        ]}>
         <Text style={styles.errorTitle}>No se pudo cargar el listado</Text>
         <Text style={styles.errorMsg}>
           {error instanceof Error ? error.message : 'Error desconocido'}
@@ -350,18 +384,18 @@ export default function ExploreScreen() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[styles.root, { paddingTop: screenTopPadding(insets.top) }]}>
       <FlatList
         data={exploreItems}
         keyExtractor={(item) => `${item.kind}-${item.id}`}
         renderItem={({ item }) =>
           item.kind === 'match' ? (
-            <ExploreMatchCard
+            <ExploreMatchRow
               row={item.row}
               onPress={() => router.push(`/(tabs)/matches/${item.id}`)}
             />
           ) : (
-            <ExploreTournamentCard
+            <ExploreTournamentRow
               row={item.row}
               onPress={() => router.push(`/(tabs)/tournaments/${item.id}`)}
             />
@@ -369,7 +403,7 @@ export default function ExploreScreen() {
         }
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 88 }]}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.35}
         refreshing={(isRefetching && !isFetchingNextPage) || tournamentsRefetching}
@@ -398,7 +432,7 @@ export default function ExploreScreen() {
       <CreateFab />
 
       <Modal visible={filterModalOpen} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalRoot, { paddingTop: insets.top + 8 }]}>
+        <View style={[styles.modalRoot, { paddingTop: screenTopPadding(insets.top, 8) }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Filtros</Text>
             <Pressable
@@ -491,7 +525,13 @@ export default function ExploreScreen() {
 
             <View style={styles.switchRow}>
               <Text style={styles.switchLabel}>Ocultar partidas ya celebradas</Text>
-              <Switch value={draftHidePast} onValueChange={setDraftHidePast} />
+              <Switch
+                value={draftHidePast}
+                onValueChange={setDraftHidePast}
+                trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+                thumbColor={Colors.white}
+                ios_backgroundColor={Colors.switchTrackOff}
+              />
             </View>
             <Text style={styles.helpMuted}>
               Si está activado, no se listan partidas con fecha/hora anterior a ahora (salvo que
@@ -552,144 +592,210 @@ export default function ExploreScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f6f7f4' },
-  listContent: { paddingHorizontal: 16, paddingBottom: 32 },
+  root: { flex: 1, backgroundColor: Colors.background },
+  listContent: { paddingHorizontal: 20 },
   listHeader: { paddingBottom: 12 },
-  screenTitle: { fontSize: 26, fontWeight: '700', color: '#1a1a1a' },
-  subtitle: { fontSize: 14, color: '#666', marginTop: 4, marginBottom: 16 },
   search: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a1a',
+    fontFamily: Fonts.regular,
+    color: Colors.textPrimary,
   },
   filterBtn: {
     alignSelf: 'flex-start',
     marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1a5f4a',
+    borderColor: Colors.border,
   },
-  filterBtnText: { color: '#1a5f4a', fontWeight: '600', fontSize: 15 },
+  filterBtnText: { color: Colors.textPrimary, fontFamily: Fonts.semiBold, fontSize: 15 },
   filterBadge: {
     marginLeft: 8,
     minWidth: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterBadgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e8ebe8',
-  },
-  tournamentCard: { borderColor: '#c5ddd4' },
-  tournamentKind: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#1a5f4a',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 4,
-  },
-  cardTitle: { fontSize: 17, fontWeight: '600', color: '#1a1a1a' },
-  cardMeta: { fontSize: 14, color: '#555', marginTop: 4 },
-  cardRow: {
+  filterBadgeText: { color: Colors.white, fontSize: 12, fontFamily: Fonts.bold },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  badge: {
-    fontSize: 12,
-    color: '#1a5f4a',
-    fontWeight: '600',
-    backgroundColor: '#e8f2ef',
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  rowBody: { flex: 1, minWidth: 0 },
+  rowKind: {
+    fontSize: 10,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
-  slots: { fontSize: 13, color: '#666' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f7f4' },
-  loadingHint: { marginTop: 12, color: '#666' },
-  errorTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', textAlign: 'center' },
-  errorMsg: { marginTop: 8, color: '#c00', textAlign: 'center' },
-  errorHint: { marginTop: 12, fontSize: 13, color: '#666', textAlign: 'center' },
+  rowTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  rowMeta: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  rowTrailing: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 110 },
+  rowStatus: {
+    fontSize: 11,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textSecondary,
+  },
+  rowStatusActive: { color: Colors.primary },
+  rowDate: {
+    fontSize: 11,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  rowExtra: {
+    fontSize: 10,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  loadingHint: { marginTop: 12, color: Colors.textSecondary, fontFamily: Fonts.regular },
+  errorTitle: {
+    fontSize: 18,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  errorMsg: { marginTop: 8, color: Colors.danger, textAlign: 'center', fontFamily: Fonts.regular },
+  errorHint: {
+    marginTop: 12,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    fontFamily: Fonts.regular,
+  },
   footerLoad: { paddingVertical: 20, alignItems: 'center' },
-  endHint: { textAlign: 'center', color: '#999', fontSize: 13, paddingVertical: 12 },
+  endHint: {
+    textAlign: 'center',
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    paddingVertical: 12,
+  },
   emptyWrap: { paddingVertical: 48, paddingHorizontal: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: '#333', textAlign: 'center' },
-  emptyText: { marginTop: 8, fontSize: 14, color: '#777', textAlign: 'center', lineHeight: 20 },
-  modalRoot: { flex: 1, backgroundColor: '#f6f7f4' },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontFamily: Fonts.regular,
+  },
+  modalRoot: { flex: 1, backgroundColor: Colors.background },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  modalTitle: { fontSize: 20, fontWeight: '700' },
-  modalClose: { fontSize: 22, color: '#666', padding: 8 },
+  modalTitle: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  modalClose: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   modalScroll: { flex: 1 },
   modalScrollContent: { paddingHorizontal: 16, paddingBottom: 24 },
-  fieldLabel: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8, marginTop: 12 },
+  fieldLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    marginBottom: 8,
+    marginTop: 12,
+  },
   chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     marginRight: 8,
   },
-  chipOn: { backgroundColor: '#1a5f4a', borderColor: '#1a5f4a' },
-  chipText: { fontSize: 13, color: '#444' },
-  chipTextOn: { color: '#fff', fontWeight: '600' },
+  chipOn: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  chipText: { fontSize: 13, color: Colors.textSecondary, fontFamily: Fonts.regular },
+  chipTextOn: { color: Colors.white, fontFamily: Fonts.semiBold },
   segment: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   segBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
   },
-  segBtnOn: { borderColor: '#1a5f4a', backgroundColor: '#e8f2ef' },
-  segBtnText: { fontSize: 13, color: '#444' },
-  segBtnTextOn: { color: '#1a5f4a', fontWeight: '600' },
+  segBtnOn: { borderColor: Colors.primary, backgroundColor: Colors.surface },
+  segBtnText: { fontSize: 13, color: Colors.textSecondary, fontFamily: Fonts.regular },
+  segBtnTextOn: { color: Colors.primary, fontFamily: Fonts.semiBold },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 20,
   },
-  switchLabel: { flex: 1, fontSize: 15, color: '#333', paddingRight: 12 },
-  helpMuted: { fontSize: 12, color: '#888', marginTop: 6, lineHeight: 16 },
+  switchLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.textPrimary,
+    fontFamily: Fonts.regular,
+    paddingRight: 12,
+  },
+  helpMuted: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.regular,
+    marginTop: 6,
+    lineHeight: 16,
+  },
   clearLink: { marginTop: 8 },
-  clearLinkText: { color: '#1a5f4a', fontSize: 14 },
+  clearLinkText: { color: Colors.primary, fontSize: 14, fontFamily: Fonts.medium },
   modalActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    backgroundColor: '#f6f7f4',
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.background,
   },
 })

@@ -1,6 +1,8 @@
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Colors } from '@/theme/colors'
+import { screenTopPadding } from '@/theme/layout'
 
 type AdminCloseBarProps = {
   /** Where to go when back is unavailable (common on web). */
@@ -26,7 +28,7 @@ export function AdminCloseBar({ fallbackHref = '/(admin)/' as Href }: AdminClose
   }
 
   return (
-    <View style={[styles.bar, { paddingTop: Math.max(insets.top, 8) }]}>
+    <View style={[styles.bar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={styles.spacer} />
       <Pressable
         onPress={handleClose}
@@ -46,9 +48,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 4,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
   spacer: { flex: 1 },
   closeBtn: Platform.select({
@@ -58,7 +60,7 @@ const styles = StyleSheet.create({
   closeBtnPressed: { opacity: 0.65 },
   closeX: {
     fontSize: 22,
-    color: '#555',
+    color: Colors.textSecondary,
     padding: 8,
   },
 })

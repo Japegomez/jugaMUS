@@ -4,6 +4,7 @@ import { useRouter, type Href } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
@@ -17,6 +18,9 @@ import { MATCH_VISIBILITY } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useAddTournamentPair, useCreateTournament } from '@/hooks/useTournaments'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 const schema = z
   .object({
@@ -80,6 +84,7 @@ function Chip({
 
 export default function CreateTournamentScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
   const createTournament = useCreateTournament()
   const addPair = useAddTournamentPair()
@@ -186,7 +191,7 @@ export default function CreateTournamentScreen() {
     return (
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.container}
+        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
         keyboardShouldPersistTaps="handled">
         <Text style={s.heading}>Organizar torneo</Text>
         <Text style={s.step}>Paso 1 de 2 — Datos del torneo</Text>
@@ -261,8 +266,8 @@ export default function CreateTournamentScreen() {
                   field.onChange(!v)
                   if (v) setValue('place_text', '', { shouldValidate: true })
                 }}
-                trackColor={{ true: '#1a5f4a', false: '#ccc' }}
-                thumbColor="#fff"
+                trackColor={{ true: Colors.primary, false: Colors.border }}
+                thumbColor={Colors.white}
               />
             )}
           />
@@ -346,7 +351,7 @@ export default function CreateTournamentScreen() {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={s.container}
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
       keyboardShouldPersistTaps="handled">
       <Text style={s.heading}>Parejas inscritas</Text>
       <Text style={s.step}>Paso 2 de 2 — Añade las parejas participantes</Text>
@@ -388,43 +393,43 @@ const chip = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
   },
-  selected: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
-  label: { fontSize: 15, fontWeight: '600', color: '#666' },
-  labelSelected: { color: '#1a5f4a' },
-  sublabel: { fontSize: 11, color: '#999', marginTop: 2, textAlign: 'center' },
-  sublabelSelected: { color: '#2a8f6f' },
+  selected: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  label: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  labelSelected: { color: Colors.primary },
+  sublabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
+  sublabelSelected: { color: Colors.primary },
 })
 
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
-  heading: { fontSize: 24, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
-  step: { fontSize: 14, color: '#1a5f4a', fontWeight: '600', marginBottom: 16 },
-  hint: { fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 20 },
-  empty: { fontSize: 15, color: '#999', fontStyle: 'italic', marginBottom: 16 },
+  heading: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 6 },
+  step: { fontSize: 14, color: Colors.primary, fontFamily: Fonts.semiBold, marginBottom: 16 },
+  hint: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
+  empty: { fontSize: 15, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 16 },
   fieldWrap: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: '#1a1a1a' },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
   durationRow: { flexDirection: 'row', marginHorizontal: -4 },
   visRow: { flexDirection: 'row', marginHorizontal: -4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 16,
   },
   rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 16, color: '#1a1a1a', fontWeight: '500' },
-  rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
+  rowLabel: { fontSize: 16, color: Colors.textPrimary, fontFamily: Fonts.medium },
+  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   actionBtn: { marginBottom: 10 },
   submitBtn: { marginTop: 8 },
 })

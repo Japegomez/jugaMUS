@@ -1,6 +1,8 @@
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface ApproveResultModalProps {
   visible: boolean
@@ -67,22 +69,22 @@ export function ApproveResultModal({
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20 },
-  score: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 8 },
-  submitter: { fontSize: 15, color: '#555', marginBottom: 16 },
-  submitterName: { fontWeight: '700', color: '#1a1a1a' },
-  question: { fontSize: 15, color: '#333', marginBottom: 24 },
+  score: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 8 },
+  submitter: { fontSize: 15, color: Colors.textSecondary, marginBottom: 16 },
+  submitterName: { fontFamily: Fonts.bold, color: Colors.textPrimary },
+  question: { fontSize: 15, color: Colors.textPrimary, marginBottom: 24 },
   btn: { marginBottom: 12 },
 })

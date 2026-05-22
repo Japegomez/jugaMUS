@@ -17,6 +17,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
 import { loginSchema, type LoginFormValues } from '@/utils/authSchemas'
+import { Colors } from '@/theme/colors'
+import { Layout } from '@/theme/layout'
+import { Fonts } from '@/theme/typography'
 
 export default function LoginScreen() {
   const signInWithPassword = useAuthStore((s) => s.signInWithPassword)
@@ -145,22 +148,22 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f6f7f4' },
+  flex: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 48,
+    paddingTop: Layout.authScreenTopPadding + 8,
     paddingBottom: 32,
   },
   heading: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#1a5f4a',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
     marginBottom: 8,
   },
   sub: {
     fontSize: 16,
-    color: '#444',
+    color: Colors.textSecondary,
     marginBottom: 28,
   },
   linkForgot: {
@@ -169,8 +172,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   linkText: {
-    color: '#1a5f4a',
-    fontWeight: '600',
+    color: Colors.primary,
+    fontFamily: Fonts.semiBold,
     fontSize: 15,
   },
   btn: { marginBottom: 12 },
@@ -182,11 +185,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ccc',
+    backgroundColor: Colors.border,
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#666',
+    color: Colors.textSecondary,
     fontSize: 14,
   },
   footer: {
@@ -197,6 +200,6 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 15,
-    color: '#333',
+    color: Colors.textPrimary,
   },
 })

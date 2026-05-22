@@ -1,17 +1,24 @@
-import { forwardRef } from 'react'
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native'
+import { forwardRef, useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface InputProps extends TextInputProps {
   label: string
   error?: string
+  showPasswordToggle?: boolean
 }
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(
-  { label, error, style, accessibilityLabel, ...rest },
+  { label, error, style, accessibilityLabel, secureTextEntry, showPasswordToggle = false, ...rest },
   ref
 ) {
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const inputId = rest.id ?? rest.nativeID
   const a11yLabel = accessibilityLabel ?? label
+  const isSecure = showPasswordToggle ? !passwordVisible : secureTextEntry
 
   return (
     <View style={styles.wrap}>
@@ -21,14 +28,36 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
         style={styles.label}>
         {label}
       </Text>
-      <TextInput
-        ref={ref}
-        accessibilityLabel={a11yLabel}
-        accessibilityHint={error}
-        style={[styles.input, error ? styles.inputError : null, style]}
-        placeholderTextColor="#888"
-        {...rest}
-      />
+      <View style={styles.inputWrap}>
+        <TextInput
+          ref={ref}
+          accessibilityLabel={a11yLabel}
+          accessibilityHint={error}
+          secureTextEntry={isSecure}
+          style={[
+            styles.input,
+            showPasswordToggle ? styles.inputWithToggle : null,
+            error ? styles.inputError : null,
+            style,
+          ]}
+          placeholderTextColor={Colors.textSecondary}
+          {...rest}
+        />
+        {showPasswordToggle ? (
+          <Pressable
+            style={styles.toggleBtn}
+            onPress={() => setPasswordVisible((visible) => !visible)}
+            accessibilityRole="button"
+            accessibilityLabel={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityState={{ selected: passwordVisible }}>
+            <Ionicons
+              name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+              size={22}
+              color={Colors.textSecondary}
+            />
+          </Pressable>
+        ) : null}
+      </View>
       {error ? (
         <Text accessibilityRole="alert" style={styles.error}>
           {error}
@@ -44,26 +73,42 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.medium,
     marginBottom: 6,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
+  },
+  inputWrap: {
+    position: 'relative',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
+    borderColor: Colors.border,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#1a1a1a',
+    fontFamily: Fonts.regular,
+    backgroundColor: Colors.surface,
+    color: Colors.textPrimary,
+  },
+  inputWithToggle: {
+    paddingRight: 48,
   },
   inputError: {
-    borderColor: '#b00020',
+    borderColor: Colors.danger,
+  },
+  toggleBtn: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
   },
   error: {
-    color: '#b00020',
+    color: Colors.danger,
     fontSize: 13,
+    fontFamily: Fonts.regular,
     marginTop: 4,
   },
 })
