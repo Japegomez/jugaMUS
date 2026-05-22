@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface DeleteAccountModalProps {
   visible: boolean
@@ -78,27 +80,27 @@ export function DeleteAccountModal({
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#b42318' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.danger },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20 },
   warning: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#b42318',
+    fontFamily: Fonts.semiBold,
+    color: Colors.danger,
     marginBottom: 12,
     lineHeight: 22,
   },
-  message: { fontSize: 15, color: '#333', marginBottom: 16, lineHeight: 22 },
-  error: { fontSize: 14, color: '#b00020', marginBottom: 16 },
+  message: { fontSize: 15, color: Colors.textPrimary, marginBottom: 16, lineHeight: 22 },
+  error: { fontSize: 14, color: Colors.danger, marginBottom: 16 },
   btn: { marginBottom: 12 },
 })

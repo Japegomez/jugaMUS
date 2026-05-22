@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export type MatchScoreValues = {
   teamAGames: number
@@ -181,23 +183,28 @@ export function MatchScoreModal({
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20 },
-  hint: { fontSize: 15, color: '#444', marginBottom: 6 },
-  sub: { fontSize: 14, color: '#666', marginBottom: 16, lineHeight: 20 },
+  hint: { fontSize: 15, color: Colors.textSecondary, marginBottom: 6 },
+  sub: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
   fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', marginBottom: 8 },
+  fieldLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    marginBottom: 8,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     minWidth: 44,
@@ -205,12 +212,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
   },
-  chipOn: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
-  chipText: { fontSize: 16, fontWeight: '600', color: '#666' },
-  chipTextOn: { color: '#1a5f4a' },
-  error: { fontSize: 14, color: '#c0392b', marginTop: 4 },
+  chipOn: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  chipText: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  chipTextOn: { color: Colors.primary },
+  error: { fontSize: 14, color: Colors.danger, marginTop: 4 },
 })

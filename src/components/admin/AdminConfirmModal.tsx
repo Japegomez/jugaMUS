@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface AdminConfirmModalProps {
   visible: boolean
@@ -80,7 +82,7 @@ export function AdminConfirmModal({
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -88,12 +90,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', flex: 1, paddingRight: 12 },
-  close: { fontSize: 22, color: '#666', padding: 4 },
+  title: {
+    fontSize: 18,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+    flex: 1,
+    paddingRight: 12,
+  },
+  close: { fontSize: 22, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20, gap: 12 },
-  message: { fontSize: 15, color: '#444', lineHeight: 22 },
-  error: { fontSize: 14, color: '#b42318' },
+  message: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
+  error: { fontSize: 14, color: Colors.danger },
   btn: { marginTop: 4 },
 })

@@ -1,4 +1,5 @@
 import { BRACKET_ROUND_LABELS, MATCH_STATUS } from '@/constants'
+import { Colors } from '@/theme/colors'
 
 export type MatchOutcome = 'won' | 'lost' | null
 
@@ -36,7 +37,7 @@ export function resolveMatchOutcome(match: {
 }
 
 export function matchHistoryBackground(outcome: MatchOutcome): string | undefined {
-  if (outcome === 'won') return '#e8f5ef'
-  if (outcome === 'lost') return '#fdeaea'
+  if (outcome === 'won') return Colors.wonBackground
+  if (outcome === 'lost') return Colors.lostBackground
   return undefined
 }

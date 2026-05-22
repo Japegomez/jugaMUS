@@ -11,6 +11,9 @@ import {
   type TextInputProps,
 } from 'react-native'
 
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+
 export interface CountryCode {
   code: string
   dialCode: string
@@ -118,7 +121,7 @@ export function PhoneInput({
           value={localNumber}
           onChangeText={handleLocalChange}
           keyboardType="phone-pad"
-          placeholderTextColor="#888"
+          placeholderTextColor={Colors.textSecondary}
           placeholder="612 345 678"
           accessibilityLabel="Número de teléfono"
           {...rest}
@@ -183,21 +186,21 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginBottom: 6,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     overflow: 'hidden',
   },
   rowError: {
-    borderColor: '#b00020',
+    borderColor: Colors.danger,
   },
   dialCodeButton: {
     flexDirection: 'row',
@@ -211,35 +214,35 @@ const styles = StyleSheet.create({
   },
   dialCode: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
   },
   chevron: {
     fontSize: 11,
-    color: '#666',
+    color: Colors.textSecondary,
     marginLeft: 2,
   },
   divider: {
     width: 1,
     height: 24,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: Colors.border,
   },
   input: {
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   error: {
-    color: '#b00020',
+    color: Colors.danger,
     fontSize: 13,
     marginTop: 4,
   },
   // Modal
   modal: {
     flex: 1,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -247,18 +250,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
   },
   modalClose: {
     fontSize: 18,
-    color: '#555',
+    color: Colors.textSecondary,
     padding: 4,
   },
   countryItem: {
@@ -266,14 +269,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     gap: 12,
   },
   countryItemPressed: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: Colors.surface,
   },
   countryItemSelected: {
-    backgroundColor: '#eef7f3',
+    backgroundColor: Colors.wonBackground,
   },
   countryFlag: {
     fontSize: 24,
@@ -282,22 +285,22 @@ const styles = StyleSheet.create({
   countryName: {
     flex: 1,
     fontSize: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   countryDial: {
     fontSize: 15,
-    color: '#555',
+    color: Colors.textSecondary,
     fontVariant: ['tabular-nums'],
   },
   checkmark: {
     fontSize: 16,
-    color: '#1a5f4a',
-    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
     marginLeft: 8,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#eee',
+    backgroundColor: Colors.border,
     marginLeft: 68,
   },
 })

@@ -4,6 +4,13 @@ import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router'
 import { PostHogProvider } from 'posthog-react-native'
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+  useFonts,
+} from '@expo-google-fonts/dm-sans'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
 import { posthog } from '@/lib/posthog'
@@ -22,6 +29,12 @@ function RootLayout() {
   const segments = useSegments()
   const router = useRouter()
   const navigationState = useRootNavigationState()
+  const [fontsLoaded] = useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+  })
 
   useNotifications()
 
@@ -46,6 +59,10 @@ function RootLayout() {
 
     return () => clearTimeout(timeoutId)
   }, [session, initialized, segments, navigationState?.key, router])
+
+  if (!fontsLoaded) {
+    return null
+  }
 
   return (
     <PostHogProvider client={posthog}>

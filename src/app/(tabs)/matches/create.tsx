@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
@@ -11,6 +12,9 @@ import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useCreateMatch } from '@/hooks/useMatches'
 import { DEFAULT_TEAM_A_NAME, DEFAULT_TEAM_B_NAME, MATCH_VISIBILITY } from '@/constants'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -84,6 +88,7 @@ function textPlayerOrNull(value?: string): string | null {
 
 export default function CreateMatchScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const createMatch = useCreateMatch()
 
   const {
@@ -143,7 +148,7 @@ export default function CreateMatchScreen() {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={s.container}
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
       keyboardShouldPersistTaps="handled">
       <Text style={s.heading}>Nueva partida</Text>
 
@@ -226,8 +231,8 @@ export default function CreateMatchScreen() {
                 field.onChange(!v)
                 if (v) setValue('place_text', '', { shouldValidate: true })
               }}
-              trackColor={{ true: '#1a5f4a', false: '#ccc' }}
-              thumbColor="#fff"
+              trackColor={{ true: Colors.primary, false: Colors.border }}
+              thumbColor={Colors.white}
             />
           )}
         />
@@ -432,35 +437,35 @@ const chip = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
   },
   selected: {
-    borderColor: '#1a5f4a',
-    backgroundColor: '#eef7f3',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.wonBackground,
   },
-  label: { fontSize: 15, fontWeight: '600', color: '#666' },
-  labelSelected: { color: '#1a5f4a' },
-  sublabel: { fontSize: 11, color: '#999', marginTop: 2, textAlign: 'center' },
-  sublabelSelected: { color: '#2a8f6f' },
+  label: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  labelSelected: { color: Colors.primary },
+  sublabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
+  sublabelSelected: { color: Colors.primary },
 })
 
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
   heading: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginBottom: 20,
   },
   fieldWrap: { marginBottom: 20 },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginBottom: 8,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   durationRow: {
     flexDirection: 'row',
@@ -474,19 +479,25 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 16,
   },
   rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 16, color: '#1a1a1a', fontWeight: '500' },
-  rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
-  hint: { fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 },
-  teamLabel: { fontSize: 14, fontWeight: '700', color: '#1a5f4a', marginBottom: 8, marginTop: 4 },
-  error: { color: '#b00020', fontSize: 13, marginTop: 4 },
+  rowLabel: { fontSize: 16, color: Colors.textPrimary, fontFamily: Fonts.medium },
+  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
+  teamLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
   submitBtn: { marginTop: 8 },
 })

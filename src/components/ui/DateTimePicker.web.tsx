@@ -8,6 +8,8 @@ import {
   toDatetimeLocalValue,
 } from '@/components/ui/dateTimePickerUtils'
 import type { DateTimePickerProps } from '@/components/ui/DateTimePicker.types'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export type { DateTimePickerProps }
 
@@ -90,26 +92,26 @@ const s = StyleSheet.create({
   wrap: { marginBottom: 4 },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginBottom: 6,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
-  fieldError: { borderColor: '#b00020' },
-  fieldText: { flex: 1, fontSize: 16, color: '#1a1a1a' },
-  fieldPlaceholder: { color: '#888' },
-  chevron: { fontSize: 12, color: '#666', paddingLeft: 8 },
-  error: { color: '#b00020', fontSize: 13, marginTop: 4 },
+  fieldError: { borderColor: Colors.danger },
+  fieldText: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  fieldPlaceholder: { color: Colors.textSecondary },
+  chevron: { fontSize: 12, color: Colors.textSecondary, paddingLeft: 8 },
+  error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -117,30 +119,30 @@ const s = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     padding: 20,
     gap: 16,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  modalTitle: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.textPrimary },
   webInput: {
     width: '100%',
     fontSize: 16,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
     boxSizing: 'border-box',
   },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   modalBtnSecondary: { paddingVertical: 10, paddingHorizontal: 14 },
-  modalBtnSecondaryText: { fontSize: 16, color: '#666' },
+  modalBtnSecondaryText: { fontSize: 16, color: Colors.textSecondary },
   modalBtnPrimary: {
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 10,
   },
-  modalBtnPrimaryText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  modalBtnPrimaryText: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.white },
 })

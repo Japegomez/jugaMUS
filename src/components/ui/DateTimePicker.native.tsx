@@ -9,6 +9,8 @@ import {
 } from '@/components/ui/dateTimePickerUtils'
 
 import type { DateTimePickerProps } from '@/components/ui/DateTimePicker.types'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export type { DateTimePickerProps }
 
@@ -99,8 +101,8 @@ function IOSPicker({ label, value, onChange, error, minDate }: DateTimePickerPro
               minimumDate={minDate}
               locale="es_ES"
               themeVariant="light"
-              textColor="#1a1a1a"
-              accentColor="#1a5f4a"
+              textColor={Colors.textPrimary}
+              accentColor={Colors.primary}
               onChange={(_, d) => {
                 if (d) setDraft(d)
               }}
@@ -208,30 +210,30 @@ const s = StyleSheet.create({
   wrap: { marginBottom: 4 },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: Fonts.semiBold,
     marginBottom: 6,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   field: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
   },
-  fieldError: { borderColor: '#b00020' },
-  fieldText: { flex: 1, fontSize: 16, color: '#1a1a1a' },
-  fieldPlaceholder: { color: '#888' },
-  chevron: { fontSize: 12, color: '#666', paddingLeft: 8 },
-  error: { color: '#b00020', fontSize: 13, marginTop: 4 },
-  modal: { flex: 1, backgroundColor: '#d5dad5' },
+  fieldError: { borderColor: Colors.danger },
+  fieldText: { flex: 1, fontSize: 16, color: Colors.textPrimary },
+  fieldPlaceholder: { color: Colors.textSecondary },
+  chevron: { fontSize: 12, color: Colors.textSecondary, paddingLeft: 8 },
+  error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
+  modal: { flex: 1, backgroundColor: Colors.surface },
   iosPickerWrap: {
     flex: 1,
-    backgroundColor: '#c9cfc9',
+    backgroundColor: Colors.border,
     justifyContent: 'center',
     paddingVertical: 8,
   },
@@ -241,12 +243,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  modalCancel: { fontSize: 16, color: '#666' },
-  modalConfirm: { fontSize: 16, color: '#1a5f4a', fontWeight: '700' },
+  modalTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  modalCancel: { fontSize: 16, color: Colors.textSecondary },
+  modalConfirm: { fontSize: 16, color: Colors.primary, fontFamily: Fonts.bold },
   iosSpinner: { alignSelf: 'stretch', backgroundColor: 'transparent' },
 })

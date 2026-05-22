@@ -30,6 +30,9 @@ import {
 } from '@/hooks/useTournaments'
 import { canJoinTournamentPair, userIsInTournamentPair } from '@/services/tournaments.service'
 import { isPlaceholderNode } from '@/utils/bracketLayout'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 type TabKey = 'bracket' | 'pending'
 
@@ -73,7 +76,7 @@ export default function TournamentDetailScreen() {
   if (isLoading) {
     return (
       <View style={s.centered}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     )
   }
@@ -142,7 +145,7 @@ export default function TournamentDetailScreen() {
   }
 
   return (
-    <View style={[s.root, { paddingTop: Math.max(insets.top, 8) }]}>
+    <View style={[s.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={s.topBar}>
         <Pressable
           onPress={() => router.back()}
@@ -159,7 +162,7 @@ export default function TournamentDetailScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => void refetchAll()}
-            tintColor="#1a5f4a"
+            tintColor={Colors.primary}
           />
         }>
         <Text style={s.title}>{tournament.title}</Text>
@@ -280,45 +283,45 @@ export default function TournamentDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f6f7f4' },
+  root: { flex: 1, backgroundColor: Colors.background },
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
-  close: { fontSize: 22, color: '#555', padding: 8 },
+  close: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  error: { fontSize: 16, color: '#888' },
-  title: { fontSize: 22, fontWeight: '800', color: '#1a1a1a' },
+  error: { fontSize: 16, color: Colors.textSecondary },
+  title: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary },
   infoBlock: { marginTop: 4, marginBottom: 12 },
-  meta: { fontSize: 14, color: '#666', marginTop: 2 },
-  organizer: { fontSize: 14, color: '#555', marginTop: 6 },
-  desc: { fontSize: 15, color: '#444', lineHeight: 22, marginBottom: 12 },
+  meta: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
+  organizer: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
+  desc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 12 },
   tabs: { flexDirection: 'row', marginBottom: 12, gap: 8 },
   tab: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     alignItems: 'center',
   },
-  tabOn: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#666' },
-  tabTextOn: { color: '#1a5f4a' },
+  tabOn: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  tabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  tabTextOn: { color: Colors.primary },
   bracketSection: { minHeight: 300, marginBottom: 8 },
   pendingWrap: { minHeight: 120 },
   pendingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: Colors.border,
   },
-  pendingTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
-  pendingMeta: { fontSize: 13, color: '#666', marginTop: 4 },
-  empty: { fontSize: 14, color: '#999', fontStyle: 'italic', padding: 16 },
+  pendingTitle: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+  pendingMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  empty: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic', padding: 16 },
   section: { marginTop: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1a5f4a', marginBottom: 10 },
+  sectionTitle: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.primary, marginBottom: 10 },
   actions: { marginTop: 20, gap: 10 },
   actionGap: { marginTop: 0 },
 })

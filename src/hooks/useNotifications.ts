@@ -6,6 +6,7 @@ import type { Subscription } from 'expo-notifications'
 
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/hooks/useAuth'
+import { Colors } from '@/theme/colors'
 
 // How incoming notifications behave while the app is in the foreground
 Notifications.setNotificationHandler({
@@ -31,7 +32,7 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
       name: 'Notificaciones',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
+      lightColor: `${Colors.danger}7C`,
     })
   }
 

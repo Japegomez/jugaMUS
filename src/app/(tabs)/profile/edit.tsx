@@ -13,6 +13,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
@@ -22,6 +23,9 @@ import { PhoneInput } from '@/components/ui/PhoneInput'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile, useUploadAvatar } from '@/hooks/useProfile'
 import { phoneE164Schema } from '@/utils/validators'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 const editProfileSchema = z.object({
   display_name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
@@ -33,6 +37,7 @@ type EditProfileValues = z.infer<typeof editProfileSchema>
 
 export default function EditProfileScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading } = useProfile(sessionUserId)
   const updateProfile = useUpdateProfile()
@@ -112,7 +117,7 @@ export default function EditProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1a5f4a" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     )
   }
@@ -127,7 +132,7 @@ export default function EditProfileScreen() {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, { paddingTop: screenTopPadding(insets.top, 24) }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <Text style={styles.heading}>Editar perfil</Text>
@@ -221,21 +226,21 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingTop: 32,
+    paddingTop: 0,
     paddingBottom: 40,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
     gap: 16,
   },
   centered: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
   heading: {
     fontSize: 26,
-    fontWeight: '800',
-    color: '#1a5f4a',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
     marginBottom: 4,
   },
   avatarSection: {
@@ -251,20 +256,20 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#ddd',
+    backgroundColor: Colors.border,
   },
   avatarFallback: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
     fontSize: 36,
-    fontWeight: '700',
-    color: '#fff',
+    fontFamily: Fonts.bold,
+    color: Colors.white,
   },
   avatarBadge: {
     position: 'absolute',
@@ -273,20 +278,20 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderWidth: 1.5,
-    borderColor: '#1a5f4a',
+    borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarBadgeText: {
     fontSize: 13,
-    color: '#1a5f4a',
-    fontWeight: '700',
+    color: Colors.primary,
+    fontFamily: Fonts.bold,
   },
   avatarHint: {
     fontSize: 13,
-    color: '#888',
+    color: Colors.textSecondary,
   },
   fields: {
     gap: 8,

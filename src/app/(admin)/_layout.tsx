@@ -3,6 +3,8 @@ import { Redirect, Stack } from 'expo-router'
 
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile } from '@/hooks/useProfile'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export default function AdminLayout() {
   const initialized = useAuthStore((s) => s.initialized)
@@ -22,9 +24,9 @@ export default function AdminLayout() {
       <Stack
         screenOptions={{
           headerShown: true,
-          headerTintColor: '#1a5f4a',
-          headerStyle: { backgroundColor: '#f6f7f4' },
-          headerTitleStyle: { fontWeight: '600' },
+          headerTintColor: Colors.primary,
+          headerStyle: { backgroundColor: Colors.background },
+          headerTitleStyle: { fontFamily: Fonts.semiBold },
         }}>
         <Stack.Screen name="index" options={{ title: 'Administración' }} />
         <Stack.Screen name="reports" options={{ headerShown: false }} />
@@ -32,7 +34,7 @@ export default function AdminLayout() {
       </Stack>
       {(!initialized || isLoading || profile?.role !== 'admin') && (
         <View style={styles.accessOverlay} pointerEvents="auto">
-          <ActivityIndicator size="large" color="#1a5f4a" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       )}
     </View>
@@ -45,6 +47,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
 })

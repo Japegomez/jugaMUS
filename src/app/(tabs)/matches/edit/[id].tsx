@@ -28,6 +28,9 @@ import {
   validateTextRosterCapacity,
 } from '@/services/matches.service'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 // ─── Schema (same as create) ──────────────────────────────────────────────────
 
@@ -131,15 +134,15 @@ const chip = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
     alignItems: 'center',
   },
-  selected: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
-  label: { fontSize: 15, fontWeight: '600', color: '#666' },
-  labelSelected: { color: '#1a5f4a' },
-  sublabel: { fontSize: 11, color: '#999', marginTop: 2, textAlign: 'center' },
-  sublabelSelected: { color: '#2a8f6f' },
+  selected: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  label: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  labelSelected: { color: Colors.primary },
+  sublabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
+  sublabelSelected: { color: Colors.primary },
 })
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -296,7 +299,7 @@ export default function EditMatchScreen() {
       style={s.scroll}
       contentContainerStyle={s.container}
       keyboardShouldPersistTaps="handled">
-      <View style={[s.closeBar, { paddingTop: Math.max(insets.top, 8) }]}>
+      <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         <View style={{ flex: 1 }} />
         <Pressable
           onPress={() => router.back()}
@@ -387,8 +390,8 @@ export default function EditMatchScreen() {
                 field.onChange(!v)
                 if (v) setValue('place_text', '', { shouldValidate: true })
               }}
-              trackColor={{ true: '#1a5f4a', false: '#ccc' }}
-              thumbColor="#fff"
+              trackColor={{ true: Colors.primary, false: Colors.border }}
+              thumbColor={Colors.white}
             />
           )}
         />
@@ -559,7 +562,7 @@ export default function EditMatchScreen() {
 
 const s = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
   closeBar: {
     flexDirection: 'row',
@@ -567,35 +570,41 @@ const s = StyleSheet.create({
     marginBottom: 4,
     marginHorizontal: -4,
   },
-  closeX: { fontSize: 22, color: '#555', padding: 8 },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   heading: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#1a1a1a',
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
     marginBottom: 20,
   },
   fieldWrap: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: '#1a1a1a' },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
   durationRow: { flexDirection: 'row', marginHorizontal: -4 },
   visRow: { flexDirection: 'row', marginHorizontal: -4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 16,
   },
   rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 16, color: '#1a1a1a', fontWeight: '500' },
-  rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
-  hint: { fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 },
-  rosterNote: { fontSize: 13, color: '#666', fontStyle: 'italic', marginBottom: 12 },
-  teamLabel: { fontSize: 14, fontWeight: '700', color: '#1a5f4a', marginBottom: 8, marginTop: 4 },
-  error: { color: '#b00020', fontSize: 13, marginTop: 4 },
+  rowLabel: { fontSize: 16, color: Colors.textPrimary, fontFamily: Fonts.medium },
+  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
+  rosterNote: { fontSize: 13, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 12 },
+  teamLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
   submitBtn: { marginTop: 8 },
 })

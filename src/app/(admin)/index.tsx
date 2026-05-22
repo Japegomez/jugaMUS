@@ -1,5 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export default function AdminDashboardScreen() {
   const router = useRouter()
@@ -31,25 +33,25 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     padding: 20,
-    backgroundColor: '#f6f7f4',
+    backgroundColor: Colors.background,
   },
   navSection: { gap: 12 },
   navButton: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e0e8e4',
+    borderColor: Colors.border,
   },
   navButtonPressed: { opacity: 0.85 },
   navButtonTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
   },
   navButtonDesc: {
     fontSize: 14,
-    color: '#666',
+    color: Colors.textSecondary,
     marginTop: 4,
   },
 })

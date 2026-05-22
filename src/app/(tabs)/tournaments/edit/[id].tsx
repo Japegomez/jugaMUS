@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
@@ -11,6 +12,9 @@ import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useTournament, useUpdateTournament } from '@/hooks/useTournaments'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 const schema = z
   .object({
@@ -30,6 +34,7 @@ type FormValues = z.infer<typeof schema>
 export default function EditTournamentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { data: tournament, isLoading } = useTournament(id)
   const updateTournament = useUpdateTournament()
 
@@ -102,7 +107,7 @@ export default function EditTournamentScreen() {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={s.container}
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
       keyboardShouldPersistTaps="handled">
       <Text style={s.heading}>Editar torneo</Text>
       <Controller
@@ -214,34 +219,34 @@ export default function EditTournamentScreen() {
 }
 
 const s = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: '#f6f7f4' },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  error: { color: '#888', textAlign: 'center' },
-  heading: { fontSize: 22, fontWeight: '700', marginBottom: 16 },
+  error: { color: Colors.textSecondary, textAlign: 'center' },
+  heading: { fontSize: 22, fontFamily: Fonts.bold, marginBottom: 16 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
   },
   rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 15, fontWeight: '500' },
-  rowHint: { fontSize: 12, color: '#888', marginTop: 2 },
+  rowLabel: { fontSize: 15, fontFamily: Fonts.medium },
+  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   fieldWrap: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8 },
   chips: { flexDirection: 'row', gap: 8 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
   },
-  chipOn: { borderColor: '#1a5f4a', backgroundColor: '#eef7f3' },
-  chipText: { color: '#666' },
-  chipTextOn: { color: '#1a5f4a', fontWeight: '600' },
+  chipOn: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  chipText: { color: Colors.textSecondary },
+  chipTextOn: { color: Colors.primary, fontFamily: Fonts.semiBold },
 })

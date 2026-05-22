@@ -17,6 +17,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
 import { registerSchema, type RegisterFormValues } from '@/utils/authSchemas'
+import { Colors } from '@/theme/colors'
+import { Layout } from '@/theme/layout'
+import { Fonts } from '@/theme/typography'
 
 export default function RegisterScreen() {
   const router = useRouter()
@@ -109,7 +112,7 @@ export default function RegisterScreen() {
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
               label="Contraseña"
-              secureTextEntry
+              showPasswordToggle
               autoComplete="new-password"
               value={value}
               onBlur={onBlur}
@@ -125,7 +128,7 @@ export default function RegisterScreen() {
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
               label="Confirmar contraseña"
-              secureTextEntry
+              showPasswordToggle
               autoComplete="new-password"
               value={value}
               onBlur={onBlur}
@@ -180,22 +183,22 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f6f7f4' },
+  flex: { flex: 1, backgroundColor: Colors.background },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: Layout.authScreenTopPadding,
     paddingBottom: 32,
   },
   heading: {
     fontSize: 26,
-    fontWeight: '800',
-    color: '#1a5f4a',
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
     marginBottom: 8,
   },
   sub: {
     fontSize: 15,
-    color: '#444',
+    color: Colors.textSecondary,
     marginBottom: 24,
   },
   btn: { marginTop: 8 },
@@ -213,20 +216,20 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: '#1a5f4a',
+    borderColor: Colors.primary,
     marginTop: 2,
   },
   boxOn: {
-    backgroundColor: '#1a5f4a',
+    backgroundColor: Colors.primary,
   },
   checkLabel: {
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    color: '#222',
+    color: Colors.textPrimary,
   },
   termsError: {
-    color: '#b00020',
+    color: Colors.danger,
     fontSize: 13,
     marginTop: 8,
     marginLeft: 34,
@@ -239,17 +242,17 @@ const styles = StyleSheet.create({
     marginLeft: 34,
   },
   a: {
-    color: '#1a5f4a',
-    fontWeight: '600',
+    color: Colors.primary,
+    fontFamily: Fonts.semiBold,
     fontSize: 14,
     textDecorationLine: 'underline',
   },
-  dot: { color: '#666' },
+  dot: { color: Colors.textSecondary },
   footer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     marginTop: 20,
   },
-  footerText: { fontSize: 15, color: '#333' },
+  footerText: { fontSize: 15, color: Colors.textPrimary },
 })

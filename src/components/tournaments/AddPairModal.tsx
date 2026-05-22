@@ -12,6 +12,8 @@ import {
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export type AddPairFormValues = {
   name: string
@@ -156,32 +158,32 @@ export function AddPairModal({
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20, paddingBottom: 40 },
   slot: { marginBottom: 16 },
-  slotLabel: { fontSize: 14, fontWeight: '700', color: '#1a5f4a', marginBottom: 8 },
+  slotLabel: { fontSize: 14, fontFamily: Fonts.bold, color: Colors.primary, marginBottom: 8 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: Colors.border,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 8,
   },
-  rowLabel: { fontSize: 15, color: '#333' },
+  rowLabel: { fontSize: 15, color: Colors.textPrimary },
 })

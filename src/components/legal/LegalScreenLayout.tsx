@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+import { screenTopPadding } from '@/theme/layout'
 
 export const LEGAL_DISCLAIMER = 'Texto legal definitivo pendiente de revisión jurídica.'
 
@@ -13,9 +17,11 @@ type Props = {
 
 export function LegalScreenLayout({ title, children }: Props) {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { paddingTop: screenTopPadding(insets.top, 24) }]}>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.disclaimerBox}>
         <Text style={styles.disclaimer}>{LEGAL_DISCLAIMER}</Text>
@@ -48,38 +54,37 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: Fonts.bold,
     marginBottom: 16,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   disclaimerBox: {
-    backgroundColor: '#fff8e6',
+    backgroundColor: Colors.wonBackground,
     borderLeftWidth: 4,
-    borderLeftColor: '#c9a227',
+    borderLeftColor: Colors.warning,
     padding: 12,
     marginBottom: 20,
-    borderRadius: 4,
   },
   disclaimer: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#5c4a12',
-    fontWeight: '600',
+    fontSize: 13,
+    color: Colors.textPrimary,
+    fontFamily: Fonts.medium,
   },
   section: {
     marginBottom: 20,
   },
   h2: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
     marginBottom: 8,
-    color: '#1a1a1a',
   },
   p: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 12,
-    color: '#333',
+    fontSize: 15,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+    fontFamily: Fonts.regular,
+    marginBottom: 8,
   },
   actions: {
     marginTop: 24,

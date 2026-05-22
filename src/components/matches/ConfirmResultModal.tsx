@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
 
 export interface ConfirmResultModalProps {
   visible: boolean
@@ -57,7 +59,7 @@ export function ConfirmResultModal({
             multiline
             numberOfLines={4}
             placeholder="Describe el motivo de la disputa…"
-            placeholderTextColor="#888"
+            placeholderTextColor={Colors.textSecondary}
             value={comment}
             onChangeText={setComment}
             editable={!loading}
@@ -79,34 +81,34 @@ export function ConfirmResultModal({
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: '#f6f7f4' },
+  wrap: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ddd',
+    borderBottomColor: Colors.border,
   },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  close: { fontSize: 18, color: '#555', padding: 4 },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
   body: { padding: 20 },
-  score: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 8 },
-  submitter: { fontSize: 15, color: '#555', marginBottom: 20 },
-  submitterName: { fontWeight: '700', color: '#1a1a1a' },
-  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
+  score: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 8 },
+  submitter: { fontSize: 15, color: Colors.textSecondary, marginBottom: 20 },
+  submitterName: { fontFamily: Fonts.bold, color: Colors.textPrimary },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textPrimary, marginBottom: 8 },
   textarea: {
     minHeight: 100,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: Colors.border,
     borderRadius: 10,
     padding: 12,
     fontSize: 15,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     textAlignVertical: 'top',
     marginBottom: 20,
-    color: '#1a1a1a',
+    color: Colors.textPrimary,
   },
   actions: { gap: 12 },
   btn: {},
