@@ -1028,6 +1028,8 @@ export type Database = {
           creator_id: string
           id: string
           match_result_id: string
+          place_defined: boolean
+          place_text: string | null
           start_at: string
           status: string
           title: string

@@ -515,6 +515,8 @@ export type UserMatchSummary = {
   title: string
   start_at: string
   city: string
+  place_defined: boolean
+  place_text: string | null
   status: string
   visibility: string
   creator_id: string
@@ -533,7 +535,9 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
   const [asCreator, asParticipant] = await Promise.all([
     supabase
       .from('matches')
-      .select('id, title, start_at, city, status, visibility, creator_id')
+      .select(
+        'id, title, start_at, city, place_defined, place_text, status, visibility, creator_id'
+      )
       .eq('creator_id', userId)
       .is('tournament_id', null)
       .eq('tournament_is_bye', false)
@@ -543,7 +547,7 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
     supabase
       .from('match_participants')
       .select(
-        `match:matches!inner(id, title, start_at, city, status, visibility, creator_id, tournament_round_size)`
+        `match:matches!inner(id, title, start_at, city, place_defined, place_text, status, visibility, creator_id, tournament_round_size)`
       )
       .eq('user_id', userId)
       .is('left_at', null)
@@ -623,6 +627,82 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
     .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
 }
 
+const USER_MATCH_SUMMARY_SELECT =
+  'id, title, start_at, city, place_defined, place_text, status, visibility, creator_id'
+
+function mergeMatchSummaryInto(byId: Map<string, UserMatchSummary>, row: UserMatchSummary): void {
+  const existing = byId.get(row.id)
+  if (!existing) {
+    byId.set(row.id, row)
+    return
+  }
+  if (!existing.place_text?.trim() && row.place_text?.trim()) {
+    byId.set(row.id, {
+      ...existing,
+      place_defined: row.place_defined,
+      place_text: row.place_text,
+    })
+  }
+}
+
+/** Creator + confirmed participant matches (excludes bye bracket rows). */
+async function listUserMatchSummariesForDashboard(userId: string): Promise<UserMatchSummary[]> {
+  const [asCreator, asParticipant] = await Promise.all([
+    supabase
+      .from('matches')
+      .select(USER_MATCH_SUMMARY_SELECT)
+      .eq('creator_id', userId)
+      .eq('tournament_is_bye', false)
+      .limit(120),
+    supabase
+      .from('match_participants')
+      .select(`match:matches!inner(${USER_MATCH_SUMMARY_SELECT})`)
+      .eq('user_id', userId)
+      .is('left_at', null)
+      .eq('state', 'confirmed')
+      .eq('match.tournament_is_bye', false)
+      .limit(120),
+  ])
+
+  if (asCreator.error) throw new Error(asCreator.error.message)
+  if (asParticipant.error) throw new Error(asParticipant.error.message)
+
+  const byId = new Map<string, UserMatchSummary>()
+  for (const row of (asCreator.data ?? []) as UserMatchSummary[]) {
+    mergeMatchSummaryInto(byId, row)
+  }
+  for (const row of asParticipant.data ?? []) {
+    const match = row.match as UserMatchSummary | null
+    if (match) mergeMatchSummaryInto(byId, match)
+  }
+
+  return [...byId.values()]
+}
+
+/** Ensure venue fields come from `matches` (RPC/embed responses may omit them). */
+async function attachPlaceFields<T extends UserMatchSummary>(rows: T[]): Promise<T[]> {
+  if (rows.length === 0) return rows
+
+  const ids = [...new Set(rows.map((row) => row.id))]
+  const { data, error } = await supabase
+    .from('matches')
+    .select('id, place_defined, place_text')
+    .in('id', ids)
+
+  if (error) throw new Error(error.message)
+
+  const placeById = new Map((data ?? []).map((row) => [row.id, row]))
+  return rows.map((row) => {
+    const place = placeById.get(row.id)
+    if (!place) return row
+    return {
+      ...row,
+      place_defined: place.place_defined,
+      place_text: place.place_text,
+    }
+  })
+}
+
 /** Row from `list_matches_awaiting_my_result_action` — same shape as `UserMatchSummary` + result id. */
 export type AwaitingResultMatchRow = UserMatchSummary & { match_result_id: string }
 
@@ -661,7 +741,7 @@ async function listAwaitingResultValidationClientFallback(
     .from('match_results')
     .select(
       `id, match_id, submitted_by_team, created_at,
-       match:matches!inner(id, title, start_at, city, status, visibility, creator_id, tournament_is_bye)`
+       match:matches!inner(id, title, start_at, city, place_defined, place_text, status, visibility, creator_id, tournament_is_bye)`
     )
     .in('match_id', matchIds)
     .eq('status', RESULT_STATUS.PENDING_VALIDATION)
@@ -714,16 +794,9 @@ async function listAwaitingResultValidationClientFallback(
  * and matches where the user must approve or dispute a submitted result.
  */
 export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
-  const [awaitingRes, participantRes, tournamentsRes] = await Promise.all([
+  const [awaitingRes, matchSummaries, tournamentsRes] = await Promise.all([
     supabase.rpc('list_matches_awaiting_my_result_action'),
-    supabase
-      .from('match_participants')
-      .select(`match:matches!inner(id, title, start_at, city, status, visibility, creator_id)`)
-      .eq('user_id', userId)
-      .is('left_at', null)
-      .eq('state', 'confirmed')
-      .eq('match.tournament_is_bye', false)
-      .limit(120),
+    listUserMatchSummariesForDashboard(userId),
     getUserTournamentsDashboard(userId),
   ])
 
@@ -738,29 +811,27 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     awaitingResultValidation = (awaitingRes.data ?? []) as AwaitingResultMatchRow[]
   }
 
-  if (participantRes.error) throw new Error(participantRes.error.message)
+  const [withPlaces, awaitingWithPlaces] = await Promise.all([
+    attachPlaceFields(matchSummaries),
+    attachPlaceFields(awaitingResultValidation),
+  ])
 
   const now = Date.now()
-  const fromParts = (participantRes.data ?? [])
-    .map((r) => r.match as UserMatchSummary | null)
-    .filter((m): m is UserMatchSummary => m !== null)
 
-  const upcoming = fromParts
+  const upcoming = withPlaces
     .filter((m) => m.status === MATCH_STATUS.PLANNED && new Date(m.start_at).getTime() >= now)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 
-  const inProgress = fromParts
+  const inProgress = withPlaces
     .filter((m) => m.status === MATCH_STATUS.IN_PROGRESS)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 
-  awaitingResultValidation.sort(
-    (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
-  )
+  awaitingWithPlaces.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 
   return {
     upcoming,
     inProgress,
-    awaitingResultValidation,
+    awaitingResultValidation: awaitingWithPlaces,
     upcomingTournaments: tournamentsRes.upcoming,
     inProgressTournaments: tournamentsRes.inProgress,
   }
