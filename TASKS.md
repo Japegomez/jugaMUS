@@ -1,19 +1,20 @@
 # Tareas - Mussa Suerte
 
-> Actualizado: 22/05/2026 (cierre de sesión — UX Mis partidas + migración 049)
+> Actualizado: 24/05/2026 (cierre de sesión — marcador en vivo + reglas plantilla/cron)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                          |
-| ------------------- | ---------- | ------------------------------------ |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir    |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas    |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil  |
-| UI — Ultra Limpio   | Completada | Rediseño visual                      |
+| Fase                | Estado     | Descripción                                 |
+| ------------------- | ---------- | ------------------------------------------- |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir           |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes        |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas           |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil         |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado |
+| UI — Ultra Limpio   | Completada | Rediseño visual                             |
 
 ---
 
@@ -123,6 +124,11 @@
   - [x] Edición de plantilla: no permite más jugadores de texto de los que caben si hay cuentas registradas en el equipo.
   - [x] Marcador directo por creador en partidas sin otros registrados (`record_match_result_direct`); botón solo con partida `in_progress` (`017`).
   - [x] FAB «Nueva partida» en pantalla Mis partidas (como Descubrir).
+  - [x] Nombres de equipo por defecto desde plantilla (`matchTeamNames`: `Jugador1 - Jugador2`; orden alineado con lista de integrantes).
+  - [x] Crear partida: hora de inicio = ahora al abrir formulario; reset al entrar en pantalla (sin arrastrar última partida).
+  - [x] Promoción a `in_progress` al crear/unirse si `start_at <= now` y plantilla completa (4 plazas).
+  - [x] Cron/plantilla (`050`/`051`): join solo en `planned`; sin roster completo al llegar la hora → `cancelled`; explore filtra `start_at >= now`.
+  - [x] Detalle partida: refetch al foco (`useMatch` + `useFocusEffect`) — etiqueta de estado coherente con Mis partidas en móvil.
 - [x] Pantalla de edición de partida (mismo formulario que creación)
 - [x] Lógica de unirse a partida con selección de equipo
 - [x] Constraint: máximo 2 confirmados por equipo
@@ -310,6 +316,25 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ---
 
+## Fase 5 — Marcador en vivo (may. 2026)
+
+> Rama de trabajo: `feature/scoreboard` (desde `develop`).
+
+### F12 - Marcador local durante la partida
+
+- [x] Constantes de mus (`MUS_PHASES`, apuesta por defecto, puntos por juego, etiquetas de fase) en `src/constants/index.ts`
+- [x] Persistencia cross-platform (`src/lib/scoreboardStorage.ts`: AsyncStorage / `localStorage`)
+- [x] Hook `useLiveScoreboard`: puntos, juegos, fases, envite, órdago, fin de partida
+- [x] Componentes UI: `ScoreboardPairCard`, `PhaseRow`, `PointsAdjustModal`, `OrdagoModal`, `ResetScoreboardModal`
+- [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador global, fases, botón órdago, reinicio local
+- [x] Detalle partida: botones «Llevar la cuenta» y «Registrar resultado» (partida `in_progress`)
+- [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
+- [x] Reset del marcador local tras registrar resultado correctamente
+- [x] Commit + PR `feature/scoreboard` → `develop` (revisor/asignado Japegomez)
+- [ ] QA en Android / iOS / web: flujo completo marcador → registrar resultado → historial
+
+---
+
 ## UI — Rediseño Ultra Limpio (may. 2026)
 
 > Rama de trabajo: `feature/ui-redesign` (cambios locales sin commit al cierre de sesión).
@@ -325,7 +350,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Preview Mis partidas y Descubrir: `ciudad · lugar` (`formatCityAndPlace` + `attachPlaceFields` en dashboard)
 - [x] Migración `049` (`list_matches_awaiting_my_result_action` incluye lugar) — aplicada en Supabase remoto
 - [x] Cabecera Mis partidas: solo título, sin contador de activas
-- [ ] Commit + PR `feature/ui-redesign` → `develop` (revisor/asignado Japegomez)
+- [x] Commit + PR `feature/ui-redesign` → `develop` (revisor/asignado Japegomez)
 - [ ] QA visual rápida en Android / iOS / web tras merge
 
 ---
