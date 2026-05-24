@@ -4,9 +4,8 @@ import {
   type UserTournamentSummary,
 } from '@/services/tournaments.service'
 import { supabase } from '@/lib/supabase'
+import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
-  DEFAULT_TEAM_A_NAME,
-  DEFAULT_TEAM_B_NAME,
   MATCH_STATUS,
   MAX_PLAYERS_PER_TEAM,
   MATCH_PAGE_SIZE,
@@ -173,6 +172,51 @@ export function freeTeamSlots(
   return Math.max(0, MAX_PLAYERS_PER_TEAM - registered - textCount)
 }
 
+export function isRosterFull(
+  match: TextPlayerFields,
+  participants: ParticipantWithProfile[]
+): boolean {
+  return (
+    freeTeamSlots(match, participants, TEAM.A) === 0 &&
+    freeTeamSlots(match, participants, TEAM.B) === 0
+  )
+}
+
+function participantRowToWithProfile(row: ParticipantRow): ParticipantWithProfile {
+  return {
+    ...row,
+    profile: {
+      id: row.user_id,
+      display_name: 'Usuario',
+      photo_url: null,
+      city: null,
+      phone_e164: null,
+    },
+  }
+}
+
+/** Standalone match: start immediately when start_at has passed and roster is full (4 slots). */
+async function promoteToInProgressIfReady(
+  match: MatchRow,
+  participants: ParticipantWithProfile[]
+): Promise<MatchRow> {
+  if (match.tournament_id) return match
+  if (match.status !== MATCH_STATUS.PLANNED) return match
+  if (new Date(match.start_at).getTime() > Date.now()) return match
+  if (!isRosterFull(match, participants)) return match
+
+  const { data: updated, error } = await supabase
+    .from('matches')
+    .update({ status: MATCH_STATUS.IN_PROGRESS })
+    .eq('id', match.id)
+    .eq('status', MATCH_STATUS.PLANNED)
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+  return updated as MatchRow
+}
+
 /** Max text-name fields allowed on a team given registered participants. */
 export function maxTextSlotsForTeam(participants: ParticipantWithProfile[], team: string): number {
   return Math.max(0, MAX_PLAYERS_PER_TEAM - countTeamSlots(participants, team))
@@ -206,18 +250,29 @@ export function editableTextSlotsForTeam(
 export function validateTextRosterCapacity(
   participants: ParticipantWithProfile[],
   textFields: TextPlayerFields,
-  teamNames?: Pick<MatchRow, 'team_a_name' | 'team_b_name'>
+  matchForNames?: ResolveTeamNameMatch
 ): string | null {
   for (const team of [TEAM.A, TEAM.B]) {
     const registered = countTeamSlots(participants, team)
     const textCount = textPlayerNamesOnTeam(textFields, team).length
     if (registered + textCount > MAX_PLAYERS_PER_TEAM) {
-      const label = teamNames ? resolveTeamName(teamNames, team) : `equipo ${team}`
+      const label = matchForNames
+        ? resolveTeamName(matchForNames, team, participants)
+        : `equipo ${team}`
       return `${label} ya está completo; no puedes añadir más jugadores por nombre.`
     }
   }
   return null
 }
+
+export type { ResolveTeamNameMatch } from '@/utils/matchTeamNames'
+export {
+  collectTeamPlayerNames,
+  collectTeamRosterEntries,
+  formatTeamNameFromPlayers,
+  isUnspecifiedTeamName,
+  resolveTeamName,
+} from '@/utils/matchTeamNames'
 
 const TEXT_PLAYER_UPDATE_KEYS = [
   'team_a_player_1',
@@ -226,38 +281,27 @@ const TEXT_PLAYER_UPDATE_KEYS = [
   'team_b_player_2',
 ] as const satisfies ReadonlyArray<keyof TextPlayerFields>
 
-export function resolveTeamName(
-  match: Pick<MatchRow, 'team_a_name' | 'team_b_name'>,
-  team: string
-): string {
-  if (team === TEAM.B) {
-    const name = match.team_b_name?.trim()
-    return name || DEFAULT_TEAM_B_NAME
-  }
-  const name = match.team_a_name?.trim()
-  return name || DEFAULT_TEAM_A_NAME
-}
-
 // ─── Match CRUD ───────────────────────────────────────────────────────────────
 
 export async function createMatch(userId: string, data: MatchInsert): Promise<MatchRow> {
+  const startAt = startAtToTimestamptzIso(data.start_at)
+
   const { data: row, error } = await supabase
     .from('matches')
-    .insert({ ...data, start_at: startAtToTimestamptzIso(data.start_at), creator_id: userId })
+    .insert({ ...data, start_at: startAt, creator_id: userId })
     .select()
     .single()
 
   if (error) throw new Error(error.message)
 
   try {
-    await joinMatch(row.id, userId, TEAM.A)
+    const participant = await joinMatch(row.id, userId, TEAM.A)
+    return promoteToInProgressIfReady(row as MatchRow, [participantRowToWithProfile(participant)])
   } catch (joinErr) {
     throw joinErr instanceof Error
       ? joinErr
       : new Error('No se pudo añadirte como jugador del equipo A')
   }
-
-  return row as MatchRow
 }
 
 /**
@@ -819,7 +863,7 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
   const now = Date.now()
 
   const upcoming = withPlaces
-    .filter((m) => m.status === MATCH_STATUS.PLANNED && new Date(m.start_at).getTime() >= now)
+    .filter((m) => m.status === MATCH_STATUS.PLANNED && new Date(m.start_at).getTime() > now)
     .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
 
   const inProgress = withPlaces

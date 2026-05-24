@@ -19,6 +19,8 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand. Pendiente commit/PR desde rama `feature/ui-redesign`.
 - **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final. Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Cache de torneos: refetch al foco + polling 30 s en detalle (multi-dispositivo).
+- **Marcador en vivo (may. 2026):** pantalla «Llevar la cuenta» en partidas `in_progress`; estado persistido **solo en el dispositivo** (AsyncStorage / `localStorage`). Incluye fases del mus, envites, órdago y ajuste de puntos. «Registrar resultado» abre el modal con juegos pre-rellenados desde el marcador. No hay sync multi-dispositivo ni persistencia en servidor hasta enviar el resultado oficial.
+- **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Detalle de partida refetch al foco para coherencia con Mis partidas.
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
@@ -30,12 +32,13 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 
 El desarrollo se organiza en tres fases para que sea viable para un único desarrollador:
 
-| Fase                    | Contenido                            | Descripción                             |
-| ----------------------- | ------------------------------------ | --------------------------------------- |
-| **Fase 1 - Core**       | Auth, Perfil, Partidas, Descubrir    | Lo mínimo para que la app sea funcional |
-| **Fase 2 - Resultados** | Notificaciones, Resultados, Reportes | Ciclo de vida completo de una partida   |
-| **Fase 3 - Admin**      | Panel admin, Analíticas, Disputas    | Herramientas de gestión y moderación    |
-| **Fase 4 - Torneos**    | Cuadros, parejas, avance automático  | Organización de torneos eliminatorios   |
+| Fase                    | Contenido                            | Descripción                                                         |
+| ----------------------- | ------------------------------------ | ------------------------------------------------------------------- |
+| **Fase 1 - Core**       | Auth, Perfil, Partidas, Descubrir    | Lo mínimo para que la app sea funcional                             |
+| **Fase 2 - Resultados** | Notificaciones, Resultados, Reportes | Ciclo de vida completo de una partida                               |
+| **Fase 3 - Admin**      | Panel admin, Analíticas, Disputas    | Herramientas de gestión y moderación                                |
+| **Fase 4 - Torneos**    | Cuadros, parejas, avance automático  | Organización de torneos eliminatorios                               |
+| **Fase 5 - Marcador**   | Marcador en vivo local               | Conteo de puntos/juegos durante la partida (sin lógica en servidor) |
 
 ### Fuera del alcance total
 

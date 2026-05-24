@@ -17,6 +17,9 @@ type MatchScorePickerProps = {
   hint?: string
   submitLabel: string
   loading: boolean
+  initialTeamAGames?: number
+  initialTeamBGames?: number
+  lockValues?: boolean
   onSubmit: (values: MatchScoreValues) => void
 }
 
@@ -45,11 +48,13 @@ function ScoreChipRow({
   value,
   options,
   onChange,
+  locked = false,
 }: {
   label: string
   value: number
   options: number[]
   onChange: (n: number) => void
+  locked?: boolean
 }) {
   return (
     <View style={s.fieldWrap}>
@@ -58,10 +63,11 @@ function ScoreChipRow({
         {options.map((n) => (
           <Pressable
             key={n}
-            style={[s.chip, value === n && s.chipOn]}
-            onPress={() => onChange(n)}
+            style={[s.chip, value === n && s.chipOn, locked && value !== n && s.chipLocked]}
+            onPress={() => !locked && onChange(n)}
+            disabled={locked}
             accessibilityRole="button"
-            accessibilityState={{ selected: value === n }}
+            accessibilityState={{ selected: value === n, disabled: locked }}
             accessibilityLabel={`${n} juegos`}>
             <Text style={[s.chipText, value === n && s.chipTextOn]}>{n}</Text>
           </Pressable>
@@ -78,11 +84,14 @@ function MatchScorePickerFields({
   hint,
   submitLabel,
   loading,
+  initialTeamAGames,
+  initialTeamBGames,
+  lockValues = false,
   onSubmit,
 }: MatchScorePickerProps) {
   const options = useMemo(() => scoreOptions(durationTargetGames), [durationTargetGames])
-  const [teamAGames, setTeamAGames] = useState(durationTargetGames)
-  const [teamBGames, setTeamBGames] = useState(0)
+  const [teamAGames, setTeamAGames] = useState(initialTeamAGames ?? durationTargetGames)
+  const [teamBGames, setTeamBGames] = useState(initialTeamBGames ?? 0)
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = () => {
@@ -99,8 +108,9 @@ function MatchScorePickerFields({
     <View>
       {hint ? <Text style={s.hint}>{hint}</Text> : null}
       <Text style={s.sub}>
-        Partida a {durationTargetGames} juego{durationTargetGames > 1 ? 's' : ''}. Elige el marcador
-        (sin empates).
+        {lockValues
+          ? `Partida a ${durationTargetGames} juego${durationTargetGames > 1 ? 's' : ''}. Confirma el marcador del scoreboard.`
+          : `Partida a ${durationTargetGames} juego${durationTargetGames > 1 ? 's' : ''}. Elige el marcador (sin empates).`}
       </Text>
 
       <ScoreChipRow
@@ -108,12 +118,14 @@ function MatchScorePickerFields({
         value={teamAGames}
         options={options}
         onChange={setTeamAGames}
+        locked={lockValues}
       />
       <ScoreChipRow
         label={`Juegos ${teamBName}`}
         value={teamBGames}
         options={options}
         onChange={setTeamBGames}
+        locked={lockValues}
       />
 
       {error ? <Text style={s.error}>{error}</Text> : null}
@@ -129,7 +141,8 @@ function MatchScorePickerFields({
 }
 
 export function MatchScorePicker(props: MatchScorePickerProps) {
-  return <MatchScorePickerFields key={props.durationTargetGames} {...props} />
+  const pickerKey = `${props.durationTargetGames}-${props.initialTeamAGames ?? 'a'}-${props.initialTeamBGames ?? 'b'}-${props.lockValues ? 'locked' : 'open'}`
+  return <MatchScorePickerFields key={pickerKey} {...props} />
 }
 
 type MatchScoreModalProps = MatchScorePickerProps & {
@@ -217,6 +230,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   chipOn: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  chipLocked: { opacity: 0.35 },
   chipText: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   chipTextOn: { color: Colors.primary },
   error: { fontSize: 14, color: Colors.danger, marginTop: 4 },

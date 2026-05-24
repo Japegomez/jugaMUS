@@ -9,6 +9,9 @@ export interface SubmitResultModalProps {
   durationTargetGames: number
   rivalAutoConfirms?: boolean
   loading: boolean
+  initialTeamAGames?: number
+  initialTeamBGames?: number
+  lockValues?: boolean
   onSubmit: (values: { teamAGames: number; teamBGames: number }) => void
 }
 
@@ -21,6 +24,9 @@ export function SubmitResultModal({
   durationTargetGames,
   rivalAutoConfirms = false,
   loading,
+  initialTeamAGames,
+  initialTeamBGames,
+  lockValues,
   onSubmit,
 }: SubmitResultModalProps) {
   const hintParts = [`Tu equipo: ${viewerTeamLabel}`]
@@ -39,6 +45,9 @@ export function SubmitResultModal({
       hint={hintParts.join(' ')}
       submitLabel="Enviar resultado"
       loading={loading}
+      initialTeamAGames={initialTeamAGames}
+      initialTeamBGames={initialTeamBGames}
+      lockValues={lockValues}
       onSubmit={onSubmit}
     />
   )

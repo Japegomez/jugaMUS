@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import {
   ActivityIndicator,
@@ -36,11 +37,14 @@ import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTou
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import { freeTeamSlots, getParticipantProfile, resolveTeamName } from '@/services/matches.service'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
+import { collectTeamRosterEntries } from '@/utils/matchTeamNames'
 import type { ReportTargetType } from '@/services/reports.service'
 import { MATCH_STATUS, MATCH_VISIBILITY, RESULT_STATUS, TEAM } from '@/constants'
+import { clearScoreboardState } from '@/lib/scoreboardStorage'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { matchStatusDisplay } from '@/utils/matchDisplay'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,23 +62,6 @@ function formatDate(iso: string) {
 function submitterDisplayName(participants: ParticipantWithProfile[], userId: string) {
   const p = participants.find((x) => x.user_id === userId)
   return p?.profile.display_name ?? 'Jugador'
-}
-
-function statusLabel(status: string) {
-  switch (status) {
-    case MATCH_STATUS.PLANNED:
-      return { text: 'Planificada', color: Colors.primary }
-    case MATCH_STATUS.IN_PROGRESS:
-      return { text: 'En curso', color: Colors.warning }
-    case MATCH_STATUS.FINISHED:
-      return { text: 'Finalizada', color: Colors.textSecondary }
-    case MATCH_STATUS.FINISHED_NO_RESULT:
-      return { text: 'Sin resultado', color: Colors.textSecondary }
-    case MATCH_STATUS.CANCELLED:
-      return { text: 'Cancelada', color: Colors.danger }
-    default:
-      return { text: status, color: Colors.textSecondary }
-  }
 }
 
 // ─── Participant card ─────────────────────────────────────────────────────────
@@ -190,7 +177,12 @@ interface TeamSectionProps {
   teamLabel: string
   freeSlots: number
   participants: ParticipantWithProfile[]
-  textPlayers?: (string | null | undefined)[]
+  rosterText: {
+    team_a_player_1: string | null
+    team_a_player_2: string | null
+    team_b_player_1: string | null
+    team_b_player_2: string | null
+  }
   matchId: string
   canRevealPhone: boolean
   currentUserId?: string
@@ -210,14 +202,13 @@ function TeamSection({
   teamLabel,
   freeSlots,
   participants,
-  textPlayers,
+  rosterText,
   matchId,
   canRevealPhone,
   currentUserId,
   onReportUser,
 }: TeamSectionProps) {
-  const active = participants.filter((p) => p.team === team && p.left_at === null)
-  const textNames = (textPlayers ?? []).map((n) => n?.trim()).filter((n): n is string => Boolean(n))
+  const entries = collectTeamRosterEntries(rosterText, participants, team)
 
   return (
     <View style={team_s.wrap}>
@@ -229,22 +220,23 @@ function TeamSection({
             : 'Completo'}
         </Text>
       </View>
-      {textNames.map((name, i) => (
-        <TextPlayerRow key={`text-${team}-${i}-${name}`} name={name} />
-      ))}
-      {active.length === 0 && textNames.length === 0 ? (
+      {entries.length === 0 ? (
         <Text style={team_s.empty}>Sin jugadores aún</Text>
       ) : (
-        active.map((p) => (
-          <ParticipantCard
-            key={p.id}
-            participant={p}
-            matchId={matchId}
-            canRevealPhone={canRevealPhone}
-            currentUserId={currentUserId}
-            onReportUser={onReportUser}
-          />
-        ))
+        entries.map((entry) =>
+          entry.kind === 'text' ? (
+            <TextPlayerRow key={`text-${team}-${entry.name}`} name={entry.name} />
+          ) : (
+            <ParticipantCard
+              key={entry.participant.id}
+              participant={entry.participant}
+              matchId={matchId}
+              canRevealPhone={canRevealPhone}
+              currentUserId={currentUserId}
+              onReportUser={onReportUser}
+            />
+          )
+        )
       )}
     </View>
   )
@@ -376,13 +368,29 @@ const jm = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, openResult, gamesA, gamesB } = useLocalSearchParams<{
+    id: string
+    openResult?: string
+    gamesA?: string
+    gamesB?: string
+  }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
 
-  const { data: match, isLoading, isError } = useMatch(id)
-  const { data: resultBundle, isLoading: resultLoading } = useMatchResult(id)
+  const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)
+  const {
+    data: resultBundle,
+    isLoading: resultLoading,
+    refetch: refetchResult,
+  } = useMatchResult(id)
+
+  useFocusEffect(
+    useCallback(() => {
+      void refetchMatch()
+      void refetchResult()
+    }, [refetchMatch, refetchResult])
+  )
   const joinMatch = useJoinMatch()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
@@ -407,6 +415,49 @@ export default function MatchDetailScreen() {
     targetId: string
     targetLabel?: string
   } | null>(null)
+
+  const scoreboardPrefill = useMemo(() => {
+    if (openResult !== '1' || !gamesA || !gamesB) return null
+    const parsedA = Number(gamesA)
+    const parsedB = Number(gamesB)
+    if (!Number.isFinite(parsedA) || !Number.isFinite(parsedB)) return null
+    return { teamAGames: parsedA, teamBGames: parsedB, lockValues: true as const }
+  }, [openResult, gamesA, gamesB])
+
+  const [lockedScoreboardPrefill, setLockedScoreboardPrefill] = useState<{
+    teamAGames: number
+    teamBGames: number
+    lockValues: true
+  } | null>(null)
+
+  const processedOpenResultRef = useRef<string | null>(null)
+  const resultPrefill = lockedScoreboardPrefill ?? scoreboardPrefill
+
+  const clearScoreboardAfterResult = async () => {
+    await clearScoreboardState(id)
+  }
+
+  useEffect(() => {
+    if (!match || !scoreboardPrefill) return
+
+    const key = `${scoreboardPrefill.teamAGames}-${scoreboardPrefill.teamBGames}`
+    if (processedOpenResultRef.current === key) return
+    processedOpenResultRef.current = key
+
+    const activeParticipants = match.participants.filter((p) => p.left_at === null)
+    const myParticipation = activeParticipants.find((p) => p.user_id === userId)
+    const otherRegistered = activeParticipants.filter((p) => p.user_id !== userId)
+    const isPersonalMatch =
+      !match.tournament_id && match.creator_id === userId && otherRegistered.length === 0
+
+    requestAnimationFrame(() => {
+      setLockedScoreboardPrefill(scoreboardPrefill)
+      if (isPersonalMatch) setRecordResultVisible(true)
+      else if (myParticipation) setSubmitResultVisible(true)
+    })
+
+    router.setParams({ openResult: undefined, gamesA: undefined, gamesB: undefined } as never)
+  }, [match, scoreboardPrefill, userId, router])
 
   if (isLoading) {
     return (
@@ -468,6 +519,8 @@ export default function MatchDetailScreen() {
     userId && isPersonalMatch && isInProgress && !resultBlocksNewSubmit && !match.tournament_id
   )
 
+  const canOpenScoreboard = Boolean(userId && isParticipant && isInProgress && !match.tournament_id)
+
   const allTextPlayers =
     activeParticipants.length === 0 &&
     Boolean(
@@ -500,9 +553,9 @@ export default function MatchDetailScreen() {
     myParticipation?.team === latestResult.submitted_by_team
   )
 
-  const status = statusLabel(match.status)
-  const teamAName = resolveTeamName(match, TEAM.A)
-  const teamBName = resolveTeamName(match, TEAM.B)
+  const status = matchStatusDisplay(match)
+  const teamAName = resolveTeamName(match, TEAM.A, match.participants)
+  const teamBName = resolveTeamName(match, TEAM.B, match.participants)
 
   const handleJoin = async (team: string) => {
     if (!userId) return
@@ -530,6 +583,8 @@ export default function MatchDetailScreen() {
         teamBGames: payload.teamBGames,
       })
       setSubmitResultVisible(false)
+      setLockedScoreboardPrefill(null)
+      await clearScoreboardAfterResult()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
     }
@@ -544,6 +599,8 @@ export default function MatchDetailScreen() {
         teamBGames: payload.teamBGames,
       })
       setRecordResultVisible(false)
+      setLockedScoreboardPrefill(null)
+      await clearScoreboardAfterResult()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el marcador')
     }
@@ -676,7 +733,12 @@ export default function MatchDetailScreen() {
             teamLabel={teamAName}
             freeSlots={slotsA}
             participants={match.participants}
-            textPlayers={[match.team_a_player_2, match.team_a_player_1]}
+            rosterText={{
+              team_a_player_1: match.team_a_player_1,
+              team_a_player_2: match.team_a_player_2,
+              team_b_player_1: match.team_b_player_1,
+              team_b_player_2: match.team_b_player_2,
+            }}
             matchId={id}
             canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
@@ -696,7 +758,12 @@ export default function MatchDetailScreen() {
             teamLabel={teamBName}
             freeSlots={slotsB}
             participants={match.participants}
-            textPlayers={[match.team_b_player_1, match.team_b_player_2]}
+            rosterText={{
+              team_a_player_1: match.team_a_player_1,
+              team_a_player_2: match.team_a_player_2,
+              team_b_player_1: match.team_b_player_1,
+              team_b_player_2: match.team_b_player_2,
+            }}
             matchId={id}
             canRevealPhone={Boolean(myParticipation)}
             currentUserId={userId}
@@ -792,8 +859,17 @@ export default function MatchDetailScreen() {
 
           {canRecordDirect ? (
             <Button
-              title="Registrar marcador"
+              title="Registrar resultado"
               onPress={() => setRecordResultVisible(true)}
+              style={s.actionBtn}
+            />
+          ) : null}
+
+          {canOpenScoreboard ? (
+            <Button
+              title="Llevar la cuenta"
+              variant="secondary"
+              onPress={() => router.push(`/(tabs)/matches/scoreboard/${id}` as Href)}
               style={s.actionBtn}
             />
           ) : null}
@@ -873,25 +949,37 @@ export default function MatchDetailScreen() {
       {myParticipation ? (
         <SubmitResultModal
           visible={submitResultVisible}
-          onClose={() => setSubmitResultVisible(false)}
-          viewerTeamLabel={resolveTeamName(match, myParticipation.team)}
+          onClose={() => {
+            setSubmitResultVisible(false)
+            setLockedScoreboardPrefill(null)
+          }}
+          viewerTeamLabel={resolveTeamName(match, myParticipation.team, match.participants)}
           teamAName={teamAName}
           teamBName={teamBName}
           durationTargetGames={match.duration_target_games}
           rivalAutoConfirms={!rivalHasRegisteredParticipants}
           loading={submitResultMut.isPending}
+          initialTeamAGames={resultPrefill?.teamAGames}
+          initialTeamBGames={resultPrefill?.teamBGames}
+          lockValues={resultPrefill?.lockValues}
           onSubmit={handleSubmitScores}
         />
       ) : null}
 
       <RecordResultModal
         visible={recordResultVisible}
-        onClose={() => setRecordResultVisible(false)}
+        onClose={() => {
+          setRecordResultVisible(false)
+          setLockedScoreboardPrefill(null)
+        }}
         teamAName={teamAName}
         teamBName={teamBName}
         durationTargetGames={match.duration_target_games}
         hint="Partida personal: el marcador queda confirmado al guardar (sin validación del rival)."
         loading={recordResultDirectMut.isPending}
+        initialTeamAGames={resultPrefill?.teamAGames}
+        initialTeamBGames={resultPrefill?.teamBGames}
+        lockValues={resultPrefill?.lockValues}
         onSubmit={handleRecordDirect}
       />
 

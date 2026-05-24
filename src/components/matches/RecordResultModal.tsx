@@ -9,6 +9,9 @@ export interface RecordResultModalProps {
   hint?: string
   submitLabel?: string
   loading: boolean
+  initialTeamAGames?: number
+  initialTeamBGames?: number
+  lockValues?: boolean
   onSubmit: (values: { teamAGames: number; teamBGames: number }) => void
 }
 
@@ -21,19 +24,25 @@ export function RecordResultModal({
   hint,
   submitLabel = 'Confirmar marcador',
   loading,
+  initialTeamAGames,
+  initialTeamBGames,
+  lockValues,
   onSubmit,
 }: RecordResultModalProps) {
   return (
     <MatchScoreModal
       visible={visible}
       onClose={onClose}
-      title="Registrar marcador"
+      title="Registrar resultado"
       durationTargetGames={durationTargetGames}
       teamAName={teamAName}
       teamBName={teamBName}
       hint={hint}
       submitLabel={submitLabel}
       loading={loading}
+      initialTeamAGames={initialTeamAGames}
+      initialTeamBGames={initialTeamBGames}
+      lockValues={lockValues}
       onSubmit={onSubmit}
     />
   )

@@ -24,6 +24,13 @@ export default function TabsLayout() {
       <Tabs.Screen name="matches/create" options={{ href: null }} />
       <Tabs.Screen name="matches/[id]" options={{ href: null }} />
       <Tabs.Screen name="matches/edit/[id]" options={{ href: null }} />
+      <Tabs.Screen
+        name="matches/scoreboard/[id]"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
       <Tabs.Screen name="tournaments/create" options={{ href: null }} />
       <Tabs.Screen name="tournaments/[id]" options={{ href: null }} />
       <Tabs.Screen name="tournaments/edit/[id]" options={{ href: null }} />

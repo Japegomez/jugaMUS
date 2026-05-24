@@ -50,3 +50,17 @@ export const QUERY_STALE_TIME = 5 * 60 * 1000 // 5 minutos
 /** Torneos: datos compartidos entre dispositivos — refresco más frecuente. */
 export const TOURNAMENT_QUERY_STALE_TIME = 30 * 1000 // 30 segundos
 export const TOURNAMENT_REFETCH_INTERVAL = 30 * 1000
+
+export const MUS_PHASES = ['grande', 'pequena', 'pares', 'juego'] as const
+export type MusPhase = (typeof MUS_PHASES)[number]
+
+export const MUS_DEFAULT_BET = 2
+export const MUS_POINTS_PER_GAME = 40
+export const MUS_POINTS_SLIDER_MAX = 40
+
+export const MUS_PHASE_LABELS: Record<MusPhase, string> = {
+  grande: 'Grande',
+  pequena: 'Pequeña',
+  pares: 'Pares',
+  juego: 'Juego',
+}
