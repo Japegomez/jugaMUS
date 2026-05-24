@@ -1,5 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useFocusEffect } from '@react-navigation/native'
 import { useRouter } from 'expo-router'
+import { useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -11,7 +13,7 @@ import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useCreateMatch } from '@/hooks/useMatches'
-import { DEFAULT_TEAM_A_NAME, DEFAULT_TEAM_B_NAME, MATCH_VISIBILITY } from '@/constants'
+import { MATCH_VISIBILITY } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -38,16 +40,8 @@ const createMatchSchema = z
     duration_target_games: z.number().int().min(1).max(6),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
     notes: z.string().trim().max(300, 'Notas demasiado largas').optional().or(z.literal('')),
-    team_a_name: z
-      .string()
-      .trim()
-      .min(1, 'Nombre del equipo requerido')
-      .max(40, 'Nombre demasiado largo'),
-    team_b_name: z
-      .string()
-      .trim()
-      .min(1, 'Nombre del equipo requerido')
-      .max(40, 'Nombre demasiado largo'),
+    team_a_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
+    team_b_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
     team_a_player_2: z
       .string()
       .trim()
@@ -71,13 +65,30 @@ const createMatchSchema = z
 
 type CreateMatchValues = z.infer<typeof createMatchSchema>
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function defaultStartAt() {
-  const d = new Date()
-  d.setHours(d.getHours() + 2, 0, 0, 0)
-  return dateToLocalIsoString(d)
+  return dateToLocalIsoString(new Date())
 }
+
+function createDefaultFormValues(): CreateMatchValues {
+  return {
+    title: '',
+    description: '',
+    start_at: defaultStartAt(),
+    city: '',
+    place_defined: true,
+    place_text: '',
+    duration_target_games: 3,
+    visibility: MATCH_VISIBILITY.PUBLIC,
+    notes: '',
+    team_a_name: '',
+    team_b_name: '',
+    team_a_player_2: '',
+    team_b_player_1: '',
+    team_b_player_2: '',
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function textPlayerOrNull(value?: string): string | null {
   const trimmed = value?.trim()
@@ -96,26 +107,18 @@ export default function CreateMatchScreen() {
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<CreateMatchValues>({
     resolver: zodResolver(createMatchSchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      start_at: defaultStartAt(),
-      city: '',
-      place_defined: true,
-      place_text: '',
-      duration_target_games: 3,
-      visibility: MATCH_VISIBILITY.PUBLIC,
-      notes: '',
-      team_a_name: DEFAULT_TEAM_A_NAME,
-      team_b_name: DEFAULT_TEAM_B_NAME,
-      team_a_player_2: '',
-      team_b_player_1: '',
-      team_b_player_2: '',
-    },
+    defaultValues: createDefaultFormValues(),
   })
+
+  useFocusEffect(
+    useCallback(() => {
+      reset(createDefaultFormValues())
+    }, [reset])
+  )
 
   const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
@@ -132,8 +135,8 @@ export default function CreateMatchScreen() {
         duration_target_games: values.duration_target_games,
         visibility: values.visibility,
         location_privacy: 'participants_only',
-        team_a_name: values.team_a_name.trim(),
-        team_b_name: values.team_b_name.trim(),
+        team_a_name: (values.team_a_name ?? '').trim(),
+        team_b_name: (values.team_b_name ?? '').trim(),
         team_a_player_1: null,
         team_a_player_2: textPlayerOrNull(values.team_a_player_2),
         team_b_player_1: textPlayerOrNull(values.team_b_player_1),
@@ -301,15 +304,16 @@ export default function CreateMatchScreen() {
         <Text style={s.label}>Equipos y jugadores (opcional)</Text>
         <Text style={s.hint}>
           Te unirás automáticamente como jugador 1 del primer equipo. El resto puede ser por nombre
-          (sin cuenta en la app).
+          (sin cuenta en la app). Si dejas el nombre del equipo vacío, se usará «Jugador1 -
+          Jugador2» con los nombres de la plantilla.
         </Text>
         <Controller
           control={control}
           name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo A"
-              placeholder={DEFAULT_TEAM_A_NAME}
+              label="Nombre equipo A (opcional)"
+              placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
               error={errors.team_a_name?.message}
@@ -336,8 +340,8 @@ export default function CreateMatchScreen() {
           name="team_b_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B"
-              placeholder={DEFAULT_TEAM_B_NAME}
+              label="Nombre equipo B (opcional)"
+              placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
               error={errors.team_b_name?.message}

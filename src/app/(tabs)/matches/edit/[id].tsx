@@ -21,10 +21,11 @@ import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useMatch, useUpdateMatch } from '@/hooks/useMatches'
-import { DEFAULT_TEAM_A_NAME, DEFAULT_TEAM_B_NAME, MATCH_VISIBILITY, TEAM } from '@/constants'
+import { MATCH_VISIBILITY, TEAM } from '@/constants'
 import {
   editableTextSlotsForTeam,
   freeTeamSlots,
+  isUnspecifiedTeamName,
   validateTextRosterCapacity,
 } from '@/services/matches.service'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
@@ -52,16 +53,8 @@ const editMatchSchema = z
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
-    team_a_name: z
-      .string()
-      .trim()
-      .min(1, 'Nombre del equipo requerido')
-      .max(40, 'Nombre demasiado largo'),
-    team_b_name: z
-      .string()
-      .trim()
-      .min(1, 'Nombre del equipo requerido')
-      .max(40, 'Nombre demasiado largo'),
+    team_a_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
+    team_b_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
     team_a_player_2: z
       .string()
       .trim()
@@ -173,8 +166,8 @@ export default function EditMatchScreen() {
       place_text: '',
       duration_target_games: 3,
       visibility: MATCH_VISIBILITY.PUBLIC,
-      team_a_name: DEFAULT_TEAM_A_NAME,
-      team_b_name: DEFAULT_TEAM_B_NAME,
+      team_a_name: '',
+      team_b_name: '',
       team_a_player_2: '',
       team_b_player_1: '',
       team_b_player_2: '',
@@ -195,8 +188,8 @@ export default function EditMatchScreen() {
         visibility: match.visibility as
           | typeof MATCH_VISIBILITY.PUBLIC
           | typeof MATCH_VISIBILITY.LINK,
-        team_a_name: match.team_a_name ?? DEFAULT_TEAM_A_NAME,
-        team_b_name: match.team_b_name ?? DEFAULT_TEAM_B_NAME,
+        team_a_name: isUnspecifiedTeamName(match.team_a_name, TEAM.A) ? '' : match.team_a_name,
+        team_b_name: isUnspecifiedTeamName(match.team_b_name, TEAM.B) ? '' : match.team_b_name,
         team_a_player_2: match.team_a_player_2 ?? '',
         team_b_player_1: match.team_b_player_1 ?? '',
         team_b_player_2: match.team_b_player_2 ?? '',
@@ -257,8 +250,8 @@ export default function EditMatchScreen() {
           ...placePayload(values),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
-          team_a_name: values.team_a_name.trim(),
-          team_b_name: values.team_b_name.trim(),
+          team_a_name: (values.team_a_name ?? '').trim(),
+          team_b_name: (values.team_b_name ?? '').trim(),
           team_a_player_1: null,
           team_a_player_2: textPlayerForUpdate(
             'team_a_player_2',
@@ -463,14 +456,17 @@ export default function EditMatchScreen() {
 
       <View style={s.fieldWrap}>
         <Text style={s.label}>Equipos y jugadores (opcional)</Text>
-        <Text style={s.hint}>Nombres de equipos y jugadores invitados (sin cuenta en la app).</Text>
+        <Text style={s.hint}>
+          Si dejas el nombre del equipo vacío, se usará «Jugador1 - Jugador2» con los nombres de la
+          plantilla.
+        </Text>
         <Controller
           control={control}
           name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo A"
-              placeholder={DEFAULT_TEAM_A_NAME}
+              label="Nombre equipo A (opcional)"
+              placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
               error={errors.team_a_name?.message}
@@ -501,8 +497,8 @@ export default function EditMatchScreen() {
           name="team_b_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B"
-              placeholder={DEFAULT_TEAM_B_NAME}
+              label="Nombre equipo B (opcional)"
+              placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
               error={errors.team_b_name?.message}

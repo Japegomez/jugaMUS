@@ -41,3 +41,20 @@ export function matchHistoryBackground(outcome: MatchOutcome): string | undefine
   if (outcome === 'lost') return Colors.lostBackground
   return undefined
 }
+
+export function matchStatusDisplay(match: { status: string }): { text: string; color: string } {
+  switch (match.status) {
+    case MATCH_STATUS.PLANNED:
+      return { text: 'Planificada', color: Colors.primary }
+    case MATCH_STATUS.IN_PROGRESS:
+      return { text: 'En curso', color: Colors.warning }
+    case MATCH_STATUS.FINISHED:
+      return { text: 'Finalizada', color: Colors.textSecondary }
+    case MATCH_STATUS.FINISHED_NO_RESULT:
+      return { text: 'Sin resultado', color: Colors.textSecondary }
+    case MATCH_STATUS.CANCELLED:
+      return { text: 'Cancelada', color: Colors.danger }
+    default:
+      return { text: match.status, color: Colors.textSecondary }
+  }
+}

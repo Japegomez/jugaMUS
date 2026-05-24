@@ -101,7 +101,9 @@ export function useMatch(id: string) {
     queryKey: matchQueryKey(id),
     queryFn: () => getMatch(id),
     enabled: Boolean(id),
-    staleTime: QUERY_STALE_TIME,
+    staleTime: TOURNAMENT_QUERY_STALE_TIME,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -169,9 +171,14 @@ export function useCreateMatch() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: (data: MatchInsert) => {
+    mutationFn: async (data: MatchInsert) => {
       if (!sessionUserId) throw new Error('No autenticado')
-      return createMatch(sessionUserId, data)
+      const match = await createMatch(sessionUserId, data)
+      await queryClient.prefetchQuery({
+        queryKey: matchQueryKey(match.id),
+        queryFn: () => getMatch(match.id),
+      })
+      return match
     },
     onSuccess: (match) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(match.id) })

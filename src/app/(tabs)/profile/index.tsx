@@ -17,10 +17,9 @@ import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useUserMatches } from '@/hooks/useMatches'
-import { MATCH_STATUS } from '@/constants'
 import type { ProfileUpdate } from '@/services/profiles.service'
 import type { UserMatchSummary } from '@/services/matches.service'
-import { displayMatchTitle, matchHistoryBackground } from '@/utils/matchDisplay'
+import { displayMatchTitle, matchHistoryBackground, matchStatusDisplay } from '@/utils/matchDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -265,25 +264,8 @@ export default function ProfileScreen() {
   )
 }
 
-function matchStatusLabel(status: string): { text: string; color: string } {
-  switch (status) {
-    case MATCH_STATUS.PLANNED:
-      return { text: 'Planificada', color: Colors.primary }
-    case MATCH_STATUS.IN_PROGRESS:
-      return { text: 'En curso', color: Colors.warning }
-    case MATCH_STATUS.FINISHED:
-      return { text: 'Finalizada', color: Colors.textSecondary }
-    case MATCH_STATUS.FINISHED_NO_RESULT:
-      return { text: 'Sin resultado', color: Colors.textSecondary }
-    case MATCH_STATUS.CANCELLED:
-      return { text: 'Cancelada', color: Colors.danger }
-    default:
-      return { text: status, color: Colors.textSecondary }
-  }
-}
-
 function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
-  const status = matchStatusLabel(match.status)
+  const status = matchStatusDisplay(match)
   const outcomeBg = matchHistoryBackground(match.outcome ?? null)
   const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
     day: '2-digit',
