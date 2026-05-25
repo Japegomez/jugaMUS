@@ -1,4 +1,4 @@
-# Requisitos - Mussa Suerte
+# Requisitos - jugaMUS
 
 > Documento generado el 06/05/2026. Revisado y refinado en sesión colaborativa a partir del documento original `MVP_Mus_App.docx`.
 
@@ -10,7 +10,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 
 ### Decisiones clave
 
-- **Marca y legal (may. 2026):** nombre comercial **Mussa Suerte** (`APP_DISPLAY_NAME`, scheme `mussasuerte`). Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
+- **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
 - **CI/CD (may. 2026):** el workflow de EAS en GitHub Actions está limitado a **Android** (build + submit a Play) hasta contar con **Apple Developer Program**; iOS en CI y APNs quedan fuera hasta entonces.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
@@ -513,7 +513,7 @@ Supabase (PostgreSQL + Auth + Storage)
   - Torneos: no asignar `player_*_user_id` de terceros en parejas
   - Join a partidas: solo `planned`, visibilidad `public`/`link`, máx. 4 confirmados
   - Sentry: `sendDefaultPii: false`, replay reducido, filtrado de headers sensibles
-  - OAuth release: solo scheme `mussasuerte://` (Expo Go schemes solo en `__DEV__`)
+  - OAuth release: solo scheme `jugamus://` (Expo Go schemes solo en `__DEV__`)
 
 ### Privacidad (RGPD)
 

@@ -39,7 +39,7 @@ BEGIN
       '00000000-0000-0000-0000-000000000000',
       'authenticated',
       'authenticated',
-      'deleted-user@internal.mussasuerte.invalid',
+      'deleted-user@internal.jugamus.invalid',
       crypt('sentinel-no-login', gen_salt('bf')),
       NOW(),
       '{"provider":"email","providers":["email"]}'::jsonb,

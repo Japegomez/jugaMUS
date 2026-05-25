@@ -53,7 +53,7 @@ function getStorage(): StorageAdapter {
 }
 
 function scoreboardKey(matchId: string) {
-  return `mussa.scoreboard.${matchId}`
+  return `jugamus.scoreboard.${matchId}`
 }
 
 export async function loadScoreboardState(matchId: string): Promise<LiveScoreboardState | null> {

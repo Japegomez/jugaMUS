@@ -1,4 +1,4 @@
-# Tareas - Mussa Suerte
+# Tareas - jugaMUS
 
 > Actualizado: 24/05/2026 (cierre de sesión — marcador en vivo + reglas plantilla/cron)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
@@ -60,7 +60,7 @@
 - [x] Pantalla de recuperación de contraseña
 - [x] Login con Google (OAuth via Supabase)
   - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
-  - Redirects típicos: `exp://**` (Expo Go), `mussasuerte://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
+  - Redirects típicos: `exp://**` (Expo Go), `jugamus://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
 - [x] Login con Apple ID (OAuth via Supabase)
   - iOS: `signInWithIdToken` + `expo-apple-authentication`. Web: OAuth Supabase.
   - **Pendiente manual:** Manual-3 y Manual-4 del plan (Apple Developer y Supabase provider).
@@ -360,7 +360,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Pantalla de Términos y Condiciones (texto estático)
   - Secciones en `src/app/(auth)/terms.tsx`; disclaimer «Texto legal definitivo pendiente de revisión jurídica.»
 - [x] Pantalla de Política de Privacidad (texto estático)
-  - Secciones en `src/app/(auth)/privacy.tsx`; mismo disclaimer. Rebrand app → **Mussa Suerte** (`src/constants/app.ts`, `app.json`).
+  - Secciones en `src/app/(auth)/privacy.tsx`; mismo disclaimer. Rebrand app → **jugaMUS** (`src/constants/app.ts`, `app.json`).
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD) — ver F1 / PR #21
 - [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
 - [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
