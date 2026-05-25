@@ -33,8 +33,6 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Android (production)
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: eas build --profile production --platform android --non-interactive
 
   submit:
@@ -43,6 +41,15 @@ jobs:
     needs: [build-android]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Setup Expo & EAS
         uses: expo/expo-github-action@v8
