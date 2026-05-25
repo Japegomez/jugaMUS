@@ -58,15 +58,11 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       # eas.json → submit.production.android.serviceAccountKeyPath
+      # Secret: full JSON from Cloud Console (service account KEY), not Firebase google-services.json
       - name: Prepare Google Play service account JSON
         env:
-          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-        run: |
-          if [ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]; then
-            echo "::error::Define el secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON con el JSON completo de la cuenta de servicio de Play (mismo contenido que google-service-account.json local)."
-            exit 1
-          fi
-          printf '%s\n' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" > google-service-account.json
+          GOOGLE_PLAY_SERVICE_KEY_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_KEY_JSON }}
+        run: node scripts/write-google-play-service-account.mjs
 
       - name: Submit to Google Play
         run: eas submit --platform android --latest --non-interactive
