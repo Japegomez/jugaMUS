@@ -225,7 +225,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ### CI/CD Fase 2
 
 - [x] Configurar EAS Submit para publicación automática en Google Play
-  - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Variables EAS entorno `production`: `GOOGLE_SERVICES_JSON` (file), `SENTRY_AUTH_TOKEN` (string, source maps).
+  - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (clave JSON de **cuenta de servicio** en Google Cloud: `type`, `private_key`, `client_email` — **no** `google-services.json` de Firebase). Variables EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`.
 - [ ] Configurar EAS Submit para publicación automática en App Store
   - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
