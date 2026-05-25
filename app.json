@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "jugaMUS",
-    "slug": "jugamus",
+    "slug": "musapp",
     "scheme": "jugamus",
     "version": "1.0.0",
     "orientation": "portrait",
