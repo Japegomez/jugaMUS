@@ -9,8 +9,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const ALLOWED_ORIGINS = new Set([
-  'https://mussasuerte.app',
-  'https://www.mussasuerte.app',
+  'https://jugamus.app',
+  'https://www.jugamus.app',
 ])
 
 function corsHeaders(origin: string | null): Record<string, string> {
