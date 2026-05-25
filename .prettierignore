@@ -1,0 +1,6 @@
+node_modules/
+.expo/
+dist/
+web-build/
+*.lock
+src/data/municipalities.json

@@ -1,0 +1,66 @@
+# Health check every 5 minutes for process-notifications Edge Function.
+# Requires Sentry Cron Monitor slug: process-notifications-health (Sentry → Crons).
+name: Sentry health — Edge Functions
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  edge-function-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping process-notifications
+        id: ping
+        env:
+          SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          CRON_SECRET: ${{ secrets.EDGE_CRON_SECRET }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EDGE_CRON_SECRET repo secrets."
+            exit 0
+          fi
+          URL="${SUPABASE_URL%/}/functions/v1/process-notifications"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "$URL" \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
+            -d '{}' \
+            --max-time 30)
+          echo "HTTP $HTTP_CODE"
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$HTTP_CODE" -ge 500 ]; then
+            echo "::error::Edge function returned $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Sentry cron check-in
+        if: steps.ping.outputs.skip != 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "Skip: set SENTRY_AUTH_TOKEN repo secret."
+            exit 0
+          fi
+          npx @sentry/cli monitors run process-notifications-health \
+            --org javier-pena-gomez \
+            --status ok
+
+      - name: Sentry cron check-in (failure)
+        if: failure() && steps.ping.outputs.skip != 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "Skip: set SENTRY_AUTH_TOKEN repo secret."
+            exit 0
+          fi
+          npx @sentry/cli monitors run process-notifications-health \
+            --org javier-pena-gomez \
+            --status error

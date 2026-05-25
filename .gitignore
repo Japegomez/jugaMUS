@@ -1,4 +1,6 @@
-# Dependencias
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -8,9 +10,31 @@ node_modules/
 dist/
 web-build/
 
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+*.pem
+
 # Variables de entorno (nunca al repo)
 .env
-.env.local
+.env*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -19,9 +43,12 @@ web-build/
 supabase/.branches
 supabase/.temp
 
-# Sistema operativo
-.DS_Store
-Thumbs.db
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
 
 # IDEs
 .cursor/
@@ -34,10 +61,19 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Documentos fuente (no hacen falta en el repo)
 *.docx
 *.pdf
+
+# Expo types reference (generated)
+expo-env.d.ts
+
+.env.local
+google-services.json
+google-service-account.json
+*.serviceaccount.json
+*firebase*.json
+
+# Jest
+coverage/
