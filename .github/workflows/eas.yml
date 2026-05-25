@@ -33,8 +33,6 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Android (production)
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: eas build --profile production --platform android --non-interactive
 
   submit:
