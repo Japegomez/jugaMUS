@@ -1,13 +1,13 @@
 /**
- * Writes google-service-account.json from GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
+ * Writes google-service-account.json from GOOGLE_PLAY_SERVICE_KEY_JSON.
  * Validates Play API service account shape (not Firebase google-services.json).
  */
 import { writeFileSync } from 'node:fs';
 
-const raw = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON?.trim();
+const raw = process.env.GOOGLE_PLAY_SERVICE_KEY_JSON?.trim();
 if (!raw) {
   console.error(
-    'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is empty. Set the GitHub secret with the full JSON key from Google Cloud (service account key), not google-services.json.',
+    'GOOGLE_PLAY_SERVICE_KEY_JSON is empty. Set the GitHub secret with the full JSON key from Google Cloud (service account key), not google-services.json.',
   );
   process.exit(1);
 }
@@ -17,7 +17,7 @@ try {
   data = JSON.parse(raw);
 } catch {
   console.error(
-    'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is not valid JSON. Paste the entire .json file from Cloud Console without extra quotes.',
+    'GOOGLE_PLAY_SERVICE_KEY_JSON is not valid JSON. Paste the entire .json file from Cloud Console without extra quotes.',
   );
   process.exit(1);
 }
