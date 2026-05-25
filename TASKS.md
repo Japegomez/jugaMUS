@@ -200,6 +200,7 @@
 Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
 
 - [x] **Android (FCM):** Firebase para `com.javiwacho.musapp`; `google-services.json` local (gitignored). En EAS: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production --visibility secret` (obligatorio para builds en la nube / CI).
+- [ ] **Sentry source maps (EAS):** en EAS production, `eas env:create production --name SENTRY_AUTH_TOKEN --value <token> --type string --visibility secret --non-interactive` (token en Sentry → Settings → Auth Tokens, scope `project:releases`). El secret de GitHub Actions no llega al runner de EAS Build.
 - [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
   - **Pendiente:** mismo bloqueo que EAS iOS (Apple Developer Program).
 - [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
@@ -224,7 +225,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ### CI/CD Fase 2
 
 - [x] Configurar EAS Submit para publicación automática en Google Play
-  - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` Android `production` → `eas submit` Android. Secrets: `EXPO_TOKEN`, `SENTRY_AUTH_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (genera `google-service-account.json` en el runner).
+  - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Variables EAS entorno `production`: `GOOGLE_SERVICES_JSON` (file), `SENTRY_AUTH_TOKEN` (string, source maps).
 - [ ] Configurar EAS Submit para publicación automática en App Store
   - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
