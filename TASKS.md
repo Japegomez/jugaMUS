@@ -152,7 +152,7 @@
 - [x] Instalar y configurar PostHog (analytics básico)
   - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
 - [x] Configurar Expo EAS Build (primer build de prueba en Android)
-  - Perfil `production` en Android; FCM vía `google-services.json` + `eas credentials`.
+  - Perfil `production` en Android; FCM vía `google-services.json` (gitignored). CI/EAS: variable de entorno de tipo **file** `GOOGLE_SERVICES_JSON` en entorno `production` (`app.config.js` + `eas env:create`).
 - [x] Icono de app y splash screen (baraja española minimalista)
   - Assets unificados en `assets/` (`icon`, `adaptive-icon`, `splash-icon`, `favicon`); fondo de marca `#1a5f4a` en `app.json`.
   - PR #20 mergeado en `develop`.
@@ -199,7 +199,7 @@
 
 Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
 
-- [x] **Android (FCM):** crear proyecto en Firebase Console para el package `com.javiwacho.musapp`, descargar `google-services.json` en la raíz del repo y subirlo en `eas credentials` (Android).
+- [x] **Android (FCM):** Firebase para `com.javiwacho.musapp`; `google-services.json` local (gitignored). En EAS: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production --visibility secret` (obligatorio para builds en la nube / CI).
 - [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
   - **Pendiente:** mismo bloqueo que EAS iOS (Apple Developer Program).
 - [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
