@@ -11,9 +11,12 @@ import {
   DMSans_700Bold,
   useFonts,
 } from '@expo-google-fonts/dm-sans'
+import * as SplashScreen from 'expo-splash-screen'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
 import { posthog } from '@/lib/posthog'
+
+SplashScreen.preventAutoHideAsync()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +62,12 @@ function RootLayout() {
 
     return () => clearTimeout(timeoutId)
   }, [session, initialized, segments, navigationState?.key, router])
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync()
+    }
+  }, [fontsLoaded])
 
   if (!fontsLoaded) {
     return null

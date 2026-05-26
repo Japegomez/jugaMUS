@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 24/05/2026 (cierre de sesión — marcador en vivo + reglas plantilla/cron)
+> Actualizado: 26/05/2026 (cierre de sesión — release Android Play, CI/EAS, ficha Play)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -200,7 +200,8 @@
 Las notificaciones push **no** funcionan en Expo Go; hace falta un build con credenciales en EAS.
 
 - [x] **Android (FCM):** Firebase para `com.javiwacho.musapp`; `google-services.json` local (gitignored). En EAS: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production --visibility secret` (obligatorio para builds en la nube / CI).
-- [ ] **Sentry source maps (EAS):** en EAS production, `eas env:create production --name SENTRY_AUTH_TOKEN --value <token> --type string --visibility secret --non-interactive` (token en Sentry → Settings → Auth Tokens, scope `project:releases`). El secret de GitHub Actions no llega al runner de EAS Build.
+- [x] **Sentry source maps (EAS):** `SENTRY_AUTH_TOKEN` en entorno EAS `production` (subida de source maps en Gradle). Documentado en `.env.example` / TASKS.
+- [ ] **Sentry en runtime (app):** opcional `EXPO_PUBLIC_SENTRY_DSN` en EAS `production` para reportar crashes en dashboard (sin DSN, `enabled: false` en `sentry.ts`).
 - [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
   - **Pendiente:** mismo bloqueo que EAS iOS (Apple Developer Program).
 - [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
@@ -226,6 +227,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 - [x] Configurar EAS Submit para publicación automática en Google Play
   - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON` (clave JSON de **cuenta de servicio** en Google Cloud: `type`, `private_key`, `client_email` — **no** `google-services.json` de Firebase). Variables EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`.
+  - PRs mergeados en `develop`: slug EAS `musapp`, `appVersionSource: remote`, `app.config.js` + `GOOGLE_SERVICES_JSON`, validación JSON Play submit, `npm ci` antes de `eas submit`.
+- [ ] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`.
+  - Pendiente: `eas env:create production` para cada una; **nuevo build** tras añadirlas (no basta reinstalar el AAB actual).
 - [ ] Configurar EAS Submit para publicación automática en App Store
   - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
@@ -353,6 +357,21 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Cabecera Mis partidas: solo título, sin contador de activas
 - [x] Commit + PR `feature/ui-redesign` → `develop` (revisor/asignado Japegomez)
 - [ ] QA visual rápida en Android / iOS / web tras merge
+
+---
+
+## Release Android — Play Console (may. 2026)
+
+- [x] Flujo GitFlow documentado y PRs `develop` → `main` (#23, #31, #33, #35, #37, #39…)
+- [x] Primera subida manual del AAB a **Pruebas internas** (Google exige primer release manual; `eas submit` automático a partir del siguiente)
+- [x] App instalable vía enlace de testers internos (`com.javiwacho.musapp`)
+- [x] Páginas legales en `docs/` para GitHub Pages (privacidad, eliminación de cuenta; contacto `japenago@gmail.com`) — PR #40 / #41
+- [x] Recursos gráficos Play: `assets/play-store/icon-512.png`, `feature-graphic-1024x500.png` + script `export-play-store-graphics.mjs`
+- [ ] Activar **GitHub Pages** (`/docs`) y pegar URLs en ficha Play
+- [ ] Completar ficha Play (textos, capturas, clasificación, política de privacidad)
+- [x] Corregir arranque en release (código): `edgeToEdgeEnabled: false`, SplashScreen hasta cargar fuentes
+- [ ] Variables `EXPO_PUBLIC_*` en EAS + nuevo build `production` + validar login en dispositivo (p. ej. Android 11)
+- [ ] PR `main` → `develop` para alinear historial tras releases
 
 ---
 

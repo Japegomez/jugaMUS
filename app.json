@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a5f4a"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.javiwacho.musapp"
     },
