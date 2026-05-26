@@ -50,9 +50,10 @@ function RootLayout() {
     if (!navigationState?.key) return
 
     const inAuthGroup = segments[0] === '(auth)'
+    const inOAuthCallback = segments[0] === 'auth' && segments[1] === 'callback'
 
-    // Defer until the root Stack is mounted (avoids crash on web hard refresh).
     const timeoutId = setTimeout(() => {
+      if (inOAuthCallback) return
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login')
       } else if (session && inAuthGroup) {
