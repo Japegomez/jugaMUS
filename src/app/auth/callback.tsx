@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 
+import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
+import { APP_SCHEME, APP_OAUTH_CALLBACK_PATH } from '@/constants/app'
 import { supabase } from '@/lib/supabase'
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -17,9 +19,6 @@ export default function AuthCallbackScreen() {
     let cancelled = false
 
     const run = async () => {
-      const code = firstParam(params.code)
-      const accessToken = firstParam(params.access_token)
-      const refreshToken = firstParam(params.refresh_token)
       const oauthError =
         firstParam(params.error_description) ??
         firstParam(params.error) ??
@@ -30,19 +29,24 @@ export default function AuthCallbackScreen() {
         return
       }
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (!error) {
-          if (!cancelled) router.replace('/(tabs)/matches')
-          return
-        }
+      // When login starts from the app, oauth.ts exchanges the code in WebBrowser.
+      // The deep link also opens this screen; wait so we do not exchange twice (PKCE error).
+      if (await waitForAuthSession()) {
+        if (!cancelled) router.replace('/(tabs)/matches')
+        return
       }
 
-      if (accessToken && refreshToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
+      const code = firstParam(params.code)
+      const accessToken = firstParam(params.access_token)
+      const refreshToken = firstParam(params.refresh_token)
+
+      if (code || (accessToken && refreshToken)) {
+        const query = new URLSearchParams()
+        if (code) query.set('code', code)
+        if (accessToken) query.set('access_token', accessToken)
+        if (refreshToken) query.set('refresh_token', refreshToken)
+        const callbackUrl = `${APP_SCHEME}://${APP_OAUTH_CALLBACK_PATH}?${query.toString()}`
+        const { error } = await completeOAuthSessionFromCallbackUrl(callbackUrl)
         if (!error) {
           if (!cancelled) router.replace('/(tabs)/matches')
           return
