@@ -16,6 +16,7 @@ import { APP_DISPLAY_NAME } from '@/constants/app'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { loginSchema, type LoginFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
 import { Layout } from '@/theme/layout'
@@ -53,7 +54,10 @@ export default function LoginScreen() {
   const onGoogle = async () => {
     const { error } = await signInWithGoogle()
     if (error) {
-      Alert.alert('Google', error.message)
+      const { data } = await supabase.auth.getSession()
+      if (!data.session) {
+        Alert.alert('Google', error.message)
+      }
     }
   }
 
