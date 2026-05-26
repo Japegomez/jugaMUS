@@ -50,7 +50,7 @@ function RootLayout() {
     if (!navigationState?.key) return
 
     const inAuthGroup = segments[0] === '(auth)'
-    const inOAuthCallback = segments[0] === 'auth' && segments[1] === 'callback'
+    const inOAuthCallback = segments.join('/') === 'auth/callback'
 
     const timeoutId = setTimeout(() => {
       if (inOAuthCallback) return
