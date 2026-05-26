@@ -21,5 +21,5 @@ Páginas estáticas para Google Play y enlaces públicos.
 
 ## Antes de publicar
 
-- Sustituye `privacidad@jugamus.app` en los HTML por tu email real (o crea ese buzón).
+- Contacto legal: `japenago@gmail.com` (en los HTML).
 - Revisa el nombre del desarrollador si en Play no coincide con «Javier Peña Gómez».
