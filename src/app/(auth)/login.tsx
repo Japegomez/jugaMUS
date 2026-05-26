@@ -102,7 +102,7 @@ export default function LoginScreen() {
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
               label="Contraseña"
-              secureTextEntry
+              showPasswordToggle
               autoComplete="password"
               value={value}
               onBlur={onBlur}
