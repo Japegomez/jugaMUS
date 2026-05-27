@@ -16,6 +16,8 @@ export type TournamentRow = Tables<'tournaments'>
 export type TournamentPairRow = Tables<'tournament_pairs'> & {
   player_a_display_name?: string | null
   player_b_display_name?: string | null
+  /** Added in migration 054; optional until types regenerated. */
+  name_is_custom?: boolean | null
 }
 
 export type TournamentInsert = Pick<
@@ -395,9 +397,13 @@ export function isTournamentPairComplete(pair: TournamentPairRow): boolean {
 }
 
 export function displayPairName(pair: TournamentPairRow): string {
+  const stored = pair.name?.trim() || ''
+  if (pair.name_is_custom && stored) return stored
+
   const fromMembers = formatTeamNameFromPlayers(pairMemberLabels(pair))
   if (fromMembers) return fromMembers
-  return pair.name?.trim() || 'Pareja'
+
+  return stored || 'Pareja'
 }
 
 export function pairMemberLabels(pair: TournamentPairRow): string[] {
