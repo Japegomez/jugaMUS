@@ -89,8 +89,8 @@ export function AddPairModal({
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <Input
-            label="Nombre de la pareja *"
-            placeholder="Ej. Los del bar"
+            label="Nombre de la pareja (opcional)"
+            placeholder="Si lo dejas vacío, se usará Jugador1 - Jugador2"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"

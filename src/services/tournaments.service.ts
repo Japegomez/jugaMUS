@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { mapResultRpcError } from '@/services/results.service'
 import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/constants'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database.types'
+import { formatTeamNameFromPlayers } from '@/utils/matchTeamNames'
 
 function startAtToTimestamptzIso(startAt: string): string {
   const d = new Date(startAt)
@@ -75,7 +76,7 @@ export type TournamentBracket = {
 
 export type AddPairInput = {
   tournamentId: string
-  name: string
+  name?: string
   playerAUserId?: string | null
   playerAText?: string | null
   playerBUserId?: string | null
@@ -172,7 +173,7 @@ export async function updateTournament(id: string, data: TournamentUpdate): Prom
 export async function addTournamentPair(input: AddPairInput): Promise<TournamentPairRow> {
   const { data, error } = await supabase.rpc('add_tournament_pair', {
     p_tournament_id: input.tournamentId,
-    p_name: input.name,
+    p_name: input.name?.trim() ?? '',
     p_player_a_user_id: input.playerAUserId ?? undefined,
     p_player_a_text: input.playerAText ?? undefined,
     p_player_b_user_id: input.playerBUserId ?? undefined,
@@ -207,7 +208,7 @@ export async function generateTournamentBracket(tournamentId: string): Promise<v
   const { error } = await supabase.rpc('generate_tournament_bracket', {
     p_tournament_id: tournamentId,
   })
-  if (error) throw new Error(error.message)
+  if (error) throw new Error(mapGenerateBracketError(error.message))
 }
 
 export async function getTournamentBracket(tournamentId: string): Promise<TournamentBracket> {
@@ -387,6 +388,18 @@ export async function recordTournamentMatchAsReferee(
   if (error) throw new Error(mapResultRpcError(error.message))
 }
 
+export function isTournamentPairComplete(pair: TournamentPairRow): boolean {
+  const hasA = Boolean(pair.player_a_user_id || pair.player_a_text?.trim())
+  const hasB = Boolean(pair.player_b_user_id || pair.player_b_text?.trim())
+  return hasA && hasB
+}
+
+export function displayPairName(pair: TournamentPairRow): string {
+  const fromMembers = formatTeamNameFromPlayers(pairMemberLabels(pair))
+  if (fromMembers) return fromMembers
+  return pair.name?.trim() || 'Pareja'
+}
+
 export function pairMemberLabels(pair: TournamentPairRow): string[] {
   const members: string[] = []
   if (pair.player_a_user_id) {
@@ -408,6 +421,16 @@ export function pairHasOpenSlot(pair: TournamentPairRow): 'a' | 'b' | null {
   if (aFree) return 'a'
   if (bFree) return 'b'
   return null
+}
+
+function mapGenerateBracketError(message: string): string {
+  if (message.includes('need_at_least_two_complete_pairs')) {
+    return 'Se necesitan al menos 2 parejas completas (con dos jugadores) para organizar el cuadro'
+  }
+  if (message.includes('need_at_least_two_pairs')) {
+    return 'Se necesitan al menos 2 parejas para organizar el cuadro'
+  }
+  return message
 }
 
 function mapTournamentPairRpcError(message: string): string {
@@ -447,12 +470,16 @@ export function canJoinTournamentPair(
   inRegistration: boolean
 ): { canJoin: boolean; openSlot: 'a' | 'b' | null } {
   const openSlot = inRegistration ? pairHasOpenSlot(pair) : null
-  if (!userId || !openSlot || pair.created_by_user_id === userId) {
+  if (!userId || !openSlot) {
+    return { canJoin: false, openSlot }
+  }
+
+  if (pair.player_a_user_id === userId || pair.player_b_user_id === userId) {
     return { canJoin: false, openSlot }
   }
 
   const userPairId = findUserTournamentPairId(pairs, userId)
-  if (userPairId !== null) {
+  if (userPairId !== null && userPairId !== pair.id) {
     return { canJoin: false, openSlot }
   }
 

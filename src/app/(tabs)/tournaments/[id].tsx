@@ -28,13 +28,41 @@ import {
   useTournament,
   useTournamentBracket,
 } from '@/hooks/useTournaments'
-import { canJoinTournamentPair, userIsInTournamentPair } from '@/services/tournaments.service'
+import {
+  canJoinTournamentPair,
+  isTournamentPairComplete,
+  userIsInTournamentPair,
+  type BracketNodeRow,
+} from '@/services/tournaments.service'
 import { isPlaceholderNode } from '@/utils/bracketLayout'
+import { matchStatusDisplay } from '@/utils/matchDisplay'
+import { tournamentStatusDisplay } from '@/utils/tournamentDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
-type TabKey = 'bracket' | 'pending'
+type TabKey = 'bracket' | 'matches'
+
+function TournamentMatchCard({ node, onPress }: { node: BracketNodeRow; onPress: () => void }) {
+  const matchStatus = matchStatusDisplay({ status: node.match_status })
+  return (
+    <Pressable style={s.matchCard} onPress={onPress} accessibilityRole="button">
+      <View style={s.matchCardHeader}>
+        <Text style={s.matchCardTitle}>
+          {node.pair_a_name} vs {node.pair_b_name}
+        </Text>
+        <View style={[s.matchStatusBadge, { borderColor: matchStatus.color }]}>
+          <Text style={[s.matchStatusText, { color: matchStatus.color }]}>{matchStatus.text}</Text>
+        </View>
+      </View>
+      <Text style={s.matchCardMeta}>{formatDisplay(node.start_at)}</Text>
+    </Pressable>
+  )
+}
+
+function isBracketPlayableNode(node: BracketNodeRow): boolean {
+  return !node.is_bye && !isPlaceholderNode(node) && Boolean(node.pair_a_id && node.pair_b_id)
+}
 
 export default function TournamentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -95,22 +123,40 @@ export default function TournamentDetailScreen() {
   const bracketGenerated =
     Boolean(tournament.bracket_generated_at) || tournament.status !== TOURNAMENT_STATUS.REGISTRATION
   const nodes = bracket?.nodes ?? []
-  const pendingMatches = nodes.filter(
-    (n) =>
-      !n.is_bye &&
-      !isPlaceholderNode(n) &&
-      (n.match_status === MATCH_STATUS.IN_PROGRESS || n.match_status === MATCH_STATUS.PLANNED) &&
-      Boolean(n.pair_a_id && n.pair_b_id)
+  const playableMatches = nodes.filter(isBracketPlayableNode)
+  const pendingMatches = playableMatches.filter(
+    (n) => n.match_status === MATCH_STATUS.IN_PROGRESS || n.match_status === MATCH_STATUS.PLANNED
   )
+  const finishedMatches = playableMatches.filter(
+    (n) => n.match_status !== MATCH_STATUS.IN_PROGRESS && n.match_status !== MATCH_STATUS.PLANNED
+  )
+  const status = tournamentStatusDisplay(tournament)
+  const completePairs = tournament.pairs.filter(isTournamentPairComplete)
 
   const handleGenerate = async () => {
-    if (tournament.pairs.length < 2) {
+    if (completePairs.length < 2) {
       Alert.alert(
         'Parejas insuficientes',
-        'Se necesitan al menos 2 parejas para organizar el cuadro.'
+        'Se necesitan al menos 2 parejas completas (con dos jugadores) para organizar el cuadro.'
       )
       return
     }
+    const skipped = tournament.pairs.length - completePairs.length
+    if (skipped > 0) {
+      Alert.alert(
+        'Parejas incompletas',
+        `${skipped} pareja(s) sin los dos jugadores no entrarán en el cuadro. ¿Continuar?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Organizar', onPress: () => void runGenerateBracket() },
+        ]
+      )
+      return
+    }
+    await runGenerateBracket()
+  }
+
+  const runGenerateBracket = async () => {
     try {
       await generateBracket.mutateAsync(id)
       setTab('bracket')
@@ -124,7 +170,7 @@ export default function TournamentDetailScreen() {
     try {
       await addPair.mutateAsync({
         tournamentId: id,
-        name: values.name.trim(),
+        name: values.name.trim() || undefined,
         playerAUserId: values.playerAIsSelf ? userId : null,
         playerAText: values.playerAIsSelf ? null : values.playerAText.trim() || null,
         playerBUserId: values.playerBIsSelf ? userId : null,
@@ -165,7 +211,12 @@ export default function TournamentDetailScreen() {
             tintColor={Colors.primary}
           />
         }>
-        <Text style={s.title}>{tournament.title}</Text>
+        <View style={s.headerBlock}>
+          <Text style={s.title}>{tournament.title}</Text>
+          <View style={[s.statusBadge, { borderColor: status.color }]}>
+            <Text style={[s.statusText, { color: status.color }]}>{status.text}</Text>
+          </View>
+        </View>
         <View style={s.infoBlock}>
           <Text style={s.meta}>{formatDisplay(tournament.start_at)}</Text>
           <Text style={s.meta}>
@@ -186,11 +237,11 @@ export default function TournamentDetailScreen() {
             <Text style={[s.tabText, tab === 'bracket' && s.tabTextOn]}>Cuadro</Text>
           </Pressable>
           <Pressable
-            style={[s.tab, tab === 'pending' && s.tabOn]}
-            onPress={() => setTab('pending')}
+            style={[s.tab, tab === 'matches' && s.tabOn]}
+            onPress={() => setTab('matches')}
             accessibilityRole="button"
-            accessibilityState={{ selected: tab === 'pending' }}>
-            <Text style={[s.tabText, tab === 'pending' && s.tabTextOn]}>Partidos pendientes</Text>
+            accessibilityState={{ selected: tab === 'matches' }}>
+            <Text style={[s.tabText, tab === 'matches' && s.tabTextOn]}>Partidos</Text>
           </Pressable>
         </View>
 
@@ -199,21 +250,29 @@ export default function TournamentDetailScreen() {
             <BracketCanvas nodes={nodes} bracketGenerated={bracketGenerated} />
           </View>
         ) : (
-          <View style={s.pendingWrap}>
+          <View style={s.matchesWrap}>
+            <Text style={s.matchesSectionTitle}>Pendientes</Text>
             {pendingMatches.length === 0 ? (
               <Text style={s.empty}>No hay partidos pendientes.</Text>
             ) : (
               pendingMatches.map((m) => (
-                <Pressable
+                <TournamentMatchCard
                   key={m.match_id}
-                  style={s.pendingCard}
+                  node={m}
                   onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
-                  accessibilityRole="button">
-                  <Text style={s.pendingTitle}>
-                    {m.pair_a_name} vs {m.pair_b_name}
-                  </Text>
-                  <Text style={s.pendingMeta}>{formatDisplay(m.start_at)}</Text>
-                </Pressable>
+                />
+              ))
+            )}
+            <Text style={[s.matchesSectionTitle, s.matchesSectionTitleSpaced]}>Terminados</Text>
+            {finishedMatches.length === 0 ? (
+              <Text style={s.empty}>No hay partidos terminados.</Text>
+            ) : (
+              finishedMatches.map((m) => (
+                <TournamentMatchCard
+                  key={m.match_id}
+                  node={m}
+                  onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
+                />
               ))
             )}
           </View>
@@ -233,6 +292,9 @@ export default function TournamentDetailScreen() {
                 <PairCard
                   key={p.id}
                   pair={p}
+                  subtitle={
+                    inRegistration && !isTournamentPairComplete(p) ? 'Falta un jugador' : undefined
+                  }
                   joinLabel={canJoin ? 'Unirme' : undefined}
                   onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
                   joinLoading={joinPair.isPending}
@@ -289,7 +351,16 @@ const s = StyleSheet.create({
   scrollContent: { paddingHorizontal: 16, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   error: { fontSize: 16, color: Colors.textSecondary },
+  headerBlock: { gap: 8, marginBottom: 4 },
   title: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  statusText: { fontSize: 12, fontFamily: Fonts.semiBold },
   infoBlock: { marginTop: 4, marginBottom: 12 },
   meta: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   organizer: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
@@ -308,8 +379,15 @@ const s = StyleSheet.create({
   tabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   tabTextOn: { color: Colors.primary },
   bracketSection: { minHeight: 300, marginBottom: 8 },
-  pendingWrap: { minHeight: 120 },
-  pendingCard: {
+  matchesWrap: { minHeight: 120 },
+  matchesSectionTitle: {
+    fontSize: 14,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: 8,
+  },
+  matchesSectionTitleSpaced: { marginTop: 16 },
+  matchCard: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
@@ -317,8 +395,26 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  pendingTitle: { fontSize: 16, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
-  pendingMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  matchCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  matchCardTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+  },
+  matchStatusBadge: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  matchStatusText: { fontSize: 11, fontFamily: Fonts.semiBold },
+  matchCardMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 6 },
   empty: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic', padding: 16 },
   section: { marginTop: 20 },
   sectionTitle: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.primary, marginBottom: 10 },

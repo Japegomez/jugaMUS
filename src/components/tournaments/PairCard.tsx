@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
 import type { TournamentPairRow } from '@/services/tournaments.service'
-import { pairMemberLabels } from '@/services/tournaments.service'
+import { displayPairName, pairMemberLabels } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -19,7 +19,7 @@ export function PairCard({ pair, subtitle, joinLabel, onJoin, joinLoading }: Pai
 
   return (
     <View style={styles.card}>
-      <Text style={styles.name}>{pair.name}</Text>
+      <Text style={styles.name}>{displayPairName(pair)}</Text>
       {members.length > 0 ? (
         <Text style={styles.members}>{members.join(' · ')}</Text>
       ) : (
