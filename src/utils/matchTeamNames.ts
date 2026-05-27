@@ -19,8 +19,10 @@ export type ResolveTeamNameMatch = TextPlayerFields & {
   team_b_name: string
 }
 
-function activeParticipants(participants: TeamRosterParticipant[]) {
-  return participants.filter((p) => p.left_at === null)
+function activeParticipants<T extends TeamRosterParticipant>(
+  participants: Array<T | null | undefined>
+) {
+  return participants.filter((p): p is T => Boolean(p && p.left_at === null))
 }
 
 export function isUnspecifiedTeamName(name: string | null | undefined, team: string): boolean {
@@ -29,12 +31,15 @@ export function isUnspecifiedTeamName(name: string | null | undefined, team: str
   return trimmed === (team === TEAM.B ? DEFAULT_TEAM_B_NAME : DEFAULT_TEAM_A_NAME)
 }
 
-function participantDisplayName(p: TeamRosterParticipant): string | null {
-  const name = p.profile?.display_name?.trim()
+function participantDisplayName(p: TeamRosterParticipant | null | undefined): string | null {
+  const name = p?.profile?.display_name?.trim()
   return name || null
 }
 
-function registeredOnTeam<T extends TeamRosterParticipant>(participants: T[], team: string): T[] {
+function registeredOnTeam<T extends TeamRosterParticipant>(
+  participants: Array<T | null | undefined>,
+  team: string
+): T[] {
   return activeParticipants(participants)
     .filter((p) => p.team === team)
     .sort((a, b) => a.joined_at.localeCompare(b.joined_at)) as T[]
