@@ -49,14 +49,16 @@ function RootLayout() {
     if (!initialized) return
     if (!navigationState?.key) return
 
-    const inAuthGroup = segments[0] === '(auth)'
-    const inOAuthCallback = segments.join('/') === 'auth/callback'
+    const routePath = segments.join('/')
+    const inAuthGroup = routePath.startsWith('(auth)')
+    const inOAuthCallback = routePath === 'auth/callback'
+    const inAuthLegal = routePath === '(auth)/terms' || routePath === '(auth)/privacy'
 
     const timeoutId = setTimeout(() => {
       if (inOAuthCallback) return
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login')
-      } else if (session && inAuthGroup) {
+      } else if (session && inAuthGroup && !inAuthLegal) {
         router.replace('/(tabs)/matches')
       }
     }, 0)
