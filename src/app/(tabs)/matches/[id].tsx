@@ -525,7 +525,8 @@ export default function MatchDetailScreen() {
     userId && isPersonalMatch && isInProgress && !resultBlocksNewSubmit && !match.tournament_id
   )
 
-  const canOpenScoreboard = Boolean(userId && isParticipant && isInProgress && !match.tournament_id)
+  // También permitimos llevar la cuenta en partidos de torneos.
+  const canOpenScoreboard = Boolean(userId && isParticipant && isInProgress)
 
   const allTextPlayers =
     activeParticipants.length === 0 &&

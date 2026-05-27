@@ -98,7 +98,8 @@ export default function ScoreboardScreen() {
   const isParticipant = activeParticipants.some((p) => p.user_id === userId)
   const isInProgress = match.status === MATCH_STATUS.IN_PROGRESS
 
-  if (!userId || !isParticipant || !isInProgress || match.tournament_id) {
+  // Permitimos scoreboard también en partidos de torneos.
+  if (!userId || !isParticipant || !isInProgress) {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No puedes llevar la cuenta de esta partida.</Text>
