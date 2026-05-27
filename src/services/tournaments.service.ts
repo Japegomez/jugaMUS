@@ -230,6 +230,7 @@ export type PublicTournamentsListFilters = {
   search: string
   city: string
   status: string | null
+  hideCelebrated: boolean
   startAfter: string | null
   startBefore: string | null
   minFreeSlots: number
@@ -284,6 +285,10 @@ export async function listPublicTournamentsFiltered(
 
   const search = filters.search.trim()
   if (search) query = query.ilike('title', `%${search}%`)
+
+  if (filters.hideCelebrated) {
+    query = query.neq('status', TOURNAMENT_STATUS.FINISHED)
+  }
 
   if (filters.startAfter) query = query.gte('start_at', filters.startAfter)
   if (filters.startBefore) query = query.lte('start_at', filters.startBefore)

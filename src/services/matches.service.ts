@@ -897,6 +897,8 @@ export type PublicMatchesListFilters = {
   city: string
   /** `null` = any status */
   status: string | null
+  /** When true, hides finished / finished_no_result and past-date explore rows. */
+  hideCelebrated: boolean
   startAfter: string | null
   startBefore: string | null
   /** 0 = no filter; otherwise require at least N free slots (of 4). */
