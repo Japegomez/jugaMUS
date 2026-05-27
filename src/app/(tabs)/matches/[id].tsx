@@ -61,7 +61,7 @@ function formatDate(iso: string) {
 
 function submitterDisplayName(participants: ParticipantWithProfile[], userId: string) {
   const p = participants.find((x) => x.user_id === userId)
-  return p?.profile.display_name ?? 'Jugador'
+  return p?.profile?.display_name ?? 'Jugador'
 }
 
 // ─── Participant card ─────────────────────────────────────────────────────────
@@ -95,7 +95,8 @@ function ParticipantCard({
     }
   }
 
-  const p = participant.profile
+  const p = participant?.profile
+  if (!p) return null
 
   return (
     <View style={card.wrap}>
@@ -223,10 +224,15 @@ function TeamSection({
       {entries.length === 0 ? (
         <Text style={team_s.empty}>Sin jugadores aún</Text>
       ) : (
-        entries.map((entry) =>
-          entry.kind === 'text' ? (
-            <TextPlayerRow key={`text-${team}-${entry.name}`} name={entry.name} />
-          ) : (
+        entries.map((entry) => {
+          if (entry.kind === 'text') {
+            return <TextPlayerRow key={`text-${team}-${entry.name}`} name={entry.name} />
+          }
+
+          // Guard defensivo: evita crash si el roster viene incompleto.
+          if (!entry.participant) return null
+
+          return (
             <ParticipantCard
               key={entry.participant.id}
               participant={entry.participant}
@@ -236,7 +242,7 @@ function TeamSection({
               onReportUser={onReportUser}
             />
           )
-        )
+        })
       )}
     </View>
   )
@@ -519,7 +525,8 @@ export default function MatchDetailScreen() {
     userId && isPersonalMatch && isInProgress && !resultBlocksNewSubmit && !match.tournament_id
   )
 
-  const canOpenScoreboard = Boolean(userId && isParticipant && isInProgress && !match.tournament_id)
+  // También permitimos llevar la cuenta en partidos de torneos.
+  const canOpenScoreboard = Boolean(userId && isParticipant && isInProgress)
 
   const allTextPlayers =
     activeParticipants.length === 0 &&

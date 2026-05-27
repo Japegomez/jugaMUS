@@ -1,9 +1,15 @@
+import { Platform } from 'react-native'
 import { Tabs } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Colors } from '@/theme/colors'
+import { tabBarHeight } from '@/theme/layout'
 import { Fonts } from '@/theme/typography'
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets()
+  const bottomInset = insets.bottom
+
   return (
     <Tabs
       screenOptions={{
@@ -13,10 +19,14 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: Colors.background,
           borderTopColor: Colors.border,
+          paddingTop: Platform.OS === 'android' ? 6 : 0,
+          paddingBottom: bottomInset,
+          height: tabBarHeight(bottomInset),
         },
         tabBarLabelStyle: {
           fontFamily: Fonts.medium,
           fontSize: 11,
+          marginBottom: Platform.OS === 'android' ? 2 : 0,
         },
       }}>
       <Tabs.Screen name="explore/index" options={{ title: 'Descubrir' }} />

@@ -35,11 +35,13 @@ import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 import { formatCityAndPlace } from '@/utils/location'
+import { filterExploreItemsForCelebrated, type ExploreItem } from '@/utils/exploreFilters'
 
 const DEFAULT_FILTERS = (): PublicMatchesListFilters => ({
   search: '',
   city: '',
   status: null,
+  hideCelebrated: true,
   startAfter: new Date().toISOString(),
   startBefore: null,
   minFreeSlots: 0,
@@ -75,10 +77,6 @@ function tournamentStatusLabel(tournament: TournamentRow) {
       return tournament.status
   }
 }
-
-type ExploreItem =
-  | { kind: 'match'; id: string; start_at: string; row: PublicMatchExplorerRow }
-  | { kind: 'tournament'; id: string; start_at: string; row: TournamentRow }
 
 function matchStatusTone(status: string): StatusDotTone {
   if (status === MATCH_STATUS.IN_PROGRESS) return 'active'
@@ -194,6 +192,7 @@ export default function ExploreScreen() {
       search: filters.search,
       city: filters.city,
       status: filters.status,
+      hideCelebrated: filters.hideCelebrated,
       startAfter: filters.startAfter,
       startBefore: filters.startBefore,
       minFreeSlots: filters.minFreeSlots,
@@ -224,10 +223,11 @@ export default function ExploreScreen() {
       start_at: row.start_at,
       row,
     }))
-    return [...matchItems, ...tournamentItems].sort(
+    const merged = [...matchItems, ...tournamentItems].sort(
       (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
     )
-  }, [matchRows, tournaments])
+    return filterExploreItemsForCelebrated(merged, filters.hideCelebrated)
+  }, [matchRows, tournaments, filters.hideCelebrated])
 
   const refetchAll = useCallback(() => {
     void refetch()
@@ -239,7 +239,7 @@ export default function ExploreScreen() {
     setDraftStatus(filters.status)
     setDraftMinFree(filters.minFreeSlots)
     setDraftContentType(filters.contentType)
-    setDraftHidePast(filters.startAfter !== null)
+    setDraftHidePast(filters.hideCelebrated)
     setDraftDateFromIso(null)
     setDraftDateToIso(null)
     setFilterModalOpen(true)
@@ -264,6 +264,7 @@ export default function ExploreScreen() {
       status: draftStatus,
       minFreeSlots: draftMinFree,
       contentType: draftContentType,
+      hideCelebrated: draftHidePast,
       startAfter,
       startBefore,
     }))
@@ -297,7 +298,7 @@ export default function ExploreScreen() {
     if (filters.status) n += 1
     if (filters.minFreeSlots > 0) n += 1
     if (filters.startBefore) n += 1
-    if (filters.startAfter === null) n += 1
+    if (!filters.hideCelebrated) n += 1
     if (filters.contentType !== 'all') n += 1
     return n
   }, [filters])
@@ -534,8 +535,9 @@ export default function ExploreScreen() {
               />
             </View>
             <Text style={styles.helpMuted}>
-              Si está activado, no se listan partidas con fecha/hora anterior a ahora (salvo que
-              indiques una fecha &quot;desde&quot; distinta).
+              Oculta partidas y torneos ya cerrados o sin resultado, y eventos pasados (salvo
+              partidas o torneos aún en curso o con inscripción abierta). Opcional: fecha
+              &quot;desde&quot;.
             </Text>
 
             <Text style={styles.fieldLabel}>Fecha desde (opcional)</Text>

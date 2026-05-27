@@ -64,14 +64,19 @@ export function AddPairModal({
   }
 
   const handleSubmit = async () => {
-    await onSubmit({
-      name,
-      playerAIsSelf,
-      playerAText,
-      playerBIsSelf,
-      playerBText,
-    })
-    reset()
+    try {
+      await onSubmit({
+        name,
+        playerAIsSelf,
+        playerAText,
+        playerBIsSelf,
+        playerBText,
+      })
+      // Solo limpiamos el formulario si el alta se ha completado con éxito.
+      reset()
+    } catch {
+      // OnSubmit se encarga de mostrar el error (si aplica). No reiniciamos aquí para que el usuario pueda corregir.
+    }
   }
 
   return (
@@ -89,8 +94,8 @@ export function AddPairModal({
         </View>
         <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
           <Input
-            label="Nombre de la pareja *"
-            placeholder="Ej. Los del bar"
+            label="Nombre de la pareja (opcional)"
+            placeholder="Si lo dejas vacío, se usará Jugador1 - Jugador2"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"

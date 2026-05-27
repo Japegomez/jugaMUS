@@ -304,8 +304,7 @@ export default function CreateMatchScreen() {
         <Text style={s.label}>Equipos y jugadores (opcional)</Text>
         <Text style={s.hint}>
           Te unirás automáticamente como jugador 1 del primer equipo. El resto puede ser por nombre
-          (sin cuenta en la app). Si dejas el nombre del equipo vacío, se usará «Jugador1 -
-          Jugador2» con los nombres de la plantilla.
+          (sin cuenta en la app).
         </Text>
         <Controller
           control={control}
