@@ -91,13 +91,19 @@ describe('matchTeamNames', () => {
     ).toBe('Ana - Carlos')
   })
 
-  it('prioritizes registered slot 1 on team A even if team_a_player_1 has text', () => {
+  it('shows team A text slot 1 and registered companion (tournament pair layout)', () => {
     expect(
-      resolveTeamName(
-        { ...baseMatch, team_a_player_1: 'Legacy', team_a_player_2: 'Pepe' },
-        TEAM.A,
-        [participant(TEAM.A, 'Juan')]
-      )
+      resolveTeamName({ ...baseMatch, team_a_player_1: 'qqq', team_a_player_2: null }, TEAM.A, [
+        participant(TEAM.A, 'Otro', '2026-01-01T11:00:00Z'),
+      ])
+    ).toBe('qqq - Otro')
+  })
+
+  it('shows registered creator and text in slot 2 on team A', () => {
+    expect(
+      resolveTeamName({ ...baseMatch, team_a_player_2: 'Pepe' }, TEAM.A, [
+        participant(TEAM.A, 'Juan'),
+      ])
     ).toBe('Juan - Pepe')
   })
 

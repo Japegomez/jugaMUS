@@ -49,30 +49,16 @@ export type TeamRosterEntry<T extends TeamRosterParticipant = TeamRosterParticip
   | { kind: 'registered'; participant: T }
   | { kind: 'text'; name: string }
 
-/** Roster slots in display order (matches default team name ordering). */
-export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
-  match: TextPlayerFields,
+function collectTeamRosterEntriesFromSlots<T extends TeamRosterParticipant>(
+  textSlot1: string | null | undefined,
+  textSlot2: string | null | undefined,
   participants: T[],
   team: string
 ): TeamRosterEntry<T>[] {
   const registered = registeredOnTeam(participants, team)
   const entries: TeamRosterEntry<T>[] = []
-
-  if (team === TEAM.A) {
-    if (registered[0]) entries.push({ kind: 'registered', participant: registered[0] })
-
-    const slot2Text = match.team_a_player_2?.trim() || null
-    if (slot2Text && slot2Text !== participantDisplayName(registered[0])) {
-      entries.push({ kind: 'text', name: slot2Text })
-    } else if (registered[1]) {
-      entries.push({ kind: 'registered', participant: registered[1] })
-    }
-
-    return entries.slice(0, 2)
-  }
-
-  const text1 = match.team_b_player_1?.trim() || null
-  const text2 = match.team_b_player_2?.trim() || null
+  const text1 = textSlot1?.trim() || null
+  const text2 = textSlot2?.trim() || null
   let regIdx = 0
 
   if (text1) {
@@ -91,10 +77,33 @@ export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
   if (text2 && text2 !== firstName) {
     entries.push({ kind: 'text', name: text2 })
   } else if (registered[regIdx]) {
-    entries.push({ kind: 'registered', participant: registered[regIdx] })
+    entries.push({ kind: 'registered', participant: registered[regIdx++] })
   }
 
   return entries.slice(0, 2)
+}
+
+/** Roster slots in display order (matches default team name ordering). */
+export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
+  match: TextPlayerFields,
+  participants: T[],
+  team: string
+): TeamRosterEntry<T>[] {
+  if (team === TEAM.A) {
+    return collectTeamRosterEntriesFromSlots(
+      match.team_a_player_1,
+      match.team_a_player_2,
+      participants,
+      team
+    )
+  }
+
+  return collectTeamRosterEntriesFromSlots(
+    match.team_b_player_1,
+    match.team_b_player_2,
+    participants,
+    team
+  )
 }
 
 export function collectTeamPlayerNames(
