@@ -535,8 +535,9 @@ export default function ExploreScreen() {
               />
             </View>
             <Text style={styles.helpMuted}>
-              Oculta partidas y torneos finalizados o sin resultado, y las que ya pasaron (salvo
-              partidas en curso). Puedes usar &quot;desde&quot; para otra fecha de corte.
+              Oculta partidas y torneos ya cerrados o sin resultado, y eventos pasados (salvo
+              partidas o torneos aún en curso o con inscripción abierta). Opcional: fecha
+              &quot;desde&quot;.
             </Text>
 
             <Text style={styles.fieldLabel}>Fecha desde (opcional)</Text>

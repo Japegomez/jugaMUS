@@ -290,7 +290,17 @@ export async function listPublicTournamentsFiltered(
     query = query.neq('status', TOURNAMENT_STATUS.FINISHED)
   }
 
-  if (filters.startAfter) query = query.gte('start_at', filters.startAfter)
+  if (filters.startAfter) {
+    if (filters.hideCelebrated) {
+      const cutoff = filters.startAfter
+      // Same rule as list_public_matches: keep active tournaments whose start_at is in the past.
+      query = query.or(
+        `start_at.gte."${cutoff}",and(start_at.lt."${cutoff}",status.in.(${TOURNAMENT_STATUS.REGISTRATION},${TOURNAMENT_STATUS.IN_PROGRESS}))`
+      )
+    } else {
+      query = query.gte('start_at', filters.startAfter)
+    }
+  }
   if (filters.startBefore) query = query.lte('start_at', filters.startBefore)
   if (statuses) query = query.in('status', statuses)
 
