@@ -51,12 +51,13 @@ function RootLayout() {
 
     const inAuthGroup = segments[0] === '(auth)'
     const inOAuthCallback = segments.join('/') === 'auth/callback'
+    const inAuthLegal = inAuthGroup && (segments[1] === 'terms' || segments[1] === 'privacy')
 
     const timeoutId = setTimeout(() => {
       if (inOAuthCallback) return
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login')
-      } else if (session && inAuthGroup) {
+      } else if (session && inAuthGroup && !inAuthLegal) {
         router.replace('/(tabs)/matches')
       }
     }, 0)

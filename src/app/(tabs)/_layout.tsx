@@ -9,6 +9,7 @@ import { Fonts } from '@/theme/typography'
 export default function TabsLayout() {
   const insets = useSafeAreaInsets()
   const bottomInset = insets.bottom
+  const androidBottomInset = Platform.OS === 'android' ? Math.max(bottomInset, 12) : bottomInset
 
   return (
     <Tabs
@@ -20,13 +21,13 @@ export default function TabsLayout() {
           backgroundColor: Colors.background,
           borderTopColor: Colors.border,
           paddingTop: Platform.OS === 'android' ? 6 : 0,
-          paddingBottom: bottomInset,
-          height: tabBarHeight(bottomInset),
+          paddingBottom: androidBottomInset,
+          height: tabBarHeight(androidBottomInset),
         },
         tabBarLabelStyle: {
           fontFamily: Fonts.medium,
           fontSize: 11,
-          marginBottom: Platform.OS === 'android' ? 2 : 0,
+          marginBottom: Platform.OS === 'android' ? 6 : 0,
         },
       }}>
       <Tabs.Screen name="explore/index" options={{ title: 'Descubrir' }} />
