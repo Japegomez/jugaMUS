@@ -49,9 +49,10 @@ function RootLayout() {
     if (!initialized) return
     if (!navigationState?.key) return
 
-    const inAuthGroup = segments[0] === '(auth)'
-    const inOAuthCallback = segments.join('/') === 'auth/callback'
-    const inAuthLegal = inAuthGroup && (segments[1] === 'terms' || segments[1] === 'privacy')
+    const routePath = segments.join('/')
+    const inAuthGroup = routePath.startsWith('(auth)')
+    const inOAuthCallback = routePath === 'auth/callback'
+    const inAuthLegal = routePath === '(auth)/terms' || routePath === '(auth)/privacy'
 
     const timeoutId = setTimeout(() => {
       if (inOAuthCallback) return
