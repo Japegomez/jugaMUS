@@ -64,14 +64,19 @@ export function AddPairModal({
   }
 
   const handleSubmit = async () => {
-    await onSubmit({
-      name,
-      playerAIsSelf,
-      playerAText,
-      playerBIsSelf,
-      playerBText,
-    })
-    reset()
+    try {
+      await onSubmit({
+        name,
+        playerAIsSelf,
+        playerAText,
+        playerBIsSelf,
+        playerBText,
+      })
+      // Solo limpiamos el formulario si el alta se ha completado con éxito.
+      reset()
+    } catch {
+      // OnSubmit se encarga de mostrar el error (si aplica). No reiniciamos aquí para que el usuario pueda corregir.
+    }
   }
 
   return (

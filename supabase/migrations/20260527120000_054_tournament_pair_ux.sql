@@ -3,6 +3,9 @@
 ALTER TABLE public.tournament_pairs
   ADD COLUMN IF NOT EXISTS name_is_custom BOOLEAN NOT NULL DEFAULT FALSE;
 
+ALTER TABLE public.tournament_pairs
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE OR REPLACE FUNCTION public.tournament_pair_slot_label(
   p_user_id UUID,
   p_text TEXT

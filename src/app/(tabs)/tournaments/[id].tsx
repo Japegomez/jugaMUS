@@ -179,6 +179,8 @@ export default function TournamentDetailScreen() {
       setPairModalOpen(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo añadir la pareja')
+      // Propagamos el error para evitar que el modal reinicie el formulario.
+      throw err
     }
   }
 
