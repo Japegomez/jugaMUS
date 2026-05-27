@@ -56,6 +56,7 @@ export function publicTournamentsExploreQueryKey(filters: PublicTournamentsListF
     filters.search.trim(),
     filters.city.trim(),
     filters.status ?? '',
+    filters.hideCelebrated,
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
@@ -88,6 +89,7 @@ export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) 
     filters.search.trim(),
     filters.city.trim(),
     filters.status ?? '',
+    filters.hideCelebrated,
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
@@ -115,7 +117,11 @@ export function useUserMatches(userId?: string) {
     queryKey: userMatchesQueryKey(resolvedId ?? ''),
     queryFn: () => getUserMatches(resolvedId!),
     enabled: Boolean(resolvedId),
-    staleTime: QUERY_STALE_TIME,
+    // Historial: mejor fresco que cacheado (el estado puede cambiar tras terminar una partida).
+    staleTime: TOURNAMENT_QUERY_STALE_TIME,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   })
 }
 

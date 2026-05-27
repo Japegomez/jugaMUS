@@ -19,8 +19,10 @@ export type ResolveTeamNameMatch = TextPlayerFields & {
   team_b_name: string
 }
 
-function activeParticipants(participants: TeamRosterParticipant[]) {
-  return participants.filter((p) => p.left_at === null)
+function activeParticipants<T extends TeamRosterParticipant>(
+  participants: Array<T | null | undefined>
+) {
+  return participants.filter((p): p is T => Boolean(p && p.left_at === null))
 }
 
 export function isUnspecifiedTeamName(name: string | null | undefined, team: string): boolean {
@@ -29,12 +31,15 @@ export function isUnspecifiedTeamName(name: string | null | undefined, team: str
   return trimmed === (team === TEAM.B ? DEFAULT_TEAM_B_NAME : DEFAULT_TEAM_A_NAME)
 }
 
-function participantDisplayName(p: TeamRosterParticipant): string | null {
-  const name = p.profile?.display_name?.trim()
+function participantDisplayName(p: TeamRosterParticipant | null | undefined): string | null {
+  const name = p?.profile?.display_name?.trim()
   return name || null
 }
 
-function registeredOnTeam<T extends TeamRosterParticipant>(participants: T[], team: string): T[] {
+function registeredOnTeam<T extends TeamRosterParticipant>(
+  participants: Array<T | null | undefined>,
+  team: string
+): T[] {
   return activeParticipants(participants)
     .filter((p) => p.team === team)
     .sort((a, b) => a.joined_at.localeCompare(b.joined_at)) as T[]
@@ -44,30 +49,16 @@ export type TeamRosterEntry<T extends TeamRosterParticipant = TeamRosterParticip
   | { kind: 'registered'; participant: T }
   | { kind: 'text'; name: string }
 
-/** Roster slots in display order (matches default team name ordering). */
-export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
-  match: TextPlayerFields,
+function collectTeamRosterEntriesFromSlots<T extends TeamRosterParticipant>(
+  textSlot1: string | null | undefined,
+  textSlot2: string | null | undefined,
   participants: T[],
   team: string
 ): TeamRosterEntry<T>[] {
   const registered = registeredOnTeam(participants, team)
   const entries: TeamRosterEntry<T>[] = []
-
-  if (team === TEAM.A) {
-    if (registered[0]) entries.push({ kind: 'registered', participant: registered[0] })
-
-    const slot2Text = match.team_a_player_2?.trim() || null
-    if (slot2Text && slot2Text !== participantDisplayName(registered[0])) {
-      entries.push({ kind: 'text', name: slot2Text })
-    } else if (registered[1]) {
-      entries.push({ kind: 'registered', participant: registered[1] })
-    }
-
-    return entries.slice(0, 2)
-  }
-
-  const text1 = match.team_b_player_1?.trim() || null
-  const text2 = match.team_b_player_2?.trim() || null
+  const text1 = textSlot1?.trim() || null
+  const text2 = textSlot2?.trim() || null
   let regIdx = 0
 
   if (text1) {
@@ -86,10 +77,33 @@ export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
   if (text2 && text2 !== firstName) {
     entries.push({ kind: 'text', name: text2 })
   } else if (registered[regIdx]) {
-    entries.push({ kind: 'registered', participant: registered[regIdx] })
+    entries.push({ kind: 'registered', participant: registered[regIdx++] })
   }
 
   return entries.slice(0, 2)
+}
+
+/** Roster slots in display order (matches default team name ordering). */
+export function collectTeamRosterEntries<T extends TeamRosterParticipant>(
+  match: TextPlayerFields,
+  participants: T[],
+  team: string
+): TeamRosterEntry<T>[] {
+  if (team === TEAM.A) {
+    return collectTeamRosterEntriesFromSlots(
+      match.team_a_player_1,
+      match.team_a_player_2,
+      participants,
+      team
+    )
+  }
+
+  return collectTeamRosterEntriesFromSlots(
+    match.team_b_player_1,
+    match.team_b_player_2,
+    participants,
+    team
+  )
 }
 
 export function collectTeamPlayerNames(
