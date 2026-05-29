@@ -6,6 +6,10 @@ export const Colors = {
   textSecondary: '#767676',
   border: '#E8E8E8',
   tabActive: '#1A5F4A',
+  /** Bottom tab bar: active label and pill background (text-only tabs). */
+  tabBarActive: '#4A4A4A',
+  tabBarInactive: '#A8A8A8',
+  tabBarActiveBackground: '#EDEDED',
   danger: '#B00020',
   warning: '#7A6000',
   white: '#FFFFFF',
