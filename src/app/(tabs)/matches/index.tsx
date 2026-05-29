@@ -15,11 +15,9 @@ import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
-import { TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
 import type { UserMatchSummary } from '@/services/matches.service'
-import type { UserTournamentSummary } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -68,54 +66,6 @@ function MatchListRow({
       </View>
     </Pressable>
   )
-}
-
-function TournamentListRow({
-  row,
-  tone,
-  statusLabel,
-  hint,
-  onPress,
-}: {
-  row: UserTournamentSummary
-  tone: StatusDotTone
-  statusLabel: string
-  hint?: string
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      style={styles.row}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Torneo: ${row.title}`}>
-      <StatusDot tone={tone} />
-      <View style={styles.rowBody}>
-        <Text style={styles.rowKind}>Torneo</Text>
-        <Text style={styles.rowTitle} numberOfLines={2}>
-          {row.title}
-        </Text>
-        <Text style={styles.rowMeta}>
-          {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
-        </Text>
-        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
-      </View>
-      <View style={styles.rowTrailing}>
-        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
-          {statusLabel}
-        </Text>
-        <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
-      </View>
-    </Pressable>
-  )
-}
-
-function tournamentStatusLabel(row: UserTournamentSummary) {
-  if (row.status === TOURNAMENT_STATUS.REGISTRATION) {
-    return row.bracket_generated_at ? 'Inscripción' : 'Inscripción abierta'
-  }
-  if (row.status === TOURNAMENT_STATUS.IN_PROGRESS) return 'En curso'
-  return row.status
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -173,21 +123,11 @@ export default function MatchesScreen() {
     )
   }
 
-  const {
-    upcoming,
-    inProgress,
-    awaitingResultValidation,
-    upcomingTournaments,
-    inProgressTournaments,
-  } = data
+  const { upcoming, inProgress, awaitingResultValidation } = data
   const awaitingIds = new Set(awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = inProgress.filter((m) => !awaitingIds.has(m.id))
   const hasAny =
-    upcoming.length > 0 ||
-    inProgressDeduped.length > 0 ||
-    awaitingResultValidation.length > 0 ||
-    upcomingTournaments.length > 0 ||
-    inProgressTournaments.length > 0
+    upcoming.length > 0 || inProgressDeduped.length > 0 || awaitingResultValidation.length > 0
 
   return (
     <View style={styles.container}>
@@ -201,44 +141,8 @@ export default function MatchesScreen() {
 
         {!hasAny ? (
           <Text style={styles.emptyBlock}>
-            No tienes partidas ni torneos activos aquí. Explora en Descubrir o crea uno nuevo.
+            No tienes partidas activas aquí. Explora en Descubrir o crea una nueva.
           </Text>
-        ) : null}
-
-        {inProgressTournaments.length > 0 ? (
-          <Section title="Torneos en curso">
-            {inProgressTournaments.map((t) => (
-              <TournamentListRow
-                key={t.id}
-                row={t}
-                tone="active"
-                statusLabel="En curso"
-                hint={t.isOrganizer ? 'Organizas este torneo' : 'Participas en este torneo'}
-                onPress={() => router.push(`/(tabs)/tournaments/${t.id}`)}
-              />
-            ))}
-          </Section>
-        ) : null}
-
-        {upcomingTournaments.length > 0 ? (
-          <Section title="Torneos próximos">
-            {upcomingTournaments.map((t) => (
-              <TournamentListRow
-                key={t.id}
-                row={t}
-                tone="upcoming"
-                statusLabel={tournamentStatusLabel(t)}
-                hint={
-                  t.isOrganizer
-                    ? t.bracket_generated_at
-                      ? 'Organizas este torneo'
-                      : 'Organizas este torneo · cuadro pendiente de generar'
-                    : 'Participas en este torneo'
-                }
-                onPress={() => router.push(`/(tabs)/tournaments/${t.id}`)}
-              />
-            ))}
-          </Section>
         ) : null}
 
         {awaitingResultValidation.length > 0 ? (
@@ -319,14 +223,6 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   rowBody: { flex: 1, minWidth: 0 },
-  rowKind: {
-    fontSize: 10,
-    fontFamily: Fonts.semiBold,
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
   rowTitle: {
     fontSize: 15,
     fontFamily: Fonts.semiBold,
