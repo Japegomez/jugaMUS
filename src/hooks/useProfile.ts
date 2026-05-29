@@ -1,11 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getProfile, updateProfile, uploadAvatar } from '@/services/profiles.service'
+import {
+  getProfile,
+  getViewableUserProfile,
+  updateProfile,
+  uploadAvatar,
+} from '@/services/profiles.service'
 import type { ProfileUpdate } from '@/services/profiles.service'
 import { useAuthStore } from '@/hooks/useAuth'
 
 export function profileQueryKey(userId: string) {
   return ['profile', userId] as const
+}
+
+export function viewableUserProfileQueryKey(userId: string) {
+  return ['viewable-user-profile', userId] as const
 }
 
 /** Fetch the current user's profile (or any userId passed explicitly). */
@@ -17,6 +26,15 @@ export function useProfile(userId?: string) {
     queryKey: profileQueryKey(resolvedId ?? ''),
     queryFn: () => getProfile(resolvedId!),
     enabled: Boolean(resolvedId),
+  })
+}
+
+/** Another user's profile (name, city, phone when allowed). */
+export function useViewableUserProfile(userId?: string) {
+  return useQuery({
+    queryKey: viewableUserProfileQueryKey(userId ?? ''),
+    queryFn: () => getViewableUserProfile(userId!),
+    enabled: Boolean(userId),
   })
 }
 

@@ -15,19 +15,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
 import { BracketCanvas } from '@/components/tournaments/BracketCanvas'
+import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { MATCH_STATUS, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
+import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
 import {
   useAddTournamentPair,
   useGenerateTournamentBracket,
   useJoinTournamentPair,
+  useRemoveTournamentPair,
+  useUpdateTournamentPair,
   useTournament,
   useTournamentBracket,
 } from '@/hooks/useTournaments'
+import type { TournamentPairRow } from '@/services/tournaments.service'
 import {
   canJoinTournamentPair,
   isTournamentPairComplete,
@@ -85,9 +90,12 @@ export default function TournamentDetailScreen() {
   const generateBracket = useGenerateTournamentBracket()
   const addPair = useAddTournamentPair()
   const joinPair = useJoinTournamentPair()
+  const updatePair = useUpdateTournamentPair()
+  const removePair = useRemoveTournamentPair()
 
   const [tab, setTab] = useState<TabKey>('bracket')
   const [pairModalOpen, setPairModalOpen] = useState(false)
+  const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
 
   const refetchAll = useCallback(async () => {
     await Promise.all([refetchTournament(), refetchBracket()])
@@ -120,6 +128,7 @@ export default function TournamentDetailScreen() {
 
   const isCreator = tournament.creator_id === userId
   const inRegistration = tournament.status === TOURNAMENT_STATUS.REGISTRATION
+  const canManagePairs = isCreator && inRegistration && !tournament.bracket_generated_at
   const bracketGenerated =
     Boolean(tournament.bracket_generated_at) || tournament.status !== TOURNAMENT_STATUS.REGISTRATION
   const nodes = bracket?.nodes ?? []
@@ -189,6 +198,43 @@ export default function TournamentDetailScreen() {
       await joinPair.mutateAsync({ pairId, slot, tournamentId: id })
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo unir a la pareja')
+    }
+  }
+
+  const handleEditPair = async (values: EditPairFormValues) => {
+    if (!editingPair) return
+    try {
+      await updatePair.mutateAsync({
+        pairId: editingPair.id,
+        tournamentId: id,
+        name: values.name.trim() || undefined,
+        playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
+        playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
+      })
+      setEditingPair(null)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
+      throw err
+    }
+  }
+
+  const confirmDeletePair = async () => {
+    if (!editingPair) return
+    const pairId = editingPair.id
+    const ok = await confirmAlert(
+      'Eliminar pareja',
+      '¿Seguro que quieres eliminar esta pareja del torneo?',
+      { confirmText: 'Eliminar', destructive: true }
+    )
+    if (ok) void runDeletePair(pairId)
+  }
+
+  const runDeletePair = async (pairId: string) => {
+    try {
+      await removePair.mutateAsync({ pairId, tournamentId: id })
+      setEditingPair(null)
+    } catch (err) {
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo eliminar la pareja')
     }
   }
 
@@ -297,6 +343,8 @@ export default function TournamentDetailScreen() {
                   subtitle={
                     inRegistration && !isTournamentPairComplete(p) ? 'Falta un jugador' : undefined
                   }
+                  editLabel={canManagePairs ? 'Editar' : undefined}
+                  onEdit={canManagePairs ? () => setEditingPair(p) : undefined}
                   joinLabel={canJoin ? 'Unirme' : undefined}
                   onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
                   joinLoading={joinPair.isPending}
@@ -341,6 +389,16 @@ export default function TournamentDetailScreen() {
         onSubmit={handleAddPair}
         loading={addPair.isPending}
         selfJoinDisabled={Boolean(userId && userIsInTournamentPair(tournament.pairs, userId))}
+      />
+
+      <EditPairModal
+        visible={editingPair !== null}
+        pair={editingPair}
+        onClose={() => setEditingPair(null)}
+        onSubmit={handleEditPair}
+        onDelete={confirmDeletePair}
+        saveLoading={updatePair.isPending}
+        deleteLoading={removePair.isPending}
       />
     </View>
   )

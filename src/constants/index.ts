@@ -51,6 +51,13 @@ export const QUERY_STALE_TIME = 5 * 60 * 1000 // 5 minutos
 export const TOURNAMENT_QUERY_STALE_TIME = 30 * 1000 // 30 segundos
 export const TOURNAMENT_REFETCH_INTERVAL = 30 * 1000
 
+/** Tab root screens: one refetch when stale (avoid refetchOnMount:'always' + focus double-fetch). */
+export const TAB_SCREEN_QUERY_OPTIONS = {
+  staleTime: TOURNAMENT_QUERY_STALE_TIME,
+  refetchOnMount: true,
+  refetchOnWindowFocus: true,
+} as const
+
 export const MUS_PHASES = ['grande', 'pequena', 'pares', 'juego'] as const
 export type MusPhase = (typeof MUS_PHASES)[number]
 

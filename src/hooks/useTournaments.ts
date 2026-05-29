@@ -14,7 +14,9 @@ import {
   recordTournamentMatchAsReferee,
   removeTournamentPair,
   updateTournament,
+  updateTournamentPair,
   type AddPairInput,
+  type UpdatePairInput,
   type TournamentInsert,
   type TournamentUpdate,
 } from '@/services/tournaments.service'
@@ -38,7 +40,6 @@ export function useTournament(id: string) {
     queryFn: () => getTournament(id),
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })
@@ -50,7 +51,6 @@ export function useTournamentBracket(id: string) {
     queryFn: () => getTournamentBracket(id),
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })
@@ -124,8 +124,28 @@ export function useJoinTournamentPair() {
   })
 }
 
+export function useUpdateTournamentPair() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: (input: UpdatePairInput & { tournamentId: string }) =>
+      updateTournamentPair({
+        pairId: input.pairId,
+        name: input.name,
+        playerAText: input.playerAText,
+        playerBText: input.playerBText,
+      }),
+    onSuccess: (_pair, input) => {
+      invalidateTournamentQueries(queryClient, input.tournamentId)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
+    },
+  })
+}
+
 export function useRemoveTournamentPair() {
   const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
     mutationFn: ({
@@ -137,6 +157,7 @@ export function useRemoveTournamentPair() {
     }) => removeTournamentPair(pairId),
     onSuccess: (_void, vars) => {
       invalidateTournamentQueries(queryClient, vars.tournamentId)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
     },
   })
 }

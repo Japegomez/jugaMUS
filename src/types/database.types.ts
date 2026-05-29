@@ -985,6 +985,32 @@ export type Database = {
           photo_url: string
         }[]
       }
+      get_viewable_user_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          city: string
+          display_name: string
+          id: string
+          phone_e164: string
+        }[]
+      }
+      list_user_viewable_matches: {
+        Args: { p_user_id: string }
+        Returns: {
+          city: string
+          creator_id: string
+          id: string
+          place_defined: boolean
+          place_text: string
+          start_at: string
+          status: string
+          team_a_games: number
+          team_b_games: number
+          title: string
+          user_team: string
+          visibility: string
+        }[]
+      }
       join_tournament_pair: {
         Args: { p_as_text?: string; p_pair_id: string; p_slot: string }
         Returns: {
@@ -998,6 +1024,38 @@ export type Database = {
           player_b_text: string | null
           player_b_user_id: string | null
           tournament_id: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'tournament_pairs'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_tournament_pair: {
+        Args: { p_pair_id: string }
+        Returns: undefined
+      }
+      update_tournament_pair: {
+        Args: {
+          p_name: string
+          p_pair_id: string
+          p_player_a_text: string
+          p_player_b_text: string
+        }
+        Returns: {
+          created_at: string
+          created_by_user_id: string
+          id: string
+          is_eliminated: boolean
+          name: string
+          name_is_custom: boolean
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          tournament_id: string
+          updated_at: string
         }
         SetofOptions: {
           from: '*'

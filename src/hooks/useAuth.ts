@@ -5,6 +5,7 @@ import { Platform } from 'react-native'
 
 import { getOAuthRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
+import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
 import { supabase } from '@/lib/supabase'
 
 let authSubscription: { unsubscribe: () => void } | null = null
@@ -93,6 +94,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ initialized: true })
       }
 
+      if (event === 'SIGNED_IN') {
+        void clearSessionBackgroundMarker()
+      }
+
       if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
         void (async () => {
           const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
@@ -141,6 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    await clearSessionBackgroundMarker()
     await supabase.auth.signOut()
     set({ session: null })
   },

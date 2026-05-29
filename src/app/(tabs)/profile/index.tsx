@@ -13,13 +13,12 @@ import {
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
+import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useUserMatches } from '@/hooks/useMatches'
 import type { ProfileUpdate } from '@/services/profiles.service'
-import type { UserMatchSummary } from '@/services/matches.service'
-import { displayMatchTitle, matchHistoryBackground, matchStatusDisplay } from '@/utils/matchDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -58,8 +57,8 @@ export default function ProfileScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const deleteAccount = useAuthStore((s) => s.deleteAccount)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
-  const { data: profile, isLoading, isError } = useProfile(sessionUserId)
-  const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
+  const { data: profile, isPending: profilePending, isError } = useProfile(sessionUserId)
+  const { data: userMatches, isPending: matchesPending } = useUserMatches(sessionUserId)
   const updateProfile = useUpdateProfile()
   const [signingOut, setSigningOut] = useState(false)
   const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
@@ -104,7 +103,7 @@ export default function ProfileScreen() {
     }
   }
 
-  if (isLoading) {
+  if (profilePending && !profile) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -194,19 +193,12 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
-        {matchesLoading ? (
-          <ActivityIndicator size="small" color={Colors.primary} style={styles.matchesLoader} />
-        ) : !userMatches || userMatches.length === 0 ? (
-          <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
-        ) : (
-          userMatches.map((m) => (
-            <MatchHistoryRow
-              key={m.id}
-              match={m}
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))
-        )}
+        <MatchHistoryList
+          matches={userMatches}
+          loading={matchesPending}
+          emptyMessage="Aún no has participado en ninguna partida"
+          onMatchPress={(matchId) => router.push(`/(tabs)/matches/${matchId}`)}
+        />
       </View>
 
       <View style={styles.card}>
@@ -261,42 +253,6 @@ export default function ProfileScreen() {
         onConfirm={onDeleteAccount}
       />
     </ScrollView>
-  )
-}
-
-function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
-  const status = matchStatusDisplay(match)
-  const outcomeBg = matchHistoryBackground(match.outcome ?? null)
-  const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-  const outcomeHint =
-    match.outcome === 'won' ? ', victoria' : match.outcome === 'lost' ? ', derrota' : ''
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.matchRow,
-        outcomeBg != null && { backgroundColor: outcomeBg },
-        pressed && styles.matchRowPressed,
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${displayMatchTitle(match)}${outcomeHint}`}>
-      <View style={styles.matchRowMain}>
-        <Text style={styles.matchTitle} numberOfLines={1}>
-          {displayMatchTitle(match)}
-        </Text>
-        <Text style={styles.matchMeta}>
-          {dateStr} · {match.city}
-        </Text>
-      </View>
-      <View style={[styles.matchBadge, { borderColor: status.color }]}>
-        <Text style={[styles.matchBadgeText, { color: status.color }]}>{status.text}</Text>
-      </View>
-    </Pressable>
   )
 }
 
@@ -520,34 +476,4 @@ const styles = StyleSheet.create({
   deleteAccountBtn: {
     marginTop: -4,
   },
-  matchesLoader: { marginVertical: 12 },
-  matchesEmpty: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    paddingVertical: 12,
-    textAlign: 'center',
-  },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    marginHorizontal: -10,
-    borderRadius: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-    gap: 10,
-  },
-  matchRowPressed: { opacity: 0.7 },
-  matchRowMain: { flex: 1 },
-  matchTitle: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
-  matchMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  matchBadge: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  matchBadgeText: { fontSize: 11, fontFamily: Fonts.semiBold },
 })

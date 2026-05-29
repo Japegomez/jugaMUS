@@ -85,6 +85,13 @@ export type AddPairInput = {
   playerBText?: string | null
 }
 
+export type UpdatePairInput = {
+  pairId: string
+  name?: string
+  playerAText?: string | null
+  playerBText?: string | null
+}
+
 export async function createTournament(
   _userId: string,
   data: TournamentInsert
@@ -201,9 +208,21 @@ export async function joinTournamentPair(
   return data as TournamentPairRow
 }
 
+export async function updateTournamentPair(input: UpdatePairInput): Promise<TournamentPairRow> {
+  const { data, error } = await supabase.rpc('update_tournament_pair', {
+    p_pair_id: input.pairId,
+    p_name: input.name?.trim() ?? '',
+    p_player_a_text: input.playerAText ?? '',
+    p_player_b_text: input.playerBText ?? '',
+  })
+
+  if (error) throw new Error(mapTournamentPairRpcError(error.message))
+  return data as TournamentPairRow
+}
+
 export async function removeTournamentPair(pairId: string): Promise<void> {
-  const { error } = await supabase.from('tournament_pairs').delete().eq('id', pairId)
-  if (error) throw new Error(error.message)
+  const { error } = await supabase.rpc('remove_tournament_pair', { p_pair_id: pairId })
+  if (error) throw new Error(mapTournamentPairRpcError(error.message))
 }
 
 export async function generateTournamentBracket(tournamentId: string): Promise<void> {
@@ -448,6 +467,15 @@ function mapTournamentPairRpcError(message: string): string {
   }
   if (message.includes('tournament_not_in_registration')) {
     return 'El torneo ya no acepta inscripciones'
+  }
+  if (message.includes('bracket_already_generated')) {
+    return 'El cuadro ya está organizado; no se pueden modificar las parejas'
+  }
+  if (message.includes('forbidden')) {
+    return 'Solo el organizador puede modificar las parejas'
+  }
+  if (message.includes('pair_not_found')) {
+    return 'La pareja ya no existe'
   }
   return message
 }
