@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/dm-sans'
 import * as SplashScreen from 'expo-splash-screen'
 import { useAuthStore } from '@/hooks/useAuth'
+import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
 import { useNotifications } from '@/hooks/useNotifications'
 import { posthog } from '@/lib/posthog'
 
@@ -40,6 +41,7 @@ function RootLayout() {
   })
 
   useNotifications()
+  useBackgroundSessionTimeout()
 
   useEffect(() => {
     useAuthStore.getState().initializeAuth()
