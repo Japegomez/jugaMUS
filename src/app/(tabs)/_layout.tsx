@@ -1,5 +1,6 @@
-import { Platform, Pressable, StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import { Tabs } from 'expo-router'
+import { PlatformPressable } from '@react-navigation/elements'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs'
 
@@ -12,16 +13,14 @@ const VISIBLE_TAB_OPTIONS = {
 } as const
 
 function TabBarButton(props: BottomTabBarButtonProps) {
-  const { style, accessibilityState, children, ...rest } = props
-  const focused = accessibilityState?.selected === true
+  const focused = props.accessibilityState?.selected === true
 
   return (
-    <Pressable
-      {...rest}
-      accessibilityState={accessibilityState}
-      style={[styles.tabBarButton, style, focused && styles.tabBarButtonActive]}>
-      {children}
-    </Pressable>
+    <PlatformPressable
+      {...props}
+      style={[styles.tabBarButton, props.style, focused && styles.tabBarButtonActive]}>
+      {props.children}
+    </PlatformPressable>
   )
 }
 
@@ -34,6 +33,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        lazy: true,
         tabBarButton: (props) => <TabBarButton {...props} />,
         tabBarIcon: () => null,
         tabBarActiveTintColor: Colors.tabBarActive,

@@ -20,7 +20,12 @@ import {
 } from '@/services/tournaments.service'
 import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
-import { MATCH_PAGE_SIZE, QUERY_STALE_TIME, TOURNAMENT_QUERY_STALE_TIME } from '@/constants'
+import {
+  MATCH_PAGE_SIZE,
+  QUERY_STALE_TIME,
+  TAB_SCREEN_QUERY_OPTIONS,
+  TOURNAMENT_QUERY_STALE_TIME,
+} from '@/constants'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
@@ -104,7 +109,6 @@ export function useMatch(id: string) {
     queryFn: () => getMatch(id),
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 }
@@ -117,10 +121,7 @@ export function useUserMatches(userId?: string) {
     queryKey: userMatchesQueryKey(resolvedId ?? ''),
     queryFn: () => getUserMatches(resolvedId!),
     enabled: Boolean(resolvedId),
-    // Historial: mejor fresco que cacheado (el estado puede cambiar tras terminar una partida).
-    staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    ...TAB_SCREEN_QUERY_OPTIONS,
     refetchOnReconnect: true,
   })
 }
@@ -132,9 +133,7 @@ export function useMyMatchesDashboard() {
     queryKey: myMatchesDashboardQueryKey(sessionUserId ?? ''),
     queryFn: () => getMyMatchesDashboard(sessionUserId!),
     enabled: Boolean(sessionUserId),
-    staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }
 
@@ -164,9 +163,7 @@ export function usePublicTournamentsExplore(filters: PublicTournamentsListFilter
     queryKey: publicTournamentsExploreQueryKey(filters),
     queryFn: () => listPublicTournamentsFiltered(filters),
     enabled: filters.contentType !== 'matches',
-    staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }
 

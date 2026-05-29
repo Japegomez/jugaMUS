@@ -131,7 +131,7 @@ export default function MatchesScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const { data, isLoading, isError, refetch, isRefetching } = useMyMatchesDashboard()
+  const { data, isPending, isError, refetch, isRefetching } = useMyMatchesDashboard()
 
   const contentPadding = {
     paddingTop: screenTopPadding(insets.top, 16),
@@ -148,7 +148,7 @@ export default function MatchesScreen() {
     )
   }
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <View style={styles.container}>
         <View style={[styles.centered, { flex: 1 }]}>

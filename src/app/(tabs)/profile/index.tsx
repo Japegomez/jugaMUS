@@ -63,8 +63,8 @@ export default function ProfileScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const deleteAccount = useAuthStore((s) => s.deleteAccount)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
-  const { data: profile, isLoading, isError } = useProfile(sessionUserId)
-  const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
+  const { data: profile, isPending: profilePending, isError } = useProfile(sessionUserId)
+  const { data: userMatches, isPending: matchesPending } = useUserMatches(sessionUserId)
   const updateProfile = useUpdateProfile()
   const [signingOut, setSigningOut] = useState(false)
   const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
@@ -109,7 +109,7 @@ export default function ProfileScreen() {
     }
   }
 
-  if (isLoading) {
+  if (profilePending && !profile) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -199,7 +199,7 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
-        {matchesLoading ? (
+        {matchesPending && !userMatches ? (
           <ActivityIndicator size="small" color={Colors.primary} style={styles.matchesLoader} />
         ) : !userMatches || userMatches.length === 0 ? (
           <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
