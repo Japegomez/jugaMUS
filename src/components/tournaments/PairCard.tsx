@@ -12,9 +12,19 @@ type PairCardProps = {
   joinLabel?: string
   onJoin?: () => void
   joinLoading?: boolean
+  editLabel?: string
+  onEdit?: () => void
 }
 
-export function PairCard({ pair, subtitle, joinLabel, onJoin, joinLoading }: PairCardProps) {
+export function PairCard({
+  pair,
+  subtitle,
+  joinLabel,
+  onJoin,
+  joinLoading,
+  editLabel,
+  onEdit,
+}: PairCardProps) {
   const members = pairMemberLabels(pair)
 
   return (
@@ -26,15 +36,20 @@ export function PairCard({ pair, subtitle, joinLabel, onJoin, joinLoading }: Pai
         <Text style={styles.empty}>Sin jugadores</Text>
       )}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      {onJoin && joinLabel ? (
-        <Button
-          title={joinLabel}
-          variant="outline"
-          onPress={onJoin}
-          loading={joinLoading}
-          style={styles.joinBtn}
-        />
-      ) : null}
+      <View style={styles.actions}>
+        {onEdit && editLabel ? (
+          <Button title={editLabel} variant="secondary" onPress={onEdit} style={styles.actionBtn} />
+        ) : null}
+        {onJoin && joinLabel ? (
+          <Button
+            title={joinLabel}
+            variant="outline"
+            onPress={onJoin}
+            loading={joinLoading}
+            style={styles.actionBtn}
+          />
+        ) : null}
+      </View>
     </View>
   )
 }
@@ -52,5 +67,6 @@ const styles = StyleSheet.create({
   members: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
   empty: { fontSize: 14, color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' },
   subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 6 },
-  joinBtn: { marginTop: 12 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  actionBtn: { flexGrow: 1, minWidth: 120 },
 })
