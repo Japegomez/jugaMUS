@@ -727,10 +727,10 @@ export default function MatchDetailScreen() {
             {match.tournament_id && tournamentMeta ? (
               <Pressable
                 onPress={() => router.push(`/(tabs)/tournaments/${match.tournament_id}` as Href)}
-                style={s.tournamentBadge}
+                style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
                 accessibilityRole="button"
-                accessibilityLabel={`Torneo: ${tournamentMeta.title}`}>
-                <Text style={s.tournamentBadgeText}>🏆 {tournamentMeta.title}</Text>
+                accessibilityLabel={`Ir al torneo: ${tournamentMeta.title}`}>
+                <Text style={s.tournamentBadgeText}>🏆 Ir al torneo</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1124,13 +1124,14 @@ const s = StyleSheet.create({
   statusText: { fontSize: 12, fontFamily: Fonts.semiBold },
   tournamentBadge: {
     alignSelf: 'flex-start',
-    marginTop: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     backgroundColor: Colors.wonBackground,
   },
-  tournamentBadgeText: { fontSize: 12, fontFamily: Fonts.semiBold, color: Colors.primary },
+  tournamentBadgePressed: { opacity: 0.85 },
+  tournamentBadgeText: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.primary },
   infoBlock: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
