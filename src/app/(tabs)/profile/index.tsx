@@ -204,19 +204,22 @@ export default function ProfileScreen() {
         ) : !userMatches || userMatches.length === 0 ? (
           <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
         ) : (
-          <ScrollView
-            style={styles.matchHistoryScroll}
-            contentContainerStyle={styles.matchHistoryScrollContent}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator={userMatches.length > PROFILE_HISTORY_VISIBLE_ROWS}>
-            {userMatches.map((m) => (
-              <MatchHistoryRow
-                key={m.id}
-                match={m}
-                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-              />
-            ))}
-          </ScrollView>
+          <View style={styles.matchHistoryList}>
+            <ScrollView
+              style={styles.matchHistoryScroll}
+              contentContainerStyle={styles.matchHistoryScrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={userMatches.length > PROFILE_HISTORY_VISIBLE_ROWS}>
+              {userMatches.map((m, index) => (
+                <MatchHistoryRow
+                  key={m.id}
+                  match={m}
+                  isLast={index === userMatches.length - 1}
+                  onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+                />
+              ))}
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -275,7 +278,15 @@ export default function ProfileScreen() {
   )
 }
 
-function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
+function MatchHistoryRow({
+  match,
+  isLast,
+  onPress,
+}: {
+  match: UserMatchSummary
+  isLast: boolean
+  onPress: () => void
+}) {
   const status = matchStatusDisplay(match)
   const outcomeBg = matchHistoryBackground(match.outcome ?? null)
   const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
@@ -290,6 +301,7 @@ function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress:
     <Pressable
       style={({ pressed }) => [
         styles.matchRow,
+        isLast && styles.matchRowLast,
         outcomeBg != null && { backgroundColor: outcomeBg },
         pressed && styles.matchRowPressed,
       ]}
@@ -538,23 +550,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     textAlign: 'center',
   },
+  matchHistoryList: {
+    marginHorizontal: -16,
+    marginBottom: -4,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
   matchHistoryScroll: {
     maxHeight: PROFILE_HISTORY_VISIBLE_ROWS * PROFILE_HISTORY_ROW_HEIGHT,
   },
   matchHistoryScrollContent: {
-    paddingBottom: 2,
+    flexGrow: 1,
   },
   matchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    marginHorizontal: -10,
-    borderRadius: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
     gap: 10,
+  },
+  matchRowLast: {
+    borderBottomWidth: 0,
   },
   matchRowPressed: { opacity: 0.7 },
   matchRowMain: { flex: 1 },
