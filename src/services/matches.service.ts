@@ -1,8 +1,4 @@
 import { mapResultRpcError } from '@/services/results.service'
-import {
-  getUserTournamentsDashboard,
-  type UserTournamentSummary,
-} from '@/services/tournaments.service'
 import { supabase } from '@/lib/supabase'
 import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
@@ -754,8 +750,6 @@ export type MyMatchesDashboard = {
   upcoming: UserMatchSummary[]
   inProgress: UserMatchSummary[]
   awaitingResultValidation: AwaitingResultMatchRow[]
-  upcomingTournaments: UserTournamentSummary[]
-  inProgressTournaments: UserTournamentSummary[]
 }
 
 /**
@@ -838,10 +832,9 @@ async function listAwaitingResultValidationClientFallback(
  * and matches where the user must approve or dispute a submitted result.
  */
 export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
-  const [awaitingRes, matchSummaries, tournamentsRes] = await Promise.all([
+  const [awaitingRes, matchSummaries] = await Promise.all([
     supabase.rpc('list_matches_awaiting_my_result_action'),
     listUserMatchSummariesForDashboard(userId),
-    getUserTournamentsDashboard(userId),
   ])
 
   let awaitingResultValidation: AwaitingResultMatchRow[]
@@ -876,8 +869,6 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     upcoming,
     inProgress,
     awaitingResultValidation: awaitingWithPlaces,
-    upcomingTournaments: tournamentsRes.upcoming,
-    inProgressTournaments: tournamentsRes.inProgress,
   }
 }
 

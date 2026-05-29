@@ -38,7 +38,6 @@ export function useTournament(id: string) {
     queryFn: () => getTournament(id),
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })
@@ -50,7 +49,6 @@ export function useTournamentBracket(id: string) {
     queryFn: () => getTournamentBracket(id),
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })

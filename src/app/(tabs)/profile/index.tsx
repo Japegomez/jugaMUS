@@ -24,6 +24,11 @@ import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
+/** Visible rows in profile history before scrolling for older matches. */
+const PROFILE_HISTORY_VISIBLE_ROWS = 5
+/** Approximate row height (padding + title + meta + separator). */
+const PROFILE_HISTORY_ROW_HEIGHT = 58
+
 type NotifField = Pick<
   ProfileUpdate,
   | 'notify_email'
@@ -58,8 +63,8 @@ export default function ProfileScreen() {
   const signOut = useAuthStore((s) => s.signOut)
   const deleteAccount = useAuthStore((s) => s.deleteAccount)
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
-  const { data: profile, isLoading, isError } = useProfile(sessionUserId)
-  const { data: userMatches, isLoading: matchesLoading } = useUserMatches(sessionUserId)
+  const { data: profile, isPending: profilePending, isError } = useProfile(sessionUserId)
+  const { data: userMatches, isPending: matchesPending } = useUserMatches(sessionUserId)
   const updateProfile = useUpdateProfile()
   const [signingOut, setSigningOut] = useState(false)
   const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
@@ -104,7 +109,7 @@ export default function ProfileScreen() {
     }
   }
 
-  if (isLoading) {
+  if (profilePending && !profile) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -194,18 +199,27 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
-        {matchesLoading ? (
+        {matchesPending && !userMatches ? (
           <ActivityIndicator size="small" color={Colors.primary} style={styles.matchesLoader} />
         ) : !userMatches || userMatches.length === 0 ? (
           <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
         ) : (
-          userMatches.map((m) => (
-            <MatchHistoryRow
-              key={m.id}
-              match={m}
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))
+          <View style={styles.matchHistoryList}>
+            <ScrollView
+              style={styles.matchHistoryScroll}
+              contentContainerStyle={styles.matchHistoryScrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={userMatches.length > PROFILE_HISTORY_VISIBLE_ROWS}>
+              {userMatches.map((m, index) => (
+                <MatchHistoryRow
+                  key={m.id}
+                  match={m}
+                  isLast={index === userMatches.length - 1}
+                  onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+                />
+              ))}
+            </ScrollView>
+          </View>
         )}
       </View>
 
@@ -264,7 +278,15 @@ export default function ProfileScreen() {
   )
 }
 
-function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress: () => void }) {
+function MatchHistoryRow({
+  match,
+  isLast,
+  onPress,
+}: {
+  match: UserMatchSummary
+  isLast: boolean
+  onPress: () => void
+}) {
   const status = matchStatusDisplay(match)
   const outcomeBg = matchHistoryBackground(match.outcome ?? null)
   const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
@@ -279,6 +301,7 @@ function MatchHistoryRow({ match, onPress }: { match: UserMatchSummary; onPress:
     <Pressable
       style={({ pressed }) => [
         styles.matchRow,
+        isLast && styles.matchRowLast,
         outcomeBg != null && { backgroundColor: outcomeBg },
         pressed && styles.matchRowPressed,
       ]}
@@ -527,17 +550,31 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     textAlign: 'center',
   },
+  matchHistoryList: {
+    marginHorizontal: -16,
+    marginBottom: -4,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  matchHistoryScroll: {
+    maxHeight: PROFILE_HISTORY_VISIBLE_ROWS * PROFILE_HISTORY_ROW_HEIGHT,
+  },
+  matchHistoryScrollContent: {
+    flexGrow: 1,
+  },
   matchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    marginHorizontal: -10,
-    borderRadius: 10,
+    paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
     gap: 10,
+  },
+  matchRowLast: {
+    borderBottomWidth: 0,
   },
   matchRowPressed: { opacity: 0.7 },
   matchRowMain: { flex: 1 },
