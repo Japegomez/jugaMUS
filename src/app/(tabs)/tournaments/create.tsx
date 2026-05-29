@@ -158,27 +158,35 @@ export default function CreateTournamentScreen() {
 
   const handleAddPair = async (values: AddPairFormValues) => {
     if (!tournamentId || !userId) return
-    if (!values.name.trim()) {
-      Alert.alert('Error', 'El nombre de la pareja es obligatorio')
-      return
-    }
 
     const useSelfA = values.playerAIsSelf && !userAlreadyInPair
     const useSelfB = values.playerBIsSelf && !userAlreadyInPair && !useSelfA
+    const playerAUserId = useSelfA ? userId : null
+    const playerAText = useSelfA ? null : values.playerAText.trim() || null
+    const playerBUserId = useSelfB ? userId : null
+    const playerBText = useSelfB ? null : values.playerBText.trim() || null
+
+    const hasPlayerA = playerAUserId !== null || playerAText !== null
+    const hasPlayerB = playerBUserId !== null || playerBText !== null
+    if (!hasPlayerA && !hasPlayerB) {
+      Alert.alert('Error', 'Indica al menos un jugador para la pareja')
+      throw new Error('pair_players_required')
+    }
 
     try {
       const row = await addPair.mutateAsync({
         tournamentId,
-        name: values.name.trim(),
-        playerAUserId: useSelfA ? userId : null,
-        playerAText: useSelfA ? null : values.playerAText.trim() || null,
-        playerBUserId: useSelfB ? userId : null,
-        playerBText: useSelfB ? null : values.playerBText.trim() || null,
+        name: values.name.trim() || undefined,
+        playerAUserId,
+        playerAText,
+        playerBUserId,
+        playerBText,
       })
       setPairs((prev) => [...prev, row])
       setPairModalOpen(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo añadir la pareja')
+      throw err
     }
   }
 
