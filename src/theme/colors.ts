@@ -14,6 +14,9 @@ export const Colors = {
   statusUpcoming: '#767676',
   wonBackground: '#F3FAF6',
   lostBackground: '#FDF5F5',
+  /** Profile match history — slightly stronger tint than generic won/lost surfaces. */
+  historyWonBackground: '#D4EDDF',
+  historyLostBackground: '#F8D4D4',
   admin: '#2C5282',
   switchTrackOff: '#CFCFCF',
 } as const

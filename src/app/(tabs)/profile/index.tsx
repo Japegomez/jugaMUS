@@ -24,6 +24,11 @@ import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
+/** Visible rows in profile history before scrolling for older matches. */
+const PROFILE_HISTORY_VISIBLE_ROWS = 5
+/** Approximate row height (padding + title + meta + separator). */
+const PROFILE_HISTORY_ROW_HEIGHT = 58
+
 type NotifField = Pick<
   ProfileUpdate,
   | 'notify_email'
@@ -199,13 +204,19 @@ export default function ProfileScreen() {
         ) : !userMatches || userMatches.length === 0 ? (
           <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
         ) : (
-          userMatches.map((m) => (
-            <MatchHistoryRow
-              key={m.id}
-              match={m}
-              onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-            />
-          ))
+          <ScrollView
+            style={styles.matchHistoryScroll}
+            contentContainerStyle={styles.matchHistoryScrollContent}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={userMatches.length > PROFILE_HISTORY_VISIBLE_ROWS}>
+            {userMatches.map((m) => (
+              <MatchHistoryRow
+                key={m.id}
+                match={m}
+                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
+              />
+            ))}
+          </ScrollView>
         )}
       </View>
 
@@ -526,6 +537,12 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     paddingVertical: 12,
     textAlign: 'center',
+  },
+  matchHistoryScroll: {
+    maxHeight: PROFILE_HISTORY_VISIBLE_ROWS * PROFILE_HISTORY_ROW_HEIGHT,
+  },
+  matchHistoryScrollContent: {
+    paddingBottom: 2,
   },
   matchRow: {
     flexDirection: 'row',

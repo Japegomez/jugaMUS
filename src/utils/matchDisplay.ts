@@ -37,8 +37,8 @@ export function resolveMatchOutcome(match: {
 }
 
 export function matchHistoryBackground(outcome: MatchOutcome): string | undefined {
-  if (outcome === 'won') return Colors.wonBackground
-  if (outcome === 'lost') return Colors.lostBackground
+  if (outcome === 'won') return Colors.historyWonBackground
+  if (outcome === 'lost') return Colors.historyLostBackground
   return undefined
 }
 
