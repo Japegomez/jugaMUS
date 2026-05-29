@@ -7,6 +7,7 @@ import {
   getMatch,
   getMyMatchesDashboard,
   getUserMatches,
+  getViewableUserMatches,
   joinMatch,
   leaveMatch,
   listPublicMatchesPage,
@@ -40,6 +41,10 @@ export function matchResultQueryKey(matchId: string, viewerUserId?: string | nul
 
 export function userMatchesQueryKey(userId: string) {
   return ['user-matches', userId] as const
+}
+
+export function viewableUserMatchesQueryKey(userId: string) {
+  return ['viewable-user-matches', userId] as const
 }
 
 export function myMatchesDashboardQueryKey(userId: string) {
@@ -123,6 +128,15 @@ export function useUserMatches(userId?: string) {
     enabled: Boolean(resolvedId),
     ...TAB_SCREEN_QUERY_OPTIONS,
     refetchOnReconnect: true,
+  })
+}
+
+export function useViewableUserMatches(userId?: string) {
+  return useQuery({
+    queryKey: viewableUserMatchesQueryKey(userId ?? ''),
+    queryFn: () => getViewableUserMatches(userId!),
+    enabled: Boolean(userId),
+    ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }
 

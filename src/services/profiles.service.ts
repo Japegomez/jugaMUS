@@ -28,6 +28,13 @@ export type PublicProfileRow = {
   city: string | null
 }
 
+export type ViewableUserProfile = {
+  id: string
+  display_name: string
+  city: string | null
+  phone_e164: string | null
+}
+
 export type ProfileUpdate = Pick<
   TablesUpdate<'profiles'>,
   | 'display_name'
@@ -76,6 +83,18 @@ export async function getPublicProfile(profileId: string): Promise<PublicProfile
   if (!data || data.length === 0) return null
 
   return data[0] as PublicProfileRow
+}
+
+/** Profile card for another user (PII gated server-side). */
+export async function getViewableUserProfile(userId: string): Promise<ViewableUserProfile | null> {
+  const { data, error } = await supabase.rpc('get_viewable_user_profile', {
+    p_user_id: userId,
+  })
+
+  if (error) throw new Error(error.message)
+  if (!data || data.length === 0) return null
+
+  return data[0] as ViewableUserProfile
 }
 
 export async function updateProfile(userId: string, updates: ProfileUpdate): Promise<ProfileRow> {

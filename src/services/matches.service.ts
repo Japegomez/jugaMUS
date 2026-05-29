@@ -667,6 +667,57 @@ export async function getUserMatches(userId: string): Promise<UserMatchSummary[]
     .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
 }
 
+type ViewableUserMatchRow = {
+  id: string
+  title: string
+  start_at: string
+  city: string
+  place_defined: boolean
+  place_text: string | null
+  status: string
+  visibility: string
+  creator_id: string
+  user_team: string | null
+  team_a_games: number | null
+  team_b_games: number | null
+}
+
+/** Match history for another user, limited to matches the viewer can read. */
+export async function getViewableUserMatches(userId: string): Promise<UserMatchSummary[]> {
+  const { data, error } = await supabase.rpc('list_user_viewable_matches', {
+    p_user_id: userId,
+  })
+
+  if (error) throw new Error(error.message)
+
+  return ((data ?? []) as ViewableUserMatchRow[]).map((row) => {
+    const user_team = row.user_team === 'A' || row.user_team === 'B' ? row.user_team : null
+    const team_a_games = row.team_a_games ?? null
+    const team_b_games = row.team_b_games ?? null
+    const outcome = resolveMatchOutcome({
+      status: row.status,
+      user_team,
+      team_a_games,
+      team_b_games,
+    })
+    return {
+      id: row.id,
+      title: row.title,
+      start_at: row.start_at,
+      city: row.city,
+      place_defined: row.place_defined,
+      place_text: row.place_text,
+      status: row.status,
+      visibility: row.visibility,
+      creator_id: row.creator_id,
+      user_team,
+      team_a_games,
+      team_b_games,
+      outcome,
+    }
+  })
+}
+
 const USER_MATCH_SUMMARY_SELECT =
   'id, title, start_at, city, place_defined, place_text, status, visibility, creator_id'
 

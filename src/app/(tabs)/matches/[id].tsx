@@ -81,8 +81,17 @@ function ParticipantCard({
   currentUserId,
   onReportUser,
 }: ParticipantCardProps) {
+  const router = useRouter()
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
+  const canOpenProfile = Boolean(
+    participant.user_id && currentUserId && participant.user_id !== currentUserId
+  )
+
+  const handleOpenProfile = () => {
+    if (!canOpenProfile) return
+    router.push(`/(tabs)/profile/${participant.user_id}` as Href)
+  }
 
   const handleRevealPhone = async () => {
     if (!canRevealPhone) return
@@ -100,17 +109,26 @@ function ParticipantCard({
 
   return (
     <View style={card.wrap}>
-      {p.photo_url ? (
-        <Image source={{ uri: p.photo_url }} style={card.avatar} />
-      ) : (
-        <View style={card.avatarPlaceholder}>
-          <Text style={card.avatarInitial}>{p.display_name.charAt(0).toUpperCase()}</Text>
+      <Pressable
+        style={({ pressed }) => [card.profileTap, pressed && card.profileTapPressed]}
+        onPress={canOpenProfile ? handleOpenProfile : undefined}
+        disabled={!canOpenProfile}
+        accessibilityRole={canOpenProfile ? 'button' : undefined}
+        accessibilityLabel={canOpenProfile ? `Ver perfil de ${p.display_name}` : undefined}>
+        {p.photo_url ? (
+          <Image source={{ uri: p.photo_url }} style={card.avatar} />
+        ) : (
+          <View style={card.avatarPlaceholder}>
+            <Text style={card.avatarInitial}>{p.display_name.charAt(0).toUpperCase()}</Text>
+          </View>
+        )}
+        <View style={card.info}>
+          <Text style={[card.name, canOpenProfile && card.nameLink]}>{p.display_name}</Text>
+          {p.city ? <Text style={card.city}>{p.city}</Text> : null}
         </View>
-      )}
-      <View style={card.info}>
-        <Text style={card.name}>{p.display_name}</Text>
-        {p.city ? <Text style={card.city}>{p.city}</Text> : null}
-        {canRevealPhone && (
+      </Pressable>
+      <View style={card.actions}>
+        {canRevealPhone ? (
           <>
             {fullProfile?.phone_e164 ? (
               <Text style={card.phone}>{fullProfile.phone_e164}</Text>
@@ -120,7 +138,7 @@ function ParticipantCard({
               </Pressable>
             )}
           </>
-        )}
+        ) : null}
         {currentUserId && participant.user_id !== currentUserId && onReportUser ? (
           <Pressable
             onPress={() => onReportUser(participant.user_id, p.display_name)}
@@ -138,7 +156,7 @@ function ParticipantCard({
 const card = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 14,
     backgroundColor: Colors.surface,
@@ -146,6 +164,20 @@ const card = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 8,
+  },
+  profileTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  profileTapPressed: { opacity: 0.75 },
+  actions: {
+    flexShrink: 0,
+    alignItems: 'flex-end',
+    gap: 4,
+    maxWidth: '42%',
   },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarPlaceholder: {
@@ -157,8 +189,9 @@ const card = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarInitial: { color: Colors.white, fontSize: 16, fontFamily: Fonts.bold },
-  info: { flex: 1, marginLeft: 12 },
+  info: { flex: 1, marginLeft: 12, minWidth: 0 },
   name: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+  nameLink: { color: Colors.primary },
   city: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   phone: { fontSize: 13, color: Colors.primary, marginTop: 3, fontFamily: Fonts.medium },
   revealPhone: {
