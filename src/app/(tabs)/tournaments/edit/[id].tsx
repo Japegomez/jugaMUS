@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -66,9 +66,27 @@ export default function EditTournamentScreen() {
   const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
 
+  const closeToTournament = () => {
+    if (!id) {
+      router.back()
+      return
+    }
+    router.replace(`/(tabs)/tournaments/${id}` as Href)
+  }
+
   if (isLoading || !tournament) {
     return (
-      <View style={s.centered}>
+      <View style={[s.centered, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+        <View style={s.closeBar}>
+          <View style={s.closeBarSpacer} />
+          <Pressable
+            onPress={closeToTournament}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar edición">
+            <Text style={s.closeX}>✕</Text>
+          </Pressable>
+        </View>
         <Text>Cargando…</Text>
       </View>
     )
@@ -76,9 +94,19 @@ export default function EditTournamentScreen() {
 
   if (tournament.status !== TOURNAMENT_STATUS.REGISTRATION) {
     return (
-      <View style={s.centered}>
+      <View style={[s.centered, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+        <View style={s.closeBar}>
+          <View style={s.closeBarSpacer} />
+          <Pressable
+            onPress={closeToTournament}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar edición">
+            <Text style={s.closeX}>✕</Text>
+          </Pressable>
+        </View>
         <Text style={s.error}>Solo se puede editar antes de organizar el cuadro.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeToTournament} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -98,7 +126,7 @@ export default function EditTournamentScreen() {
           visibility: values.visibility,
         },
       })
-      router.back()
+      closeToTournament()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar')
     }
@@ -107,8 +135,18 @@ export default function EditTournamentScreen() {
   return (
     <ScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}
       keyboardShouldPersistTaps="handled">
+      <View style={s.closeBar}>
+        <View style={s.closeBarSpacer} />
+        <Pressable
+          onPress={closeToTournament}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar edición">
+          <Text style={s.closeX}>✕</Text>
+        </Pressable>
+      </View>
       <Text style={s.heading}>Editar torneo</Text>
       <Controller
         control={control}
@@ -222,6 +260,14 @@ const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  closeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    marginHorizontal: -4,
+  },
+  closeBarSpacer: { flex: 1 },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   error: { color: Colors.textSecondary, textAlign: 'center' },
   heading: { fontSize: 22, fontFamily: Fonts.bold, marginBottom: 16 },
   row: {
