@@ -13,21 +13,15 @@ import {
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
+import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useUserMatches } from '@/hooks/useMatches'
 import type { ProfileUpdate } from '@/services/profiles.service'
-import type { UserMatchSummary } from '@/services/matches.service'
-import { displayMatchTitle, matchHistoryBackground, matchStatusDisplay } from '@/utils/matchDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
-
-/** Visible rows in profile history before scrolling for older matches. */
-const PROFILE_HISTORY_VISIBLE_ROWS = 5
-/** Approximate row height (padding + title + meta + separator). */
-const PROFILE_HISTORY_ROW_HEIGHT = 58
 
 type NotifField = Pick<
   ProfileUpdate,
@@ -199,28 +193,12 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
-        {matchesPending && !userMatches ? (
-          <ActivityIndicator size="small" color={Colors.primary} style={styles.matchesLoader} />
-        ) : !userMatches || userMatches.length === 0 ? (
-          <Text style={styles.matchesEmpty}>Aún no has participado en ninguna partida</Text>
-        ) : (
-          <View style={styles.matchHistoryList}>
-            <ScrollView
-              style={styles.matchHistoryScroll}
-              contentContainerStyle={styles.matchHistoryScrollContent}
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={userMatches.length > PROFILE_HISTORY_VISIBLE_ROWS}>
-              {userMatches.map((m, index) => (
-                <MatchHistoryRow
-                  key={m.id}
-                  match={m}
-                  isLast={index === userMatches.length - 1}
-                  onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        <MatchHistoryList
+          matches={userMatches}
+          loading={matchesPending}
+          emptyMessage="Aún no has participado en ninguna partida"
+          onMatchPress={(matchId) => router.push(`/(tabs)/matches/${matchId}`)}
+        />
       </View>
 
       <View style={styles.card}>
@@ -275,51 +253,6 @@ export default function ProfileScreen() {
         onConfirm={onDeleteAccount}
       />
     </ScrollView>
-  )
-}
-
-function MatchHistoryRow({
-  match,
-  isLast,
-  onPress,
-}: {
-  match: UserMatchSummary
-  isLast: boolean
-  onPress: () => void
-}) {
-  const status = matchStatusDisplay(match)
-  const outcomeBg = matchHistoryBackground(match.outcome ?? null)
-  const dateStr = new Date(match.start_at).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-  const outcomeHint =
-    match.outcome === 'won' ? ', victoria' : match.outcome === 'lost' ? ', derrota' : ''
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.matchRow,
-        isLast && styles.matchRowLast,
-        outcomeBg != null && { backgroundColor: outcomeBg },
-        pressed && styles.matchRowPressed,
-      ]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${displayMatchTitle(match)}${outcomeHint}`}>
-      <View style={styles.matchRowMain}>
-        <Text style={styles.matchTitle} numberOfLines={1}>
-          {displayMatchTitle(match)}
-        </Text>
-        <Text style={styles.matchMeta}>
-          {dateStr} · {match.city}
-        </Text>
-      </View>
-      <View style={[styles.matchBadge, { borderColor: status.color }]}>
-        <Text style={[styles.matchBadgeText, { color: status.color }]}>{status.text}</Text>
-      </View>
-    </Pressable>
   )
 }
 
@@ -543,48 +476,4 @@ const styles = StyleSheet.create({
   deleteAccountBtn: {
     marginTop: -4,
   },
-  matchesLoader: { marginVertical: 12 },
-  matchesEmpty: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    paddingVertical: 12,
-    textAlign: 'center',
-  },
-  matchHistoryList: {
-    marginHorizontal: -16,
-    marginBottom: -4,
-    overflow: 'hidden',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  matchHistoryScroll: {
-    maxHeight: PROFILE_HISTORY_VISIBLE_ROWS * PROFILE_HISTORY_ROW_HEIGHT,
-  },
-  matchHistoryScrollContent: {
-    flexGrow: 1,
-  },
-  matchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Colors.border,
-    gap: 10,
-  },
-  matchRowLast: {
-    borderBottomWidth: 0,
-  },
-  matchRowPressed: { opacity: 0.7 },
-  matchRowMain: { flex: 1 },
-  matchTitle: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
-  matchMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  matchBadge: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  matchBadgeText: { fontSize: 11, fontFamily: Fonts.semiBold },
 })

@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 26/05/2026 (cierre de sesión — release Android Play, CI/EAS, ficha Play)
+> Actualizado: 29/05/2026 (perfil ajeno + edición de parejas en torneo)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -133,6 +133,9 @@
 - [x] Lógica de unirse a partida con selección de equipo
 - [x] Constraint: máximo 2 confirmados por equipo
 - [x] Historial de partidas del usuario (sección en pantalla de perfil)
+- [x] **Perfil de otro usuario** (`/(tabs)/profile/[userId]`): nombre, ciudad, teléfono (si comparten partida confirmada) e historial navegable a detalle de partida
+- [x] Acceso al perfil ajeno desde la tarjeta de participante registrado en detalle de partida
+- [x] RPCs `get_viewable_user_profile` y `list_user_viewable_matches` (migración `056`); componente compartido `MatchHistoryList` (PR #57)
 
 ### F5 - Descubrir y filtrar
 
@@ -314,6 +317,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Crear/editar partida y torneo: lugar obligatorio o casilla «Lugar por definir»
 - [x] Sincronización multi-dispositivo: refetch al foco, polling 30 s y pull-to-refresh en detalle torneo
 - [x] Test unitario `buildBracketLayout`
+- [x] **Editar y eliminar parejas** en detalle del torneo (organizador, inscripción abierta, sin cuadro): modal `EditPairModal`; RPCs `update_tournament_pair` / `remove_tournament_pair` (migración `055`, PR #56)
+- [x] Enlace **🏆 Ir al torneo** en ficha de partida del cuadro (chip con estilo previo, tamaño ampliado)
 
 ### F11 - Pendiente / opcional
 

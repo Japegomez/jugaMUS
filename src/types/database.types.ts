@@ -985,6 +985,32 @@ export type Database = {
           photo_url: string
         }[]
       }
+      get_viewable_user_profile: {
+        Args: { p_user_id: string }
+        Returns: {
+          city: string
+          display_name: string
+          id: string
+          phone_e164: string
+        }[]
+      }
+      list_user_viewable_matches: {
+        Args: { p_user_id: string }
+        Returns: {
+          city: string
+          creator_id: string
+          id: string
+          place_defined: boolean
+          place_text: string
+          start_at: string
+          status: string
+          team_a_games: number
+          team_b_games: number
+          title: string
+          user_team: string
+          visibility: string
+        }[]
+      }
       join_tournament_pair: {
         Args: { p_as_text?: string; p_pair_id: string; p_slot: string }
         Returns: {

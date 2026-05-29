@@ -19,7 +19,8 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Notificaciones en perfil (may. 2026):** preferencias por **canal** (email, push) y por **evento** (unión, cambio de partida, resultado, recordatorios) editables en la pantalla de perfil; enlaces legales (términos, privacidad) en la misma pantalla.
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand. Pendiente commit/PR desde rama `feature/ui-redesign`.
-- **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final. Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Cache de torneos: refetch al foco + polling 30 s en detalle (multi-dispositivo).
+- **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final. Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Cache de torneos: refetch al foco + polling 30 s en detalle (multi-dispositivo). **Edición de parejas (may. 2026):** el organizador puede editar nombre opcional y plazas en texto, o eliminar parejas, solo en fase de inscripción y antes de generar el cuadro (RPCs `update_tournament_pair` / `remove_tournament_pair`, migración `055`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
+- **Perfil ajeno (may. 2026):** pantalla de solo lectura `/(tabs)/profile/[userId]` con nombre, ciudad y teléfono (visible si el visitante comparte partida confirmada con ese usuario, o reglas equivalentes de `get_public_profile`). Historial de partidas del usuario mostrado limitado a las que el visitante puede leer; cada fila abre el detalle de la partida. Acceso desde el nombre/avatar de un participante registrado en la ficha de partida. RPCs `get_viewable_user_profile` y `list_user_viewable_matches` (migración `056`).
 - **Marcador en vivo (may. 2026):** pantalla «Llevar la cuenta» en partidas `in_progress`; estado persistido **solo en el dispositivo** (AsyncStorage / `localStorage`). Incluye fases del mus, envites, órdago y ajuste de puntos. «Registrar resultado» abre el modal con juegos pre-rellenados desde el marcador. No hay sync multi-dispositivo ni persistencia en servidor hasta enviar el resultado oficial.
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Detalle de partida refetch al foco para coherencia con Mis partidas.
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
@@ -92,7 +93,8 @@ Solo dos roles en el MVP:
   - **Canal:** email y/o push
   - **Por evento:** unión a partida, edición/cancelación, resultado, recordatorios (columnas `notify_on_*` en `profiles`, migración `022`)
 - Enlaces a términos y política de privacidad desde el perfil
-- **El teléfono solo es visible para participantes de la misma partida confirmada**
+- **Perfil de otro usuario (solo lectura):** nombre, ciudad, teléfono según permisos del servidor e historial de partidas visibles; navegación desde participantes registrados en detalle de partida
+- **El teléfono solo es visible para participantes de la misma partida confirmada** (también en perfil ajeno vía RPC)
 - Opción de ocultar ubicación exacta a no participantes
 - Eliminación de cuenta con confirmación modal (`DeleteAccountModal`)
 
@@ -616,6 +618,24 @@ Supabase (PostgreSQL + Auth + Storage)
 
 - CA_MON1: Los health checks verifican servicios críticos cada 5 minutos
 - CA_MON2: Las métricas de performance se capturan en cliente (Sentry) y servidor (Supabase logs)
+
+### Fase 4 — Torneos (ampliación may. 2026)
+
+**Parejas e inscripción**
+
+- CA_TOUR1: El organizador puede editar una pareja (nombre opcional, jugadores en texto) mientras el torneo está en inscripción y no se ha generado el cuadro
+- CA_TOUR2: El organizador puede eliminar una pareja en las mismas condiciones; las plazas con cuenta registrada no son editables en texto
+- CA_TOUR3: Tras generar el cuadro o fuera de inscripción, no se ofrecen acciones de edición/eliminación de parejas
+
+**Navegación**
+
+- CA_TOUR4: En el detalle de un partido perteneciente a un torneo, un enlace **🏆 Ir al torneo** lleva al detalle de ese torneo
+
+**Perfil ajeno**
+
+- CA_PROF5: Un usuario autenticado puede abrir el perfil de otro jugador registrado desde la ficha de partida
+- CA_PROF6: El perfil ajeno muestra historial de partidas filtrado por lo que el visitante puede leer; al pulsar una fila se abre el detalle de la partida
+- CA_PROF7: Sin permiso de visibilidad, el perfil ajeno no expone datos (pantalla de error o vacía)
 
 ---
 
