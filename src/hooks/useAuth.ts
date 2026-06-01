@@ -14,6 +14,9 @@ let authSubscription: { unsubscribe: () => void } | null = null
 function userFacingAuthError(error: { message: string; status?: number }): Error {
   const msg = error.message ?? ''
   const st = typeof error.status === 'number' ? error.status : undefined
+  if (/invalid login credentials|invalid_credentials/i.test(msg)) {
+    return new Error('Email o contraseña incorrectos')
+  }
   if (st === 429 || /429|rate limit|too many requests|too_many|over_email_send/i.test(msg)) {
     return new Error(
       'Límite temporal alcanzado (demasiadas peticiones). Espera 1–2 minutos, no pulses repetir varias veces, o prueba otra red. En cuentas de prueba, desactivar la confirmación por email en Supabase reduce estos límites.'

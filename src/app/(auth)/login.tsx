@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   KeyboardAvoidingView,
@@ -28,6 +28,7 @@ export default function LoginScreen() {
   const signInWithApple = useAuthStore((s) => s.signInWithApple)
   const lastAuthMessage = useAuthStore((s) => s.lastAuthMessage)
   const clearLastAuthMessage = useAuthStore((s) => s.clearLastAuthMessage)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const {
     control,
@@ -45,9 +46,10 @@ export default function LoginScreen() {
   }, [lastAuthMessage, clearLastAuthMessage])
 
   const onSubmit = handleSubmit(async (values) => {
+    setFormError(null)
     const { error } = await signInWithPassword(values.email, values.password)
     if (error) {
-      Alert.alert('Error de acceso', 'Email o contraseña incorrectos')
+      setFormError(error.message)
     }
   })
 
@@ -79,6 +81,12 @@ export default function LoginScreen() {
         <Text style={styles.heading}>{APP_DISPLAY_NAME}</Text>
         <Text style={styles.sub}>Inicia sesión para continuar</Text>
 
+        {formError ? (
+          <View style={styles.formError} accessibilityRole="alert">
+            <Text style={styles.formErrorText}>{formError}</Text>
+          </View>
+        ) : null}
+
         <Controller
           control={control}
           name="email"
@@ -90,7 +98,10 @@ export default function LoginScreen() {
               keyboardType="email-address"
               value={value}
               onBlur={onBlur}
-              onChangeText={onChange}
+              onChangeText={(text) => {
+                setFormError(null)
+                onChange(text)
+              }}
               error={errors.email?.message}
             />
           )}
@@ -106,7 +117,10 @@ export default function LoginScreen() {
               autoComplete="password"
               value={value}
               onBlur={onBlur}
-              onChangeText={onChange}
+              onChangeText={(text) => {
+                setFormError(null)
+                onChange(text)
+              }}
               error={errors.password?.message}
             />
           )}
@@ -169,6 +183,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.textSecondary,
     marginBottom: 28,
+  },
+  formError: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+    marginTop: -12,
+  },
+  formErrorText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.danger,
+    textAlign: 'center',
   },
   linkForgot: {
     alignSelf: 'flex-end',
