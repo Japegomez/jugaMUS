@@ -1,7 +1,6 @@
-name: Release (Android)
+name: Release
 
-# Pipeline: quality → EAS build → Google Play submit.
-# iOS omitido hasta Apple Developer Program.
+# Pipeline: quality → EAS build (Android + iOS) → submit (Play + App Store Connect / TestFlight).
 on:
   push:
     branches: [main]
@@ -35,7 +34,32 @@ jobs:
       - name: Build Android (production)
         run: eas build --profile production --platform android --non-interactive
 
-  submit:
+  build-ios:
+    name: EAS Build — iOS
+    runs-on: ubuntu-latest
+    needs: [quality]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS (production)
+        run: eas build --profile production --platform ios --non-interactive
+
+  submit-android:
     name: EAS Submit — Google Play
     runs-on: ubuntu-latest
     needs: [build-android]
@@ -66,3 +90,29 @@ jobs:
 
       - name: Submit to Google Play
         run: eas submit --platform android --latest --non-interactive
+
+  submit-ios:
+    name: EAS Submit — App Store Connect
+    runs-on: ubuntu-latest
+    needs: [build-ios]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo & EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # ASC API key stored in EAS (from eas submit / --auto-submit). Requires EXPO_TOKEN only.
+      - name: Submit to App Store Connect (TestFlight)
+        run: eas submit --platform ios --latest --non-interactive
