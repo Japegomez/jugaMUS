@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 29/05/2026 (perfil ajeno + edición de parejas en torneo)
+> Actualizado: 31/05/2026 (revisión de pendientes; PR #59 mergeado en develop)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -63,7 +63,9 @@
   - Redirects típicos: `exp://**` (Expo Go), `jugamus://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
 - [x] Login con Apple ID (OAuth via Supabase)
   - iOS: `signInWithIdToken` + `expo-apple-authentication`. Web: OAuth Supabase.
-  - **Pendiente manual:** Manual-3 y Manual-4 del plan (Apple Developer y Supabase provider).
+  - Apple Developer: App ID `com.javiwacho.musapp` (Sign In with Apple + Push), Services ID `com.javiwacho.musapp.signin` (web/OAuth futuro).
+  - Supabase: provider Apple activo **solo iOS nativo** (`Client IDs`: `com.javiwacho.musapp`; sin JWT/secret OAuth).
+  - **Pendiente:** probar Sign in with Apple en build TestFlight (dispositivo físico).
 - [x] Persistencia de sesión entre cierres de la app
   - `persistSession: true`; `src/lib/authStorage.ts` (web: `localStorage`, nativo: AsyncStorage compatible Expo Go).
 - [x] Redirección automática: usuarios autenticados → pantalla principal, no autenticados → login
@@ -159,8 +161,10 @@
 - [x] Icono de app y splash screen (baraja española minimalista)
   - Assets unificados en `assets/` (`icon`, `adaptive-icon`, `splash-icon`, `favicon`); fondo de marca `#1a5f4a` en `app.json`.
   - PR #20 mergeado en `develop`.
-- [ ] Configurar Expo EAS Build para iOS
-  - **Bloqueado:** requiere Apple Developer Program (cuenta de pago). Reanudar cuando haya membresía activa.
+- [x] Configurar Expo EAS Build para iOS
+  - Primer build `production` iOS + `--auto-submit` a App Store Connect (TestFlight). `eas.json`: `ascAppId` `6775626292`, `appleTeamId`, `ios.autoIncrement`.
+  - `app.json`: `ITSAppUsesNonExemptEncryption: false` (export compliance).
+  - **Pendiente:** QA en TestFlight (login Apple, push, flujos core).
 
 ---
 
@@ -205,10 +209,11 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Android (FCM):** Firebase para `com.javiwacho.musapp`; `google-services.json` local (gitignored). En EAS: `eas env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment production --visibility secret` (obligatorio para builds en la nube / CI).
 - [x] **Sentry source maps (EAS):** `SENTRY_AUTH_TOKEN` en entorno EAS `production` (subida de source maps en Gradle). Documentado en `.env.example` / TASKS.
 - [ ] **Sentry en runtime (app):** opcional `EXPO_PUBLIC_SENTRY_DSN` en EAS `production` para reportar crashes en dashboard (sin DSN, `enabled: false` en `sentry.ts`).
-- [ ] **iOS (APNs):** crear Push Notifications key (`.p8`) en Apple Developer y configurarla en `eas credentials` (iOS) con Key ID y Team ID.
-  - **Pendiente:** mismo bloqueo que EAS iOS (Apple Developer Program).
+- [x] **iOS (APNs):** Push Notifications key (`.p8`) en Apple Developer
+  - Key creada en portal Apple (may. 2026). EAS suele haberla subido en el primer build iOS.
+  - **Pendiente QA:** validar recepción de push en iPhone (TestFlight); si falla, revisar `eas credentials` → iOS → Push Key.
 - [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
-  - **Pendiente:** validación push end-to-end en dispositivo físico si aún no se ha hecho; iOS cuando exista programa Apple.
+  - **Pendiente:** validación push end-to-end en dispositivo físico (Android e iOS en TestFlight).
 
 ### F7 - Resultados
 
@@ -232,11 +237,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON` (clave JSON de **cuenta de servicio** en Google Cloud: `type`, `private_key`, `client_email` — **no** `google-services.json` de Firebase). Variables EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`.
   - PRs mergeados en `develop`: slug EAS `musapp`, `appVersionSource: remote`, `app.config.js` + `GOOGLE_SERVICES_JSON`, validación JSON Play submit, `npm ci` antes de `eas submit`.
 - [ ] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`.
-  - Pendiente: `eas env:create production` para cada una; **nuevo build** tras añadirlas (no basta reinstalar el AAB actual).
-- [ ] Configurar EAS Submit para publicación automática en App Store
-  - **Bloqueado** hasta Apple Developer Program; reañadir job iOS al workflow cuando proceda.
+  - Confirmar con `eas env:list --environment production`; **nuevo build** tras añadirlas.
+- [x] Configurar EAS Submit para publicación automática en App Store
+  - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
+  - **Pendiente:** merge `develop` → `main` y confirmar primer run del workflow Release en GitHub Actions.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
-  - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android → submit Play. Tests iniciales en `src/utils/validators.test.ts` (E.164).
+  - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android/iOS → submit Play + TestFlight (iOS tras merge #59). Tests iniciales en `src/utils/validators.test.ts` (E.164).
 
 ---
 
@@ -372,11 +378,25 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] App instalable vía enlace de testers internos (`com.javiwacho.musapp`)
 - [x] Páginas legales en `docs/` para GitHub Pages (privacidad, eliminación de cuenta; contacto `japenago@gmail.com`) — PR #40 / #41
 - [x] Recursos gráficos Play: `assets/play-store/icon-512.png`, `feature-graphic-1024x500.png` + script `export-play-store-graphics.mjs`
-- [ ] Activar **GitHub Pages** (`/docs`) y pegar URLs en ficha Play
+- [x] Activar **GitHub Pages** (`/docs`) — live en `https://japegomez.github.io/jugaMUS/`
+  - **Pendiente:** pegar URLs de privacidad/eliminación en fichas Play y App Store si aún no están.
 - [ ] Completar ficha Play (textos, capturas, clasificación, política de privacidad)
 - [x] Corregir arranque en release (código): `edgeToEdgeEnabled: false`, SplashScreen hasta cargar fuentes
 - [ ] Variables `EXPO_PUBLIC_*` en EAS + nuevo build `production` + validar login en dispositivo (p. ej. Android 11)
 - [ ] PR `main` → `develop` para alinear historial tras releases
+
+---
+
+## Release iOS — App Store / TestFlight (may. 2026)
+
+- [x] Apple Developer Program activo; App ID `com.javiwacho.musapp` (Sign In with Apple + Push)
+- [x] App creada en App Store Connect (`ascAppId` `6775626292`)
+- [x] Primer build iOS `production` + submit a TestFlight (`eas build --platform ios --auto-submit`)
+- [x] Textos App Store redactados (promocional, descripción, keywords, URL soporte/privacidad)
+- [x] PR #59 mergeado en `develop` (pipeline CI iOS)
+- [ ] Validar workflow Release en `main` (requiere merge `develop` → `main`)
+- [ ] Testing interno TestFlight: Sign in with Apple, push, partidas/torneos (QA manual en dispositivo)
+- [ ] Completar ficha App Store Connect (pegar textos, capturas, App Privacy) y **Submit for Review**
 
 ---
 

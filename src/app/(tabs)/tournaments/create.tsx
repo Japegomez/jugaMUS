@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
+import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
@@ -16,7 +17,14 @@ import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { MATCH_VISIBILITY } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
-import { useAddTournamentPair, useCreateTournament } from '@/hooks/useTournaments'
+import {
+  useAddTournamentPair,
+  useCreateTournament,
+  useRemoveTournamentPair,
+  useUpdateTournamentPair,
+} from '@/hooks/useTournaments'
+import { isTournamentPairComplete, type TournamentPairRow } from '@/services/tournaments.service'
+import { confirmAlert, showAlert } from '@/utils/alert'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -88,20 +96,14 @@ export default function CreateTournamentScreen() {
   const userId = useAuthStore((s) => s.session?.user.id)
   const createTournament = useCreateTournament()
   const addPair = useAddTournamentPair()
+  const updatePair = useUpdateTournamentPair()
+  const removePair = useRemoveTournamentPair()
 
   const [step, setStep] = useState<1 | 2>(1)
   const [tournamentId, setTournamentId] = useState<string | null>(null)
-  const [pairs, setPairs] = useState<
-    Array<{
-      id: string
-      name: string
-      player_a_user_id: string | null
-      player_a_text: string | null
-      player_b_user_id: string | null
-      player_b_text: string | null
-    }>
-  >([])
+  const [pairs, setPairs] = useState<TournamentPairRow[]>([])
   const [pairModalOpen, setPairModalOpen] = useState(false)
+  const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
 
   const userAlreadyInPair = Boolean(
     userId && pairs.some((p) => p.player_a_user_id === userId || p.player_b_user_id === userId)
@@ -126,6 +128,7 @@ export default function CreateTournamentScreen() {
         setTournamentId(null)
         setPairs([])
         setPairModalOpen(false)
+        setEditingPair(null)
         reset(createDefaultFormValues())
       }
     }, [reset])
@@ -187,6 +190,46 @@ export default function CreateTournamentScreen() {
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo añadir la pareja')
       throw err
+    }
+  }
+
+  const handleEditPair = async (values: EditPairFormValues) => {
+    if (!editingPair || !tournamentId) return
+    try {
+      const updated = await updatePair.mutateAsync({
+        pairId: editingPair.id,
+        tournamentId,
+        name: values.name.trim() || undefined,
+        playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
+        playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
+      })
+      setPairs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+      setEditingPair(null)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
+      throw err
+    }
+  }
+
+  const confirmDeletePair = async () => {
+    if (!editingPair) return
+    const pairId = editingPair.id
+    const ok = await confirmAlert(
+      'Eliminar pareja',
+      '¿Seguro que quieres eliminar esta pareja del torneo?',
+      { confirmText: 'Eliminar', destructive: true }
+    )
+    if (ok) void runDeletePair(pairId)
+  }
+
+  const runDeletePair = async (pairId: string) => {
+    if (!tournamentId) return
+    try {
+      await removePair.mutateAsync({ pairId, tournamentId })
+      setPairs((prev) => prev.filter((p) => p.id !== pairId))
+      setEditingPair(null)
+    } catch (err) {
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo eliminar la pareja')
     }
   }
 
@@ -371,7 +414,15 @@ export default function CreateTournamentScreen() {
       {pairs.length === 0 ? (
         <Text style={s.empty}>Aún no hay parejas. Pulsa «Añadir pareja».</Text>
       ) : (
-        pairs.map((p) => <PairCard key={p.id} pair={p as never} />)
+        pairs.map((p) => (
+          <PairCard
+            key={p.id}
+            pair={p}
+            subtitle={!isTournamentPairComplete(p) ? 'Falta un jugador' : undefined}
+            editLabel="Editar"
+            onEdit={() => setEditingPair(p)}
+          />
+        ))
       )}
 
       <Button
@@ -388,6 +439,16 @@ export default function CreateTournamentScreen() {
         onSubmit={handleAddPair}
         loading={addPair.isPending}
         selfJoinDisabled={userAlreadyInPair}
+      />
+
+      <EditPairModal
+        visible={editingPair !== null}
+        pair={editingPair}
+        onClose={() => setEditingPair(null)}
+        onSubmit={handleEditPair}
+        onDelete={confirmDeletePair}
+        saveLoading={updatePair.isPending}
+        deleteLoading={removePair.isPending}
       />
     </ScrollView>
   )
