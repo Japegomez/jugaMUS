@@ -72,6 +72,7 @@ expo-env.d.ts
 .env.local
 google-services.json
 google-service-account.json
+asc-api-key.p8
 google-play-service-account-key.json
 *.serviceaccount.json
 *firebase*.json

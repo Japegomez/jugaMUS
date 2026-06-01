@@ -16,6 +16,9 @@
       "android": {
         "buildType": "app-bundle",
         "autoIncrement": true
+      },
+      "ios": {
+        "autoIncrement": true
       }
     }
   },
@@ -26,9 +29,9 @@
         "track": "internal"
       },
       "ios": {
-        "appleId": "YOUR_APPLE_ID@example.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
+        "appleId": "japegomez@icloud.com",
+        "ascAppId": "6775626292",
+        "appleTeamId": "BUT9B76X33"
       }
     }
   }
