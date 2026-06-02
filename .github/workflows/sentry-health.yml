@@ -20,14 +20,14 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           CRON_SECRET: ${{ secrets.EDGE_CRON_SECRET }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$CRON_SECRET" ]; then
             echo "Skip: set EXPO_PUBLIC_SUPABASE_URL and EDGE_CRON_SECRET repo secrets."
             exit 0
           fi
-          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
-            echo "Skip: set SENTRY_AUTH_TOKEN repo secret."
+          if [ -z "$SENTRY_DSN" ]; then
+            echo "Skip: set SENTRY_DSN repo secret (Project DSN) to enable Sentry cron check-ins."
             exit 0
           fi
 
