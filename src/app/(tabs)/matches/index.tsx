@@ -1,13 +1,5 @@
-import type { ReactNode } from 'react'
-import {
-  ActivityIndicator,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { useMemo } from 'react'
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -68,13 +60,77 @@ function MatchListRow({
   )
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  )
+type MatchesListItem =
+  | { key: string; kind: 'empty' }
+  | { key: string; kind: 'section'; title: string }
+  | {
+      key: string
+      kind: 'row'
+      title: string
+      location: string
+      startAt: string
+      tone: StatusDotTone
+      statusLabel: string
+      hint?: string
+      matchId: string
+    }
+
+function buildMatchesListItems(data: {
+  upcoming: UserMatchSummary[]
+  inProgress: UserMatchSummary[]
+  awaitingResultValidation: UserMatchSummary[]
+}): MatchesListItem[] {
+  const awaitingIds = new Set(data.awaitingResultValidation.map((m) => m.id))
+  const inProgressDeduped = data.inProgress.filter((m) => !awaitingIds.has(m.id))
+  const hasAny =
+    data.upcoming.length > 0 ||
+    inProgressDeduped.length > 0 ||
+    data.awaitingResultValidation.length > 0
+
+  const items: MatchesListItem[] = []
+  if (!hasAny) {
+    items.push({ key: 'empty', kind: 'empty' })
+    return items
+  }
+
+  const pushSection = (
+    title: string,
+    matches: UserMatchSummary[],
+    mapRow: (m: UserMatchSummary) => Omit<Extract<MatchesListItem, { kind: 'row' }>, 'key' | 'kind'>
+  ) => {
+    if (matches.length === 0) return
+    items.push({ key: `section-${title}`, kind: 'section', title })
+    for (const m of matches) {
+      items.push({ key: m.id, kind: 'row', matchId: m.id, ...mapRow(m) })
+    }
+  }
+
+  pushSection('Pendiente: validar resultado', data.awaitingResultValidation, (m) => ({
+    title: m.title,
+    location: matchLocation(m),
+    startAt: m.start_at,
+    tone: 'pending',
+    statusLabel: 'Pendiente',
+    hint: 'Tienes que aprobar o disputar el marcador enviado por el rival.',
+  }))
+
+  pushSection('En curso', inProgressDeduped, (m) => ({
+    title: m.title,
+    location: matchLocation(m),
+    startAt: m.start_at,
+    tone: 'active',
+    statusLabel: 'En curso',
+  }))
+
+  pushSection('Próximas', data.upcoming, (m) => ({
+    title: m.title,
+    location: matchLocation(m),
+    startAt: m.start_at,
+    tone: 'upcoming',
+    statusLabel: 'Próxima',
+  }))
+
+  return items
 }
 
 export default function MatchesScreen() {
@@ -83,12 +139,9 @@ export default function MatchesScreen() {
   const userId = useAuthStore((s) => s.session?.user.id)
   const { data, isPending, isError, refetch, isRefetching } = useMyMatchesDashboard()
 
-  const contentPadding = {
-    paddingTop: screenTopPadding(insets.top, 16),
-    paddingBottom: insets.bottom + 88,
-  }
-
   const createFab = <CreateFab />
+  const topPadding = screenTopPadding(insets.top)
+  const listItems = useMemo(() => (data ? buildMatchesListItems(data) : []), [data])
 
   if (!userId) {
     return (
@@ -100,10 +153,8 @@ export default function MatchesScreen() {
 
   if (isPending) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.centered, { flex: 1 }]}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+      <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
         {createFab}
       </View>
     )
@@ -111,100 +162,68 @@ export default function MatchesScreen() {
 
   if (isError || !data) {
     return (
-      <View style={styles.container}>
-        <View style={[styles.centered, { flex: 1 }]}>
-          <Text style={styles.empty}>No se pudieron cargar tus partidas.</Text>
-          <Pressable onPress={() => refetch()} style={styles.retry}>
-            <Text style={styles.retryText}>Reintentar</Text>
-          </Pressable>
-        </View>
+      <View
+        style={[
+          styles.centered,
+          { paddingTop: screenTopPadding(insets.top, 24), paddingHorizontal: 24 },
+        ]}>
+        <Text style={styles.empty}>No se pudieron cargar tus partidas.</Text>
+        <Pressable onPress={() => refetch()} style={styles.retry}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </Pressable>
         {createFab}
       </View>
     )
   }
 
-  const { upcoming, inProgress, awaitingResultValidation } = data
-  const awaitingIds = new Set(awaitingResultValidation.map((m) => m.id))
-  const inProgressDeduped = inProgress.filter((m) => !awaitingIds.has(m.id))
-  const hasAny =
-    upcoming.length > 0 || inProgressDeduped.length > 0 || awaitingResultValidation.length > 0
-
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.scrollContent, contentPadding]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-        }>
-        <ScreenHeader title="Mis partidas" />
-
-        {!hasAny ? (
-          <Text style={styles.emptyBlock}>
-            No tienes partidas activas aquí. Explora en Descubrir o crea una nueva.
-          </Text>
-        ) : null}
-
-        {awaitingResultValidation.length > 0 ? (
-          <Section title="Pendiente: validar resultado">
-            {awaitingResultValidation.map((m) => (
-              <MatchListRow
-                key={m.id}
-                title={m.title}
-                location={matchLocation(m)}
-                startAt={m.start_at}
-                tone="pending"
-                statusLabel="Pendiente"
-                hint="Tienes que aprobar o disputar el marcador enviado por el rival."
-                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-              />
-            ))}
-          </Section>
-        ) : null}
-
-        {inProgressDeduped.length > 0 ? (
-          <Section title="En curso">
-            {inProgressDeduped.map((m) => (
-              <MatchListRow
-                key={m.id}
-                title={m.title}
-                location={matchLocation(m)}
-                startAt={m.start_at}
-                tone="active"
-                statusLabel="En curso"
-                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-              />
-            ))}
-          </Section>
-        ) : null}
-
-        {upcoming.length > 0 ? (
-          <Section title="Próximas">
-            {upcoming.map((m) => (
-              <MatchListRow
-                key={m.id}
-                title={m.title}
-                location={matchLocation(m)}
-                startAt={m.start_at}
-                tone="upcoming"
-                statusLabel="Próxima"
-                onPress={() => router.push(`/(tabs)/matches/${m.id}`)}
-              />
-            ))}
-          </Section>
-        ) : null}
-      </ScrollView>
+    <View style={[styles.root, { paddingTop: topPadding }]}>
+      <FlatList
+        data={listItems}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => {
+          if (item.kind === 'empty') {
+            return (
+              <Text style={styles.emptyBlock}>
+                No tienes partidas activas aquí. Explora en Descubrir o crea una nueva.
+              </Text>
+            )
+          }
+          if (item.kind === 'section') {
+            return <Text style={styles.sectionTitle}>{item.title}</Text>
+          }
+          return (
+            <MatchListRow
+              title={item.title}
+              location={item.location}
+              startAt={item.startAt}
+              tone={item.tone}
+              statusLabel={item.statusLabel}
+              hint={item.hint}
+              onPress={() => router.push(`/(tabs)/matches/${item.matchId}`)}
+            />
+          )
+        }}
+        ListHeaderComponent={<ScreenHeader title="Mis partidas" />}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 88 }]}
+        refreshing={isRefetching}
+        onRefresh={() => void refetch()}
+      />
       {createFab}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: Colors.background },
-  scrollContent: { paddingHorizontal: 20 },
+  root: { flex: 1, backgroundColor: Colors.background },
+  listContent: { paddingHorizontal: 20 },
   container: { flex: 1, backgroundColor: Colors.background },
-  centered: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  section: { marginBottom: 24 },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
   sectionTitle: {
     fontSize: 11,
     fontFamily: Fonts.semiBold,

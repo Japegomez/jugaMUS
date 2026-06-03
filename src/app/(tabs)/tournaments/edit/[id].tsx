@@ -200,6 +200,21 @@ export default function EditTournamentScreen() {
           />
         )}
       />
+      {placeDefined ? (
+        <Controller
+          control={control}
+          name="place_text"
+          render={({ field }) => (
+            <Input
+              label="Lugar *"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.place_text?.message}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
+      ) : null}
       <View style={s.row}>
         <View style={s.rowText}>
           <Text style={s.rowLabel}>Lugar por definir</Text>
@@ -219,21 +234,6 @@ export default function EditTournamentScreen() {
           )}
         />
       </View>
-      {placeDefined ? (
-        <Controller
-          control={control}
-          name="place_text"
-          render={({ field }) => (
-            <Input
-              label="Lugar *"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.place_text?.message}
-              autoCapitalize="sentences"
-            />
-          )}
-        />
-      ) : null}
       <View style={s.fieldWrap}>
         <Text style={s.label}>Duración (juegos)</Text>
         <View style={s.chips}>

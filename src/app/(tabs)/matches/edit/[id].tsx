@@ -356,6 +356,24 @@ export default function EditMatchScreen() {
         )}
       />
 
+      {/* Lugar (texto) */}
+      {placeDefined ? (
+        <Controller
+          control={control}
+          name="place_text"
+          render={({ field }) => (
+            <Input
+              label="Lugar *"
+              placeholder="Ej. Bar El Rincón, Mesa del fondo"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.place_text?.message}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
+      ) : null}
+
       {/* Lugar por definir */}
       <View style={s.row}>
         <View style={s.rowText}>
@@ -378,24 +396,6 @@ export default function EditMatchScreen() {
           )}
         />
       </View>
-
-      {/* Lugar (texto) */}
-      {placeDefined ? (
-        <Controller
-          control={control}
-          name="place_text"
-          render={({ field }) => (
-            <Input
-              label="Lugar *"
-              placeholder="Ej. Bar El Rincón, Mesa del fondo"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.place_text?.message}
-              autoCapitalize="sentences"
-            />
-          )}
-        />
-      ) : null}
 
       {/* Duración */}
       <View style={s.fieldWrap}>

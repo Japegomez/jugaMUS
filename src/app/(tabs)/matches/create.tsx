@@ -18,6 +18,12 @@ import { MATCH_VISIBILITY } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { showAlert } from '@/utils/alert'
+import {
+  PAST_DATE_INCOMPLETE_ROSTER_ALERT,
+  requiresFutureStartAtForIncompleteRoster,
+} from '@/utils/matchCreateForm'
+import { showFormFieldsMissingAlert } from '@/utils/formValidation'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -126,6 +132,16 @@ export default function CreateMatchScreen() {
   const visibilityValue = watch('visibility')
 
   const onSubmit = async (values: CreateMatchValues) => {
+    if (
+      requiresFutureStartAtForIncompleteRoster(values.start_at, {
+        team_a_player_2: values.team_a_player_2,
+        team_b_player_1: values.team_b_player_1,
+        team_b_player_2: values.team_b_player_2,
+      })
+    ) {
+      showAlert(PAST_DATE_INCOMPLETE_ROSTER_ALERT.title, PAST_DATE_INCOMPLETE_ROSTER_ALERT.message)
+      return
+    }
     try {
       const match = await createMatch.mutateAsync({
         title: values.title,
@@ -198,7 +214,6 @@ export default function CreateMatchScreen() {
             label="Fecha y hora *"
             value={field.value}
             onChange={field.onChange}
-            minDate={new Date()}
             error={errors.start_at?.message}
           />
         )}
@@ -217,6 +232,24 @@ export default function CreateMatchScreen() {
           />
         )}
       />
+
+      {/* Lugar (texto) */}
+      {placeDefined ? (
+        <Controller
+          control={control}
+          name="place_text"
+          render={({ field }) => (
+            <Input
+              label="Lugar *"
+              placeholder="Ej. Bar El Rincón, Mesa del fondo"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.place_text?.message}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
+      ) : null}
 
       {/* Lugar por definir */}
       <View style={s.row}>
@@ -240,24 +273,6 @@ export default function CreateMatchScreen() {
           )}
         />
       </View>
-
-      {/* Lugar (texto) */}
-      {placeDefined ? (
-        <Controller
-          control={control}
-          name="place_text"
-          render={({ field }) => (
-            <Input
-              label="Lugar *"
-              placeholder="Ej. Bar El Rincón, Mesa del fondo"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.place_text?.message}
-              autoCapitalize="sentences"
-            />
-          )}
-        />
-      ) : null}
 
       {/* Duración */}
       <View style={s.fieldWrap}>
@@ -398,7 +413,7 @@ export default function CreateMatchScreen() {
 
       <Button
         title="Crear partida"
-        onPress={handleSubmit(onSubmit)}
+        onPress={handleSubmit(onSubmit, showFormFieldsMissingAlert)}
         loading={createMatch.isPending}
         style={s.submitBtn}
       />
