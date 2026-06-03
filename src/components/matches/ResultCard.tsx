@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 
+import { MatchResultScoreLines } from '@/components/matches/MatchResultScoreLines'
 import { RESULT_STATUS } from '@/constants'
 import type { MatchResultRow } from '@/services/results.service'
 import { Colors } from '@/theme/colors'
@@ -41,9 +42,12 @@ export function ResultCard({
           <Text style={[s.badgeText, { color: badge.color }]}>{badge.text}</Text>
         </View>
       </View>
-      <Text style={s.score}>
-        {teamAName}: {result.team_a_games} — {teamBName}: {result.team_b_games}
-      </Text>
+      <MatchResultScoreLines
+        teamAName={teamAName}
+        teamBName={teamBName}
+        teamAScore={result.team_a_games}
+        teamBScore={result.team_b_games}
+      />
       <Text style={s.meta}>
         Enviado por {result.submitted_by_team === 'A' ? teamAName : teamBName}
       </Text>
@@ -74,6 +78,5 @@ const s = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeText: { fontSize: 12, fontFamily: Fonts.semiBold },
-  score: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 6 },
   meta: { fontSize: 13, color: Colors.textSecondary },
 })
