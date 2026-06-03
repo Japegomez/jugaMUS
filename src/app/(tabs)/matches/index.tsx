@@ -96,7 +96,9 @@ function buildMatchesListItems(data: {
   const pushSection = (
     title: string,
     matches: UserMatchSummary[],
-    mapRow: (m: UserMatchSummary) => Omit<Extract<MatchesListItem, { kind: 'row' }>, 'key' | 'kind'>
+    mapRow: (
+      m: UserMatchSummary
+    ) => Omit<Extract<MatchesListItem, { kind: 'row' }>, 'key' | 'kind' | 'matchId'>
   ) => {
     if (matches.length === 0) return
     items.push({ key: `section-${title}`, kind: 'section', title })

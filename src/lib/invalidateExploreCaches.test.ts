@@ -1,6 +1,4 @@
-import { describe, expect, it } from 'vitest'
-
-import { idsFromRealtimeRow } from '@/lib/invalidateExploreCaches'
+import { idsFromRealtimeRow } from '@/lib/realtimeRowIds'
 
 describe('idsFromRealtimeRow', () => {
   it('maps matches row', () => {

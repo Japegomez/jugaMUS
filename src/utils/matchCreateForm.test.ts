@@ -1,5 +1,3 @@
-import { describe, expect, it, vi, afterEach } from 'vitest'
-
 import {
   hasIncompleteMatchRoster,
   isMatchStartAtPast,
@@ -8,7 +6,7 @@ import {
 
 describe('matchCreateForm', () => {
   afterEach(() => {
-    vi.useRealTimers()
+    jest.useRealTimers()
   })
 
   it('detects past start_at by minute (current minute is allowed)', () => {
@@ -36,8 +34,8 @@ describe('matchCreateForm', () => {
   })
 
   it('requires future date only when past and roster incomplete', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-06-03T12:00:00'))
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-06-03T12:00:00'))
     const roster = { team_a_player_2: '', team_b_player_1: '', team_b_player_2: '' }
     expect(requiresFutureStartAtForIncompleteRoster('2026-06-03T10:00:00', roster)).toBe(true)
     expect(requiresFutureStartAtForIncompleteRoster('2026-06-03T14:00:00', roster)).toBe(false)
