@@ -11,7 +11,6 @@ export type ProfileRow = {
   city: string | null
   role: string
   status: string
-  notify_email: boolean
   notify_push: boolean
   notify_on_join: boolean
   notify_on_match_change: boolean
@@ -40,7 +39,6 @@ export type ProfileUpdate = Pick<
   | 'display_name'
   | 'phone_e164'
   | 'city'
-  | 'notify_email'
   | 'notify_push'
   | 'notify_on_join'
   | 'notify_on_match_change'
@@ -65,7 +63,7 @@ export async function getProfile(userId: string): Promise<ProfileRow> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, display_name, city, photo_url, role, status, notify_email, notify_push, notify_on_join, notify_on_match_change, notify_on_result, notify_on_reminder, created_at, updated_at'
+      'id, display_name, city, photo_url, role, status, notify_push, notify_on_join, notify_on_match_change, notify_on_result, notify_on_reminder, created_at, updated_at'
     )
     .eq('id', userId)
     .single()

@@ -16,7 +16,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
 - **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI.
-- **Notificaciones en perfil (may. 2026):** preferencias por **canal** (email, push) y por **evento** (unión, cambio de partida, resultado, recordatorios) editables en la pantalla de perfil; enlaces legales (términos, privacidad) en la misma pantalla.
+- **Notificaciones en perfil (may. 2026):** preferencias **push** y por **evento** (unión, cambio de partida, resultado, recordatorios) en la pantalla de perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla.
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand. Pendiente commit/PR desde rama `feature/ui-redesign`.
 - **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final. Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Sincronización multi-dispositivo: Supabase Realtime (`058`) en `matches`, participantes, resultados, torneos y parejas; invalidación React Query en Descubrir, Mis partidas, historial y ficha/cuadro de torneo (sin polling 30 s en detalle). **Edición de parejas (may. 2026):** el organizador puede editar nombre opcional y plazas en texto, o eliminar parejas, solo en fase de inscripción y antes de generar el cuadro (RPCs `update_tournament_pair` / `remove_tournament_pair`, migración `055`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
@@ -90,7 +90,7 @@ Solo dos roles en el MVP:
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
 - Preferencias de notificación en pantalla de perfil:
-  - **Canal:** email y/o push
+  - **Push** (activar/desactivar)
   - **Por evento:** unión a partida, edición/cancelación, resultado, recordatorios (columnas `notify_on_*` en `profiles`, migración `022`)
 - Enlaces a términos y política de privacidad desde el perfil
 - **Perfil de otro usuario (solo lectura):** nombre, ciudad, teléfono según permisos del servidor e historial de partidas visibles; navegación desde participantes registrados en detalle de partida
@@ -150,10 +150,10 @@ Solo dos roles en el MVP:
 
 **Notificaciones básicas (Fase 2)**
 
-- Push + email cuando alguien se une a tu partida
-- Push + email cuando la partida es editada o cancelada
-- Push + email al ser expulsado o cuando alguien abandona
-- Preferencias granulares en cliente (canal + evento); **pendiente:** que triggers/cron respeten `notify_on_*` además de `notify_push`/`notify_email`
+- Push cuando alguien se une a tu partida
+- Push cuando la partida es editada o cancelada
+- Push al ser expulsado o cuando alguien abandona
+- Preferencias granulares en cliente (push + evento); **pendiente:** que triggers/cron respeten `notify_on_*` además de `notify_push`
 
 **Notificaciones automáticas (Fase 2)**
 
@@ -258,7 +258,6 @@ CREATE TABLE profiles (
   phone_e164  TEXT NOT NULL,              -- Formato: +34612345678
   city        TEXT,
   photo_url   TEXT,
-  notify_email BOOLEAN NOT NULL DEFAULT TRUE,
   notify_push  BOOLEAN NOT NULL DEFAULT TRUE,
   -- Migración 022 (may. 2026):
   notify_on_join BOOLEAN NOT NULL DEFAULT TRUE,
@@ -596,7 +595,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_NOTIF1: El creador recibe push cuando alguien se une a su partida
 - CA_NOTIF2: Los participantes reciben push si la partida es editada o cancelada
 - CA_NOTIF3: Recordatorio automático 24h y 2h antes de la partida
-- CA_NOTIF4: El usuario puede desactivar notificaciones push y/o email desde el perfil
+- CA_NOTIF4: El usuario puede desactivar notificaciones push desde el perfil
 - CA_NOTIF5: El usuario puede desactivar tipos concretos de notificación por evento desde el perfil
 
 **Resultados**

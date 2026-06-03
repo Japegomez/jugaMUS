@@ -84,7 +84,7 @@
 - [x] Pantalla de edición de perfil
 - [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
-- [x] Preferencias de notificación (email y push)
+- [x] Preferencias de notificación (push; sin email, migración `057`)
 - [x] Preferencias granulares de notificación en pantalla de perfil (canal + por evento)
   - Migración `022`: `notify_on_join`, `notify_on_match_change`, `notify_on_result`, `notify_on_reminder` en `profiles` (aplicada en remoto).
   - Toggles editables en `profile/index.tsx` (grupos **Canal** y **Por evento**); guardado inmediato. Sin pantalla `settings` separada.
