@@ -3,20 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { PhoneInput } from '@/components/ui/PhoneInput'
@@ -131,9 +123,8 @@ export default function EditProfileScreen() {
     .join('')
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       contentContainerStyle={[styles.scroll, { paddingTop: screenTopPadding(insets.top, 24) }]}
-      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <Text style={styles.heading}>Editar perfil</Text>
 
@@ -218,7 +209,7 @@ export default function EditProfileScreen() {
         disabled={isSaving}
         onPress={() => router.back()}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

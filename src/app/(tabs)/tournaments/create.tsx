@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useRouter, type Href } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -11,6 +11,7 @@ import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/A
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
@@ -240,10 +241,9 @@ export default function CreateTournamentScreen() {
 
   if (step === 1) {
     return (
-      <ScrollView
+      <KeyboardAwareScrollView
         style={s.scroll}
-        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
-        keyboardShouldPersistTaps="handled">
+        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
         <Text style={s.heading}>Organizar torneo</Text>
         <Text style={s.step}>Paso 1 de 2 — Datos del torneo</Text>
 
@@ -395,15 +395,14 @@ export default function CreateTournamentScreen() {
           loading={createTournament.isPending}
           style={s.submitBtn}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
     )
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
-      keyboardShouldPersistTaps="handled">
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
       <Text style={s.heading}>Parejas inscritas</Text>
       <Text style={s.step}>Paso 2 de 2 — Añade las parejas participantes</Text>
       <Text style={s.hint}>
@@ -450,7 +449,7 @@ export default function CreateTournamentScreen() {
         saveLoading={updatePair.isPending}
         deleteLoading={removePair.isPending}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

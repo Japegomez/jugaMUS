@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -76,62 +86,73 @@ function EditPairForm({
           <Text style={styles.close}>✕</Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <Input
-          label="Nombre de la pareja (opcional)"
-          placeholder="Nombre Jugador1 - Nombre Jugador2"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets>
+          <Input
+            label="Nombre de la pareja (opcional)"
+            placeholder="Nombre Jugador1 - Nombre Jugador2"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
 
-        <View style={styles.slot}>
-          <Text style={styles.slotLabel}>Jugador 1</Text>
-          {playerALocked ? (
-            <View style={styles.locked}>
-              <Text style={styles.lockedName}>{playerADisplay}</Text>
-              <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
-            </View>
-          ) : (
-            <Input
-              label="Nombre (texto)"
-              placeholder="Nombre del jugador"
-              value={playerAText}
-              onChangeText={setPlayerAText}
-              autoCapitalize="words"
-            />
-          )}
-        </View>
+          <View style={styles.slot}>
+            <Text style={styles.slotLabel}>Jugador 1</Text>
+            {playerALocked ? (
+              <View style={styles.locked}>
+                <Text style={styles.lockedName}>{playerADisplay}</Text>
+                <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
+              </View>
+            ) : (
+              <Input
+                label="Nombre (texto)"
+                placeholder="Nombre del jugador"
+                value={playerAText}
+                onChangeText={setPlayerAText}
+                autoCapitalize="words"
+              />
+            )}
+          </View>
 
-        <View style={styles.slot}>
-          <Text style={styles.slotLabel}>Jugador 2</Text>
-          {playerBLocked ? (
-            <View style={styles.locked}>
-              <Text style={styles.lockedName}>{playerBDisplay}</Text>
-              <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
-            </View>
-          ) : (
-            <Input
-              label="Nombre (texto)"
-              placeholder="Compañero"
-              value={playerBText}
-              onChangeText={setPlayerBText}
-              autoCapitalize="words"
-            />
-          )}
-        </View>
+          <View style={styles.slot}>
+            <Text style={styles.slotLabel}>Jugador 2</Text>
+            {playerBLocked ? (
+              <View style={styles.locked}>
+                <Text style={styles.lockedName}>{playerBDisplay}</Text>
+                <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
+              </View>
+            ) : (
+              <Input
+                label="Nombre (texto)"
+                placeholder="Compañero"
+                value={playerBText}
+                onChangeText={setPlayerBText}
+                autoCapitalize="words"
+              />
+            )}
+          </View>
 
-        <Button title="Guardar cambios" onPress={() => void handleSubmit()} loading={saveLoading} />
-        <Button
-          title="Eliminar pareja"
-          variant="outline"
-          onPress={() => {
-            void onDelete()
-          }}
-          loading={deleteLoading}
-          style={styles.deleteBtn}
-        />
-      </ScrollView>
+          <Button
+            title="Guardar cambios"
+            onPress={() => void handleSubmit()}
+            loading={saveLoading}
+          />
+          <Button
+            title="Eliminar pareja"
+            variant="outline"
+            onPress={() => {
+              void onDelete()
+            }}
+            loading={deleteLoading}
+            style={styles.deleteBtn}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
@@ -168,6 +189,7 @@ export function EditPairModal({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: Colors.background },
+  keyboard: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

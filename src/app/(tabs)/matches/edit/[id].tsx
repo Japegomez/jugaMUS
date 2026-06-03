@@ -2,21 +2,13 @@ import { useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-  Pressable,
-} from 'react-native'
+import { ActivityIndicator, Alert, StyleSheet, Switch, Text, View, Pressable } from 'react-native'
 import { z } from 'zod'
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
@@ -288,10 +280,7 @@ export default function EditMatchScreen() {
   }
 
   return (
-    <ScrollView
-      style={s.scroll}
-      contentContainerStyle={s.container}
-      keyboardShouldPersistTaps="handled">
+    <KeyboardAwareScrollView style={s.scroll} contentContainerStyle={s.container}>
       <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         <View style={{ flex: 1 }} />
         <Pressable
@@ -552,7 +541,7 @@ export default function EditMatchScreen() {
         disabled={!isDirty}
         style={s.submitBtn}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

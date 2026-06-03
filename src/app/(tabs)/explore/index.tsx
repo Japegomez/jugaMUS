@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -443,145 +445,151 @@ export default function ExploreScreen() {
             </Pressable>
           </View>
 
-          <ScrollView
-            style={styles.modalScroll}
-            contentContainerStyle={styles.modalScrollContent}
-            keyboardShouldPersistTaps="handled">
-            <Text style={styles.fieldLabel}>Mostrar</Text>
-            <View style={styles.chipsWrap}>
-              {(
-                [
-                  { id: 'all', label: 'Todo', value: 'all' as ExploreContentType },
-                  { id: 'm', label: 'Partidas', value: 'matches' as ExploreContentType },
-                  { id: 't', label: 'Torneos', value: 'tournaments' as ExploreContentType },
-                ] as const
-              ).map((opt) => {
-                const selected = draftContentType === opt.value
-                return (
+          <KeyboardAvoidingView
+            style={styles.modalKeyboard}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView
+              style={styles.modalScroll}
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets>
+              <Text style={styles.fieldLabel}>Mostrar</Text>
+              <View style={styles.chipsWrap}>
+                {(
+                  [
+                    { id: 'all', label: 'Todo', value: 'all' as ExploreContentType },
+                    { id: 'm', label: 'Partidas', value: 'matches' as ExploreContentType },
+                    { id: 't', label: 'Torneos', value: 'tournaments' as ExploreContentType },
+                  ] as const
+                ).map((opt) => {
+                  const selected = draftContentType === opt.value
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      style={[styles.chip, selected && styles.chipOn]}
+                      onPress={() => setDraftContentType(opt.value)}>
+                      <Text style={[styles.chipText, selected && styles.chipTextOn]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+
+              <MunicipalityPicker
+                label="Ciudad o pueblo"
+                value={draftCity}
+                onChangeText={setDraftCity}
+                placeholder="Cualquiera"
+              />
+
+              <Text style={styles.fieldLabel}>Estado</Text>
+              <View style={styles.chipsWrap}>
+                {(
+                  [
+                    { id: '__all', label: 'Todos', value: null as string | null },
+                    { id: 'p', label: 'Planificada', value: MATCH_STATUS.PLANNED },
+                    { id: 'i', label: 'En curso', value: MATCH_STATUS.IN_PROGRESS },
+                    { id: 'f', label: 'Finalizada', value: MATCH_STATUS.FINISHED },
+                    { id: 'fn', label: 'Sin resultado', value: MATCH_STATUS.FINISHED_NO_RESULT },
+                  ] as const
+                ).map((opt) => {
+                  const selected =
+                    opt.value === null ? draftStatus === null : draftStatus === opt.value
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      style={[styles.chip, selected && styles.chipOn]}
+                      onPress={() => setDraftStatus(opt.value)}>
+                      <Text style={[styles.chipText, selected && styles.chipTextOn]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Plazas libres (mín.)</Text>
+              <View style={styles.segment}>
+                {(
+                  [
+                    { v: 0, t: 'Cualquiera' },
+                    { v: 1, t: '≥ 1' },
+                    { v: 2, t: '≥ 2' },
+                    { v: 3, t: '≥ 3' },
+                  ] as const
+                ).map((opt) => (
                   <Pressable
-                    key={opt.id}
-                    style={[styles.chip, selected && styles.chipOn]}
-                    onPress={() => setDraftContentType(opt.value)}>
-                    <Text style={[styles.chipText, selected && styles.chipTextOn]}>
-                      {opt.label}
+                    key={opt.v}
+                    style={[styles.segBtn, draftMinFree === opt.v && styles.segBtnOn]}
+                    onPress={() => setDraftMinFree(opt.v)}>
+                    <Text
+                      style={[styles.segBtnText, draftMinFree === opt.v && styles.segBtnTextOn]}>
+                      {opt.t}
                     </Text>
                   </Pressable>
-                )
-              })}
-            </View>
+                ))}
+              </View>
 
-            <MunicipalityPicker
-              label="Ciudad o pueblo"
-              value={draftCity}
-              onChangeText={setDraftCity}
-              placeholder="Cualquiera"
-            />
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Ocultar partidas ya celebradas</Text>
+                <Switch
+                  value={draftHidePast}
+                  onValueChange={setDraftHidePast}
+                  trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.switchTrackOff}
+                />
+              </View>
+              <Text style={styles.helpMuted}>
+                Oculta partidas y torneos ya cerrados o sin resultado, y eventos pasados (salvo
+                partidas o torneos aún en curso o con inscripción abierta). Opcional: fecha
+                &quot;desde&quot;.
+              </Text>
 
-            <Text style={styles.fieldLabel}>Estado</Text>
-            <View style={styles.chipsWrap}>
-              {(
-                [
-                  { id: '__all', label: 'Todos', value: null as string | null },
-                  { id: 'p', label: 'Planificada', value: MATCH_STATUS.PLANNED },
-                  { id: 'i', label: 'En curso', value: MATCH_STATUS.IN_PROGRESS },
-                  { id: 'f', label: 'Finalizada', value: MATCH_STATUS.FINISHED },
-                  { id: 'fn', label: 'Sin resultado', value: MATCH_STATUS.FINISHED_NO_RESULT },
-                ] as const
-              ).map((opt) => {
-                const selected =
-                  opt.value === null ? draftStatus === null : draftStatus === opt.value
-                return (
-                  <Pressable
-                    key={opt.id}
-                    style={[styles.chip, selected && styles.chipOn]}
-                    onPress={() => setDraftStatus(opt.value)}>
-                    <Text style={[styles.chipText, selected && styles.chipTextOn]}>
-                      {opt.label}
-                    </Text>
+              <Text style={styles.fieldLabel}>Fecha desde (opcional)</Text>
+              {draftDateFromIso ? (
+                <View>
+                  <DateTimePicker
+                    label=""
+                    value={draftDateFromIso}
+                    onChange={setDraftDateFromIso}
+                    minDate={new Date(2020, 0, 1)}
+                  />
+                  <Pressable onPress={() => setDraftDateFromIso(null)} style={styles.clearLink}>
+                    <Text style={styles.clearLinkText}>Quitar fecha desde</Text>
                   </Pressable>
-                )
-              })}
-            </View>
-
-            <Text style={styles.fieldLabel}>Plazas libres (mín.)</Text>
-            <View style={styles.segment}>
-              {(
-                [
-                  { v: 0, t: 'Cualquiera' },
-                  { v: 1, t: '≥ 1' },
-                  { v: 2, t: '≥ 2' },
-                  { v: 3, t: '≥ 3' },
-                ] as const
-              ).map((opt) => (
-                <Pressable
-                  key={opt.v}
-                  style={[styles.segBtn, draftMinFree === opt.v && styles.segBtnOn]}
-                  onPress={() => setDraftMinFree(opt.v)}>
-                  <Text style={[styles.segBtnText, draftMinFree === opt.v && styles.segBtnTextOn]}>
-                    {opt.t}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Ocultar partidas ya celebradas</Text>
-              <Switch
-                value={draftHidePast}
-                onValueChange={setDraftHidePast}
-                trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
-                thumbColor={Colors.white}
-                ios_backgroundColor={Colors.switchTrackOff}
-              />
-            </View>
-            <Text style={styles.helpMuted}>
-              Oculta partidas y torneos ya cerrados o sin resultado, y eventos pasados (salvo
-              partidas o torneos aún en curso o con inscripción abierta). Opcional: fecha
-              &quot;desde&quot;.
-            </Text>
-
-            <Text style={styles.fieldLabel}>Fecha desde (opcional)</Text>
-            {draftDateFromIso ? (
-              <View>
-                <DateTimePicker
-                  label=""
-                  value={draftDateFromIso}
-                  onChange={setDraftDateFromIso}
-                  minDate={new Date(2020, 0, 1)}
+                </View>
+              ) : (
+                <Button
+                  title="Elegir fecha desde…"
+                  variant="outline"
+                  onPress={() => setDraftDateFromIso(dateToLocalIsoString(new Date()))}
                 />
-                <Pressable onPress={() => setDraftDateFromIso(null)} style={styles.clearLink}>
-                  <Text style={styles.clearLinkText}>Quitar fecha desde</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Button
-                title="Elegir fecha desde…"
-                variant="outline"
-                onPress={() => setDraftDateFromIso(dateToLocalIsoString(new Date()))}
-              />
-            )}
+              )}
 
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Fecha hasta (opcional)</Text>
-            {draftDateToIso ? (
-              <View>
-                <DateTimePicker
-                  label=""
-                  value={draftDateToIso}
-                  onChange={setDraftDateToIso}
-                  minDate={new Date(2020, 0, 1)}
+              <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Fecha hasta (opcional)</Text>
+              {draftDateToIso ? (
+                <View>
+                  <DateTimePicker
+                    label=""
+                    value={draftDateToIso}
+                    onChange={setDraftDateToIso}
+                    minDate={new Date(2020, 0, 1)}
+                  />
+                  <Pressable onPress={() => setDraftDateToIso(null)} style={styles.clearLink}>
+                    <Text style={styles.clearLinkText}>Quitar fecha hasta</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Button
+                  title="Elegir fecha hasta…"
+                  variant="outline"
+                  onPress={() => setDraftDateToIso(dateToLocalIsoString(new Date()))}
                 />
-                <Pressable onPress={() => setDraftDateToIso(null)} style={styles.clearLink}>
-                  <Text style={styles.clearLinkText}>Quitar fecha hasta</Text>
-                </Pressable>
-              </View>
-            ) : (
-              <Button
-                title="Elegir fecha hasta…"
-                variant="outline"
-                onPress={() => setDraftDateToIso(dateToLocalIsoString(new Date()))}
-              />
-            )}
-          </ScrollView>
+              )}
+            </ScrollView>
+          </KeyboardAvoidingView>
 
           <View style={[styles.modalActions, { paddingBottom: insets.bottom + 16 }]}>
             <Button title="Limpiar" variant="outline" onPress={clearFilters} style={{ flex: 1 }} />
@@ -736,6 +744,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.textPrimary },
   modalClose: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
+  modalKeyboard: { flex: 1 },
   modalScroll: { flex: 1 },
   modalScrollContent: { paddingHorizontal: 16, paddingBottom: 24 },
   fieldLabel: {
