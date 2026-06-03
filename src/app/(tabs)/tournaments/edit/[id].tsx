@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
@@ -133,10 +134,9 @@ export default function EditTournamentScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}
-      keyboardShouldPersistTaps="handled">
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={s.closeBar}>
         <View style={s.closeBarSpacer} />
         <Pressable
@@ -252,7 +252,7 @@ export default function EditTournamentScreen() {
         onPress={handleSubmit(onSubmit)}
         loading={updateTournament.isPending}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

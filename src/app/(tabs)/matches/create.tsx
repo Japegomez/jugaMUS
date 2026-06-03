@@ -3,11 +3,12 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, StyleSheet, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
@@ -149,10 +150,9 @@ export default function CreateMatchScreen() {
   }
 
   return (
-    <ScrollView
+    <KeyboardAwareScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}
-      keyboardShouldPersistTaps="handled">
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
       <Text style={s.heading}>Nueva partida</Text>
 
       {/* Título */}
@@ -402,7 +402,7 @@ export default function CreateMatchScreen() {
         loading={createMatch.isPending}
         style={s.submitBtn}
       />
-    </ScrollView>
+    </KeyboardAwareScrollView>
   )
 }
 

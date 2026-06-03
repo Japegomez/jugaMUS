@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Modal, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import RNDateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
 import {
@@ -77,39 +78,40 @@ function IOSPicker({ label, value, onChange, error, minDate }: DateTimePickerPro
         </Text>
       ) : null}
 
-      <Modal
-        visible={open}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={cancel}>
-        <SafeAreaView style={s.modal}>
-          <View style={s.modalHeader}>
-            <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Cancelar">
-              <Text style={s.modalCancel}>Cancelar</Text>
-            </Pressable>
-            <Text style={s.modalTitle}>Fecha y hora</Text>
-            <Pressable onPress={confirm} accessibilityRole="button" accessibilityLabel="Confirmar">
-              <Text style={s.modalConfirm}>Listo</Text>
-            </Pressable>
-          </View>
-          {/* Fondo y colores explícitos: sin esto, ruedas blancas sobre sheet claro en iOS */}
-          <View style={s.iosPickerWrap}>
-            <RNDateTimePicker
-              value={draft}
-              mode="datetime"
-              display="spinner"
-              minimumDate={minDate}
-              locale="es_ES"
-              themeVariant="light"
-              textColor={Colors.textPrimary}
-              accentColor={Colors.primary}
-              onChange={(_, d) => {
-                if (d) setDraft(d)
-              }}
-              style={s.iosSpinner}
-            />
-          </View>
-        </SafeAreaView>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={cancel}>
+        <View style={s.modalRoot}>
+          <Pressable style={s.modalBackdrop} onPress={cancel} accessibilityLabel="Cerrar" />
+          <SafeAreaView style={s.modalSheet} edges={['bottom']}>
+            <View style={s.modalHeader}>
+              <Pressable onPress={cancel} accessibilityRole="button" accessibilityLabel="Cancelar">
+                <Text style={s.modalCancel}>Cancelar</Text>
+              </Pressable>
+              <Text style={s.modalTitle}>Fecha y hora</Text>
+              <Pressable
+                onPress={confirm}
+                accessibilityRole="button"
+                accessibilityLabel="Confirmar">
+                <Text style={s.modalConfirm}>Listo</Text>
+              </Pressable>
+            </View>
+            <View style={s.iosPickerWrap}>
+              <RNDateTimePicker
+                value={draft}
+                mode="datetime"
+                display="spinner"
+                minimumDate={minDate}
+                locale="es_ES"
+                themeVariant="light"
+                textColor={Colors.textPrimary}
+                accentColor={Colors.primary}
+                onChange={(_, d) => {
+                  if (d) setDraft(d)
+                }}
+                style={s.iosSpinner}
+              />
+            </View>
+          </SafeAreaView>
+        </View>
       </Modal>
     </View>
   )
@@ -230,11 +232,19 @@ const s = StyleSheet.create({
   fieldPlaceholder: { color: Colors.textSecondary },
   chevron: { fontSize: 12, color: Colors.textSecondary, paddingLeft: 8 },
   error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
-  modal: { flex: 1, backgroundColor: Colors.surface },
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    overflow: 'hidden',
+  },
   iosPickerWrap: {
-    flex: 1,
     backgroundColor: Colors.border,
-    justifyContent: 'center',
     paddingVertical: 8,
   },
   modalHeader: {
@@ -250,5 +260,5 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   modalCancel: { fontSize: 16, color: Colors.textSecondary },
   modalConfirm: { fontSize: 16, color: Colors.primary, fontFamily: Fonts.bold },
-  iosSpinner: { alignSelf: 'stretch', backgroundColor: 'transparent' },
+  iosSpinner: { height: 216, width: '100%', backgroundColor: 'transparent' },
 })

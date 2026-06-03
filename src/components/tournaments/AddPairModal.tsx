@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -92,71 +94,78 @@ export function AddPairModal({
             <Text style={styles.close}>✕</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-          <Input
-            label="Nombre de la pareja (opcional)"
-            placeholder="Nombre Jugador1 - Nombre Jugador2"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
+        <KeyboardAvoidingView
+          style={styles.keyboard}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            contentContainerStyle={styles.body}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets>
+            <Input
+              label="Nombre de la pareja (opcional)"
+              placeholder="Nombre Jugador1 - Nombre Jugador2"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
 
-          <View style={styles.slot}>
-            <Text style={styles.slotLabel}>Jugador 1</Text>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Soy yo</Text>
-              <Switch
-                value={playerAIsSelf}
-                onValueChange={(v) => {
-                  setPlayerAIsSelf(v)
-                  if (v) {
-                    setPlayerAText('')
-                    setPlayerBIsSelf(false)
-                  }
-                }}
-                disabled={defaultSelfSlot === 'a' || selfJoinDisabled}
-              />
+            <View style={styles.slot}>
+              <Text style={styles.slotLabel}>Jugador 1</Text>
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Soy yo</Text>
+                <Switch
+                  value={playerAIsSelf}
+                  onValueChange={(v) => {
+                    setPlayerAIsSelf(v)
+                    if (v) {
+                      setPlayerAText('')
+                      setPlayerBIsSelf(false)
+                    }
+                  }}
+                  disabled={defaultSelfSlot === 'a' || selfJoinDisabled}
+                />
+              </View>
+              {!playerAIsSelf ? (
+                <Input
+                  label="Nombre (texto)"
+                  placeholder="Nombre del jugador"
+                  value={playerAText}
+                  onChangeText={setPlayerAText}
+                  autoCapitalize="words"
+                />
+              ) : null}
             </View>
-            {!playerAIsSelf ? (
-              <Input
-                label="Nombre (texto)"
-                placeholder="Nombre del jugador"
-                value={playerAText}
-                onChangeText={setPlayerAText}
-                autoCapitalize="words"
-              />
-            ) : null}
-          </View>
 
-          <View style={styles.slot}>
-            <Text style={styles.slotLabel}>Jugador 2 (opcional)</Text>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Soy yo</Text>
-              <Switch
-                value={playerBIsSelf}
-                onValueChange={(v) => {
-                  setPlayerBIsSelf(v)
-                  if (v) {
-                    setPlayerBText('')
-                    setPlayerAIsSelf(false)
-                  }
-                }}
-                disabled={defaultSelfSlot === 'b' || selfJoinDisabled}
-              />
+            <View style={styles.slot}>
+              <Text style={styles.slotLabel}>Jugador 2 (opcional)</Text>
+              <View style={styles.row}>
+                <Text style={styles.rowLabel}>Soy yo</Text>
+                <Switch
+                  value={playerBIsSelf}
+                  onValueChange={(v) => {
+                    setPlayerBIsSelf(v)
+                    if (v) {
+                      setPlayerBText('')
+                      setPlayerAIsSelf(false)
+                    }
+                  }}
+                  disabled={defaultSelfSlot === 'b' || selfJoinDisabled}
+                />
+              </View>
+              {!playerBIsSelf ? (
+                <Input
+                  label="Nombre (texto)"
+                  placeholder="Compañero"
+                  value={playerBText}
+                  onChangeText={setPlayerBText}
+                  autoCapitalize="words"
+                />
+              ) : null}
             </View>
-            {!playerBIsSelf ? (
-              <Input
-                label="Nombre (texto)"
-                placeholder="Compañero"
-                value={playerBText}
-                onChangeText={setPlayerBText}
-                autoCapitalize="words"
-              />
-            ) : null}
-          </View>
 
-          <Button title="Guardar pareja" onPress={() => void handleSubmit()} loading={loading} />
-        </ScrollView>
+            <Button title="Guardar pareja" onPress={() => void handleSubmit()} loading={loading} />
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   )
@@ -164,6 +173,7 @@ export function AddPairModal({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: Colors.background },
+  keyboard: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
