@@ -25,7 +25,6 @@ import { screenTopPadding } from '@/theme/layout'
 
 type NotifField = Pick<
   ProfileUpdate,
-  | 'notify_email'
   | 'notify_push'
   | 'notify_on_join'
   | 'notify_on_match_change'
@@ -149,13 +148,6 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Notificaciones</Text>
 
-        <Text style={styles.cardSubtitle}>Canal</Text>
-        <NotifToggleRow
-          label="Correo electrónico"
-          value={profile.notify_email}
-          disabled={notifDisabled && savingField === 'notify_email'}
-          onValueChange={(value) => void onNotifChange('notify_email', value)}
-        />
         <NotifToggleRow
           label="Notificaciones push"
           value={profile.notify_push}

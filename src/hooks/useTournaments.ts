@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateMyMatchesDashboard, invalidatePublicExplore } from '@/hooks/useMatches'
-import { TOURNAMENT_QUERY_STALE_TIME, TOURNAMENT_REFETCH_INTERVAL } from '@/constants'
+import { TOURNAMENT_QUERY_STALE_TIME } from '@/constants'
 import {
   addTournamentPair,
   createTournament,
@@ -41,7 +41,6 @@ export function useTournament(id: string) {
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
     refetchOnWindowFocus: true,
-    refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })
 }
 
@@ -52,7 +51,6 @@ export function useTournamentBracket(id: string) {
     enabled: Boolean(id),
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
     refetchOnWindowFocus: true,
-    refetchInterval: TOURNAMENT_REFETCH_INTERVAL,
   })
 }
 
