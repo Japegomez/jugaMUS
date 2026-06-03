@@ -6,7 +6,7 @@ export const Layout = {
   /** Fixed top padding for auth screens without dynamic safe area handling. */
   authScreenTopPadding: 52,
   /** Tab bar content height excluding bottom safe area (system nav / home indicator). */
-  tabBarContentHeight: Platform.select({ ios: 49, android: 56, default: 56 }) ?? 56,
+  tabBarContentHeight: Platform.select({ ios: 54, android: 58, default: 58 }) ?? 58,
 } as const
 
 /** Total tab bar height including bottom safe area inset. */

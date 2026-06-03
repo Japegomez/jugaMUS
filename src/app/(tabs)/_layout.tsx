@@ -47,8 +47,8 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: Fonts.medium,
-          fontSize: 12,
-          marginBottom: Platform.OS === 'android' ? 6 : 0,
+          fontSize: 15,
+          marginBottom: Platform.OS === 'android' ? 6 : 2,
         },
         tabBarIconStyle: {
           width: 0,
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     marginHorizontal: 4,
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 44,
   },
   tabBarButtonActive: {
     backgroundColor: Colors.tabBarActiveBackground,

@@ -49,7 +49,6 @@ export const MATCH_PAGE_SIZE = 20
 export const QUERY_STALE_TIME = 5 * 60 * 1000 // 5 minutos
 /** Torneos: datos compartidos entre dispositivos — refresco más frecuente. */
 export const TOURNAMENT_QUERY_STALE_TIME = 30 * 1000 // 30 segundos
-export const TOURNAMENT_REFETCH_INTERVAL = 30 * 1000
 
 /** Tab root screens: one refetch when stale (avoid refetchOnMount:'always' + focus double-fetch). */
 export const TAB_SCREEN_QUERY_OPTIONS = {

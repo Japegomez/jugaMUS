@@ -1,5 +1,6 @@
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
+import { MatchResultScoreLines } from '@/components/matches/MatchResultScoreLines'
 import { Button } from '@/components/ui/Button'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -47,9 +48,12 @@ export function ApproveResultModal({
           </Pressable>
         </View>
         <View style={s.body}>
-          <Text style={s.score}>
-            {teamAName}: {teamAScore} — {teamBName}: {teamBScore}
-          </Text>
+          <MatchResultScoreLines
+            teamAName={teamAName}
+            teamBName={teamBName}
+            teamAScore={teamAScore}
+            teamBScore={teamBScore}
+          />
           <Text style={s.submitter}>
             Enviado por <Text style={s.submitterName}>{submitterDisplayName}</Text>
           </Text>

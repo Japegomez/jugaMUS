@@ -26,6 +26,7 @@ import {
 } from '@/hooks/useTournaments'
 import { isTournamentPairComplete, type TournamentPairRow } from '@/services/tournaments.service'
 import { confirmAlert, showAlert } from '@/utils/alert'
+import { showFormFieldsMissingAlert } from '@/utils/formValidation'
 import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -302,6 +303,22 @@ export default function CreateTournamentScreen() {
             />
           )}
         />
+        {placeDefined ? (
+          <Controller
+            control={control}
+            name="place_text"
+            render={({ field }) => (
+              <Input
+                label="Lugar *"
+                placeholder="Ej. Bar El Rincón"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.place_text?.message}
+                autoCapitalize="sentences"
+              />
+            )}
+          />
+        ) : null}
         <View style={s.row}>
           <View style={s.rowText}>
             <Text style={s.rowLabel}>Lugar por definir</Text>
@@ -323,22 +340,6 @@ export default function CreateTournamentScreen() {
             )}
           />
         </View>
-        {placeDefined ? (
-          <Controller
-            control={control}
-            name="place_text"
-            render={({ field }) => (
-              <Input
-                label="Lugar *"
-                placeholder="Ej. Bar El Rincón"
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                error={errors.place_text?.message}
-                autoCapitalize="sentences"
-              />
-            )}
-          />
-        ) : null}
         <View style={s.fieldWrap}>
           <Text style={s.label}>Duración (juegos) *</Text>
           <View style={s.durationRow}>
@@ -391,7 +392,7 @@ export default function CreateTournamentScreen() {
         />
         <Button
           title="Añadir parejas"
-          onPress={handleSubmit(onStep1)}
+          onPress={handleSubmit(onStep1, showFormFieldsMissingAlert)}
           loading={createTournament.isPending}
           style={s.submitBtn}
         />

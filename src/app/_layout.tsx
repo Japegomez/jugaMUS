@@ -14,6 +14,7 @@ import {
 import * as SplashScreen from 'expo-splash-screen'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
+import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync'
 import { useNotifications } from '@/hooks/useNotifications'
 import { posthog } from '@/lib/posthog'
 
@@ -81,10 +82,17 @@ function RootLayout() {
   return (
     <PostHogProvider client={posthog}>
       <QueryClientProvider client={queryClient}>
+        <AppQueryScope />
         <Stack screenOptions={{ headerShown: false }} />
       </QueryClientProvider>
     </PostHogProvider>
   )
+}
+
+/** Hooks that need QueryClientProvider (Realtime list sync). */
+function AppQueryScope() {
+  useExploreListsRealtimeSync()
+  return null
 }
 
 export default Sentry.wrap(RootLayout)

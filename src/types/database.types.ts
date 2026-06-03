@@ -420,7 +420,6 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
-          notify_email: boolean
           notify_on_join: boolean
           notify_on_match_change: boolean
           notify_on_reminder: boolean
@@ -438,7 +437,6 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
-          notify_email?: boolean
           notify_on_join?: boolean
           notify_on_match_change?: boolean
           notify_on_reminder?: boolean
@@ -456,7 +454,6 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
-          notify_email?: boolean
           notify_on_join?: boolean
           notify_on_match_change?: boolean
           notify_on_reminder?: boolean
@@ -929,7 +926,6 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
-          notify_email: boolean
           notify_on_join: boolean
           notify_on_match_change: boolean
           notify_on_reminder: boolean
@@ -956,7 +952,6 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
-          notify_email: boolean
           notify_on_join: boolean
           notify_on_match_change: boolean
           notify_on_reminder: boolean

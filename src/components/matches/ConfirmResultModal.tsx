@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from 'react-native'
 
+import { MatchResultScoreLines } from '@/components/matches/MatchResultScoreLines'
 import { Button } from '@/components/ui/Button'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -47,9 +48,12 @@ export function ConfirmResultModal({
           </Pressable>
         </View>
         <View style={s.body}>
-          <Text style={s.score}>
-            Equipo A: {teamAScore} — Equipo B: {teamBScore}
-          </Text>
+          <MatchResultScoreLines
+            teamAName="Equipo A"
+            teamBName="Equipo B"
+            teamAScore={teamAScore}
+            teamBScore={teamBScore}
+          />
           <Text style={s.submitter}>
             Enviado por <Text style={s.submitterName}>{submitterDisplayName}</Text>
           </Text>
