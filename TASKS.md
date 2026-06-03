@@ -319,14 +319,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Detalle y tarjetas: organizador, ciudad + lugar; títulos de ronda (Cuartos, Semifinal…)
 - [x] Historial perfil: victoria/derrota con fondo verde/rojo; partidas bye excluidas de historial y stats admin
 - [x] Crear/editar partida y torneo: lugar obligatorio o casilla «Lugar por definir»
-- [x] Sincronización multi-dispositivo: refetch al foco, polling 30 s y pull-to-refresh en detalle torneo
+- [x] Sincronización multi-dispositivo: Supabase Realtime + invalidación de listas (Descubrir, Mis partidas, historial, ficha/cuadro torneo); migración `058`; hook `useExploreListsRealtimeSync`
 - [x] Test unitario `buildBracketLayout`
 - [x] **Editar y eliminar parejas** en detalle del torneo (organizador, inscripción abierta, sin cuadro): modal `EditPairModal`; RPCs `update_tournament_pair` / `remove_tournament_pair` (migración `055`, PR #56)
 - [x] Enlace **🏆 Ir al torneo** en ficha de partida del cuadro (chip con estilo previo, tamaño ampliado)
 
 ### F11 - Pendiente / opcional
 
-- [ ] Supabase Realtime en torneos (sync instantáneo entre web y móvil sin esperar polling)
+- [x] Supabase Realtime en partidas y torneos (sync instantáneo entre dispositivos; sustituye polling 30 s en detalle torneo)
 
 ---
 
