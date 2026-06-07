@@ -1,20 +1,20 @@
 # Tareas - jugaMUS
 
-> Actualizado: 31/05/2026 (revisión de pendientes; PR #59 mergeado en develop)
+> Actualizado: 03/06/2026 (cierre sesión; marcador sin login en rama `feature/scoreboard_without_login`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                 |
-| ------------------- | ---------- | ------------------------------------------- |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir           |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes        |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas           |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil         |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado |
-| UI — Ultra Limpio   | Completada | Rediseño visual                             |
+| Fase                | Estado     | Descripción                                                          |
+| ------------------- | ---------- | -------------------------------------------------------------------- |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                    |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                 |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                    |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
+| UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
 
 ---
 
@@ -346,6 +346,17 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Reset del marcador local tras registrar resultado correctamente
 - [x] Commit + PR `feature/scoreboard` → `develop` (revisor/asignado Japegomez)
 - [x] QA en Android / iOS / web: flujo completo marcador → registrar resultado → historial
+
+### F13 - Marcador sin registro (guest)
+
+> Rama de trabajo: `feature/scoreboard_without_login` (desde `develop`).
+
+- [x] Botón «Llevar la cuenta» en login (destacado) + texto orientativo (sesión vs cuenta sin registro)
+- [x] Formulario rápido: nombres pareja A/B + juegos a ganar (1–6) en `/(auth)/guest-scoreboard`
+- [x] Marcador reutilizando `useLiveScoreboard` y componentes F12 (`/(auth)/guest-scoreboard/play`)
+- [x] Popup fin de partida con ganador y «Volver al inicio» → login; estado local con `GUEST_SCOREBOARD_STORAGE_ID`
+- [ ] Commit + PR `feature/scoreboard_without_login` → `develop` (revisor/asignado Japegomez)
+- [ ] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web)
 
 ---
 
