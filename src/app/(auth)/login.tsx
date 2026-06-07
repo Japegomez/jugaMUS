@@ -10,7 +10,7 @@ import {
 } from 'react-native'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
-import { Link } from 'expo-router'
+import { Link, useRouter, type Href } from 'expo-router'
 
 import { APP_DISPLAY_NAME } from '@/constants/app'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +23,7 @@ import { Layout } from '@/theme/layout'
 import { Fonts } from '@/theme/typography'
 
 export default function LoginScreen() {
+  const router = useRouter()
   const signInWithPassword = useAuthStore((s) => s.signInWithPassword)
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle)
   const signInWithApple = useAuthStore((s) => s.signInWithApple)
@@ -79,7 +80,22 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>{APP_DISPLAY_NAME}</Text>
-        <Text style={styles.sub}>Inicia sesión para continuar</Text>
+        <Text style={styles.infoText}>
+          Si deseas llevar la cuenta de una partida sin registro, pulsa Llevar la cuenta. Para crear
+          o unirse a partidas y torneos, inicia sesión.
+        </Text>
+
+        <Button
+          title="Llevar la cuenta"
+          onPress={() => router.push('/(auth)/guest-scoreboard' as Href)}
+          style={styles.scoreboardBtn}
+          textStyle={styles.scoreboardBtnLabel}
+        />
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <View style={styles.dividerLine} />
+        </View>
 
         {formError ? (
           <View style={styles.formError} accessibilityRole="alert">
@@ -179,10 +195,18 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     marginBottom: 8,
   },
-  sub: {
-    fontSize: 16,
+  infoText: {
+    fontSize: 15,
     color: Colors.textSecondary,
-    marginBottom: 28,
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  scoreboardBtn: {
+    minHeight: 56,
+    marginBottom: 8,
+  },
+  scoreboardBtnLabel: {
+    fontSize: 18,
   },
   formError: {
     backgroundColor: Colors.surface,
