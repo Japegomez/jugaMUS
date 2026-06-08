@@ -71,7 +71,7 @@
     "jest-expo": "~54.0.17",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
-    "typescript": "~5.9.2"
+    "typescript": "~6.0.3"
   },
   "private": true,
   "lint-staged": {
