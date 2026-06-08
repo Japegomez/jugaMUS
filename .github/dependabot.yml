@@ -15,7 +15,14 @@ updates:
           - minor
           - patch
       npm-runtime-patch-minor:
-        dependency-type: production
+        patterns:
+          - '@supabase/*'
+          - '@tanstack/*'
+          - '@hookform/resolvers'
+          - 'react-hook-form'
+          - 'posthog-react-native'
+          - 'zod'
+          - 'zustand'
         update-types:
           - minor
           - patch
@@ -23,6 +30,43 @@ updates:
       # Block all semver-major bumps (Expo SDK, RN, TypeScript, etc.) — upgrade manually
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Expo SDK pins these — use npx expo install on SDK upgrades
+      - dependency-name: 'react'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: 'react-dom'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: 'react-native'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: 'react-native-*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: '@react-native-community/*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: '@react-native-async-storage/*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: '@sentry/react-native'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: 'expo*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
+      - dependency-name: '@expo/*'
+        update-types:
+          - 'version-update:semver-minor'
+          - 'version-update:semver-patch'
 
   - package-ecosystem: github-actions
     directory: /
