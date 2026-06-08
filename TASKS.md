@@ -242,6 +242,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
   - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android/iOS → submit Play + TestFlight (iOS tras merge #59). Tests iniciales en `src/utils/validators.test.ts` (E.164).
 
+### CI/CD hardening (checklist Nana — jun. 2026)
+
+- [x] **Cobertura Jest con umbral 1%** — `coverageThreshold` en `jest.config.js`; artefacto `coverage/` en `quality.yml`.
+- [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
+- [x] **Escaneo de secretos** — workflow `secret-scan.yml` (Gitleaks en PR/push a `develop`/`main`).
+  - **Pendiente manual (GitHub):** Settings → Code security → Dependency graph, Dependabot alerts, Secret scanning + Push protection (si el plan del repo lo permite).
+- [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build.
+
 ---
 
 ## Fase 3 — Admin y Analíticas
