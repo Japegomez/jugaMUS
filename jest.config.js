@@ -6,4 +6,12 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   collectCoverageFrom: ['src/utils/**/*.ts', '!**/*.d.ts'],
+  coverageThreshold: {
+    global: {
+      branches: 1,
+      functions: 1,
+      lines: 1,
+      statements: 1,
+    },
+  },
 }
