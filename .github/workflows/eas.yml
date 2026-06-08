@@ -1,6 +1,6 @@
 name: Release
 
-# Pipeline: quality → EAS build (Android + iOS) → submit (Play + App Store Connect / TestFlight).
+# Pipeline: quality → release tag → EAS build (Android + iOS) → submit (Play + App Store Connect / TestFlight).
 on:
   push:
     branches: [main]
@@ -9,10 +9,36 @@ jobs:
   quality:
     uses: ./.github/workflows/quality.yml
 
+  release-tag:
+    name: Tag release
+    runs-on: ubuntu-latest
+    needs: [quality]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push tag
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          STAMP=$(date -u +%Y%m%d.%H%M)
+          TAG="v${VERSION}-${STAMP}"
+          # Avoid collision if two releases run in the same minute
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            TAG="${TAG}-${GITHUB_RUN_NUMBER}"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG (commit ${GITHUB_SHA::7})"
+          git push origin "$TAG"
+
   build-android:
     name: EAS Build — Android
     runs-on: ubuntu-latest
-    needs: [quality]
+    needs: [release-tag]
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +63,7 @@ jobs:
   build-ios:
     name: EAS Build — iOS
     runs-on: ubuntu-latest
-    needs: [quality]
+    needs: [release-tag]
     steps:
       - uses: actions/checkout@v4
 

@@ -10,7 +10,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:ci": "jest --ci --coverage",
+    "test:ci": "jest --ci --coverage --coverageReporters=text-summary --coverageReporters=lcov",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "prepare": "husky",
     "sync:municipalities": "node scripts/sync-municipalities.mjs"
