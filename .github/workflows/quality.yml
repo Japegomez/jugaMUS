@@ -1,14 +1,21 @@
-name: Quality checks
+name: Quality
 
 on:
   workflow_call:
 
 jobs:
-  lint-typecheck-test:
-    name: Lint, type-check & tests
+  quality:
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Secret scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -21,6 +28,9 @@ jobs:
 
       - name: Dependency audit
         run: npm audit --audit-level=high
+
+      - name: Expo SDK compatibility
+        run: npx expo-doctor
 
       - name: Lint
         run: npm run lint
