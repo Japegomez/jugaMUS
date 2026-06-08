@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 03/06/2026 (cierre sesión; marcador sin login en rama `feature/scoreboard_without_login`)
+> Actualizado: 09/06/2026 (cierre sesión; CI hardening, Quality gate unificado, Dependabot Expo-safe)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -238,17 +238,20 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Confirmar con `eas env:list --environment production`; **nuevo build** tras añadirlas.
 - [x] Configurar EAS Submit para publicación automática en App Store
   - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
-  - **Pendiente:** merge `develop` → `main` y confirmar primer run del workflow Release en GitHub Actions.
+  - Release en `main` validado (PR #86); tags en `https://github.com/Japegomez/jugaMUS/tags`.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
-  - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android/iOS → submit Play + TestFlight (iOS tras merge #59). Tests iniciales en `src/utils/validators.test.ts` (E.164).
+  - Workflow reutilizable `.github/workflows/quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → release-tag → build Android/iOS → submit Play + TestFlight.
 
 ### CI/CD hardening (checklist Nana — jun. 2026)
 
 - [x] **Cobertura Jest con umbral 1%** — `coverageThreshold` en `jest.config.js`; artefacto `coverage/` en `quality.yml`.
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
-- [x] **Escaneo de secretos** — workflow `secret-scan.yml` (Gitleaks en PR/push a `develop`/`main`).
-  - **Pendiente manual (GitHub):** Settings → Code security → Dependency graph, Dependabot alerts, Secret scanning + Push protection (si el plan del repo lo permite).
-- [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build.
+- [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
+- [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
+- [x] **Dependabot Expo-safe** — grupo runtime limitado a libs independientes; ignora patch/minor en stack Expo/RN. PR #84 cerrada (conflictos + bumps incompatibles SDK 54).
+- [x] **Fix deps Expo SDK 54 en `main`** — `async-storage` 2.2.0, `expo-splash-screen` ~31.0.13 (PR #85/#86).
+- [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build. Visibles en GitHub → Tags.
+- [ ] **Pendiente manual (GitHub):** Settings → Code security → Dependabot **security updates** (opción 3) + Push protection; ruleset `status check` en `develop`/`main` (check `quality / Quality`).
 
 ---
 
