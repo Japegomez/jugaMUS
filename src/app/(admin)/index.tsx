@@ -19,6 +19,14 @@ export default function AdminDashboardScreen() {
 
         <Pressable
           style={({ pressed }) => [styles.navButton, pressed && styles.navButtonPressed]}
+          onPress={() => router.push('/(admin)/feedback' as Href)}
+          accessibilityRole="button">
+          <Text style={styles.navButtonTitle}>Feedback de usuarios</Text>
+          <Text style={styles.navButtonDesc}>Sugerencias, errores y comentarios por categoría</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [styles.navButton, pressed && styles.navButtonPressed]}
           onPress={() => router.push('/(admin)/analytics' as Href)}
           accessibilityRole="button">
           <Text style={styles.navButtonTitle}>Analíticas detalladas</Text>

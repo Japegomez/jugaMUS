@@ -10,16 +10,16 @@ export default function PrivacyScreen() {
     <LegalScreenLayout title="Política de privacidad">
       <LegalSection heading="1. Responsable del tratamiento">
         <LegalParagraph>
-          {`El responsable del tratamiento de los datos personales recogidos a través de ${APP_DISPLAY_NAME} será el titular del proyecto indicado en el registro de actividades de tratamiento (RAT), cuyos datos de contacto se publicarán antes del lanzamiento comercial.`}
+          {`El responsable del tratamiento de los datos personales recogidos a través de ${APP_DISPLAY_NAME} es Javier Peña Gómez (desarrollador indicado en las fichas de Google Play y App Store). Puedes contactar en japenago@gmail.com.`}
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection heading="2. Datos que tratamos">
         <LegalParagraph>
           Datos de cuenta (email, nombre visible, foto de perfil opcional), teléfono si lo
-          facilitas, preferencias de notificación, historial de partidas en las que participas,
-          resultados, reportes y datos técnicos (identificadores de dispositivo para push, registros
-          de errores anonimizados).
+          facilitas, preferencias de notificación, historial de partidas y torneos en los que
+          participas, resultados, reportes, feedback que envíes y datos técnicos (identificadores de
+          dispositivo para push, registros de errores anonimizados).
         </LegalParagraph>
       </LegalSection>
 
@@ -59,19 +59,20 @@ export default function PrivacyScreen() {
       <LegalSection heading="7. Visibilidad del teléfono">
         <LegalParagraph>
           Si incluyes tu número de teléfono, solo será visible para usuarios que participen en la
-          misma partida que tú, conforme a la configuración de privacidad del servicio.
+          misma partida confirmada que tú, conforme a la configuración de privacidad del servicio.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection heading="8. Tus derechos">
         <LegalParagraph>
           Puedes ejercer los derechos de acceso, rectificación, supresión, limitación, oposición y
-          portabilidad, así como retirar el consentimiento cuando proceda, contactando con el
-          responsable. También puedes presentar reclamación ante la AEPD (www.aepd.es).
+          portabilidad, así como retirar el consentimiento cuando proceda, escribiendo a
+          japenago@gmail.com. También puedes presentar reclamación ante la AEPD (www.aepd.es).
         </LegalParagraph>
         <LegalParagraph>
-          La eliminación completa de cuenta (derecho de supresión) estará disponible desde la app en
-          una versión posterior del producto.
+          Puedes eliminar tu cuenta desde la propia app (Perfil → Eliminar cuenta). El historial de
+          partidas y torneos se anonimiza para no perjudicar a otros jugadores; el resto de datos
+          personales se borra conforme a esta política.
         </LegalParagraph>
       </LegalSection>
 
@@ -92,7 +93,7 @@ export default function PrivacyScreen() {
 
       <LegalSection heading="11. Contacto">
         <LegalParagraph>
-          {`Para ejercer derechos o consultas de privacidad relacionadas con ${APP_DISPLAY_NAME}, utiliza el canal de contacto que se indique en la app antes del lanzamiento público.`}
+          {`Para ejercer derechos o consultas de privacidad relacionadas con ${APP_DISPLAY_NAME}, escribe a japenago@gmail.com.`}
         </LegalParagraph>
       </LegalSection>
     </LegalScreenLayout>

@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 03/06/2026 (cierre sesión; marcador sin login en rama `feature/scoreboard_without_login`)
+> Actualizado: 10/06/2026 (cierre sesión; feedback usuarios, valoración tienda, confirmación logout)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -15,6 +15,7 @@
 | Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
 | Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
 | UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
 
 ---
 
@@ -72,6 +73,7 @@
   - Tabs: rutas `matches/index`, `profile/index`, etc. en `(tabs)/_layout.tsx` (Expo Router web).
 - [x] Hook `useAuth.ts` con Zustand para estado global de sesión
 - [x] Cerrar sesión desde pantalla de perfil
+- [x] Confirmación modal al cerrar sesión (`SignOutModal`: Confirmar / Cancelar)
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
   - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
   - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
@@ -238,17 +240,20 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Confirmar con `eas env:list --environment production`; **nuevo build** tras añadirlas.
 - [x] Configurar EAS Submit para publicación automática en App Store
   - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
-  - **Pendiente:** merge `develop` → `main` y confirmar primer run del workflow Release en GitHub Actions.
+  - Release en `main` validado (PR #86); tags en `https://github.com/Japegomez/jugaMUS/tags`.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
-  - Workflow reutilizable `.github/workflows/quality.yml` (lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → build Android/iOS → submit Play + TestFlight (iOS tras merge #59). Tests iniciales en `src/utils/validators.test.ts` (E.164).
+  - Workflow reutilizable `.github/workflows/quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → release-tag → build Android/iOS → submit Play + TestFlight.
 
 ### CI/CD hardening (checklist Nana — jun. 2026)
 
 - [x] **Cobertura Jest con umbral 1%** — `coverageThreshold` en `jest.config.js`; artefacto `coverage/` en `quality.yml`.
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
-- [x] **Escaneo de secretos** — workflow `secret-scan.yml` (Gitleaks en PR/push a `develop`/`main`).
-  - **Pendiente manual (GitHub):** Settings → Code security → Dependency graph, Dependabot alerts, Secret scanning + Push protection (si el plan del repo lo permite).
-- [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build.
+- [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
+- [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
+- [x] **Dependabot Expo-safe** — grupo runtime limitado a libs independientes; ignora patch/minor en stack Expo/RN. PR #84 cerrada (conflictos + bumps incompatibles SDK 54).
+- [x] **Fix deps Expo SDK 54 en `main`** — `async-storage` 2.2.0, `expo-splash-screen` ~31.0.13 (PR #85/#86).
+- [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build. Visibles en GitHub → Tags.
+- [ ] **Pendiente manual (GitHub):** Settings → Code security → Dependabot **security updates** (opción 3) + Push protection; ruleset `status check` en `develop`/`main` (check `quality / Quality`).
 
 ---
 
@@ -413,6 +418,19 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Validar workflow Release en `main` (requiere merge `develop` → `main`)
 - [x] Testing interno TestFlight: Sign in with Apple, push, partidas/torneos (QA manual en dispositivo)
 - [ ] Completar ficha App Store Connect (pegar textos, capturas, App Privacy) y **Submit for Review**
+
+---
+
+## UX — Cuenta y feedback (jun. 2026)
+
+- [x] Feedback en app: `FeedbackModal` + tabla `user_feedback` (migración `059`, RLS usuario/admin)
+- [x] Botón «Enviar feedback» en perfil (mismo estilo que Editar perfil, encima de Cerrar sesión)
+- [x] Panel admin «Feedback de usuarios» (`/(admin)/feedback`) con filtro por categoría (`issue` / `feature` / `other`)
+- [x] Prompt valoración en tienda cada 3 días (`expo-store-review`, `AppRatingPromptHost`); enlace manual «Valorar en la tienda» en iOS/Android
+- [x] Confirmación al cerrar sesión (`SignOutModal`)
+- [x] Commit en `develop` (cambios UX cuenta y feedback)
+- [ ] PR opcional si se prefiere revisión antes de merge a `main`
+- [ ] QA: enviar feedback → ver en panel admin; probar filtros, prompt rating (o forzar tras borrar clave AsyncStorage) y logout confirm
 
 ---
 

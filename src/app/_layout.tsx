@@ -13,6 +13,7 @@ import {
 } from '@expo-google-fonts/dm-sans'
 import * as SplashScreen from 'expo-splash-screen'
 import { useAuthStore } from '@/hooks/useAuth'
+import { AppRatingPromptHost } from '@/components/AppRatingPromptHost'
 import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
 import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -83,6 +84,7 @@ function RootLayout() {
     <PostHogProvider client={posthog}>
       <QueryClientProvider client={queryClient}>
         <AppQueryScope />
+        <AppRatingPromptHost />
         <Stack screenOptions={{ headerShown: false }} />
       </QueryClientProvider>
     </PostHogProvider>

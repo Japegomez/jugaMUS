@@ -10,11 +10,11 @@ export default function TermsScreen() {
     <LegalScreenLayout title="Términos y Condiciones">
       <LegalSection heading="1. Objeto">
         <LegalParagraph>
-          {`Los presentes Términos y Condiciones regulan el acceso y uso de la aplicación móvil ${APP_DISPLAY_NAME}, destinada a facilitar la organización de partidas de mus entre usuarios registrados en España.`}
+          {`Los presentes Términos y Condiciones regulan el acceso y uso de la aplicación móvil ${APP_DISPLAY_NAME}, destinada a facilitar la organización de partidas y torneos de mus entre usuarios registrados en España.`}
         </LegalParagraph>
         <LegalParagraph>
-          La app no incluye lógica del juego ni apuestas; actúa como herramienta de coordinación
-          entre jugadores.
+          La app no incluye lógica del juego, apuestas ni transacciones económicas; actúa únicamente
+          como herramienta de coordinación entre jugadores.
         </LegalParagraph>
       </LegalSection>
 
@@ -27,8 +27,9 @@ export default function TermsScreen() {
 
       <LegalSection heading="3. Registro y cuenta">
         <LegalParagraph>
-          Debes ser mayor de edad y proporcionar datos veraces. Eres responsable de la
-          confidencialidad de tus credenciales y de toda actividad realizada desde tu cuenta.
+          Para registrarte debes proporcionar datos veraces y mantenerlos actualizados. Eres
+          responsable de la confidencialidad de tus credenciales y de toda actividad realizada desde
+          tu cuenta.
         </LegalParagraph>
         <LegalParagraph>
           Nos reservamos el derecho de suspender o eliminar cuentas que incumplan estas condiciones
@@ -41,16 +42,16 @@ export default function TermsScreen() {
           {`Te comprometes a utilizar ${APP_DISPLAY_NAME} de forma lícita, respetuosa y conforme a la buena fe. Queda prohibido el acoso, contenido ilegal, suplantación de identidad, spam o cualquier uso que perjudique a otros usuarios o al servicio.`}
         </LegalParagraph>
         <LegalParagraph>
-          Las partidas públicas o privadas que publiques son responsabilidad tuya; la app no
-          garantiza la asistencia de terceros ni la calidad del encuentro presencial.
+          Las partidas y torneos que organices, públicos o privados, son responsabilidad tuya; la
+          app no garantiza la asistencia de terceros ni la calidad del encuentro presencial.
         </LegalParagraph>
       </LegalSection>
 
       <LegalSection heading="5. Contenido y moderación">
         <LegalParagraph>
           Puedes reportar conductas o contenidos inadecuados. El equipo de moderación podrá revisar
-          reportes y aplicar medidas (avisos, bloqueos, eliminación de partidas o resultados) según
-          las políticas internas.
+          los reportes y el feedback recibido y aplicar medidas (avisos, bloqueos, eliminación de
+          partidas o resultados) según las políticas internas.
         </LegalParagraph>
       </LegalSection>
 
@@ -80,8 +81,7 @@ export default function TermsScreen() {
 
       <LegalSection heading="9. Contacto">
         <LegalParagraph>
-          Para consultas sobre estos términos puedes escribir a la dirección de contacto indicada en
-          la Política de privacidad (pendiente de publicación definitiva).
+          Para consultas sobre estos términos puedes escribir a japenago@gmail.com.
         </LegalParagraph>
       </LegalSection>
     </LegalScreenLayout>

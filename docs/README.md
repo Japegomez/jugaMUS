@@ -16,6 +16,7 @@ Páginas estáticas para Google Play y enlaces públicos.
 
 | Uso                    | URL                                                           |
 | ---------------------- | ------------------------------------------------------------- |
+| Términos y Condiciones | `https://japegomez.github.io/jugaMUS/terminos.html`           |
 | Eliminación de cuenta  | `https://japegomez.github.io/jugaMUS/eliminacion-cuenta.html` |
 | Política de privacidad | `https://japegomez.github.io/jugaMUS/privacidad.html`         |
 

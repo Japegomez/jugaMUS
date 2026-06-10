@@ -5,13 +5,25 @@ import {
   blockUser,
   deleteMatch,
   deleteMatchResult,
+  fetchAdminFeedback,
   fetchAdminReports,
   resolveReport,
+  type FeedbackListFilters,
   type ReportListFilters,
 } from '@/services/admin.service'
 
 export const adminReportsQueryKey = (filters: ReportListFilters) =>
   ['admin', 'reports', filters] as const
+
+export const adminFeedbackQueryKey = (filters: FeedbackListFilters) =>
+  ['admin', 'feedback', filters] as const
+
+export function useFeedbackList(filters: FeedbackListFilters) {
+  return useQuery({
+    queryKey: adminFeedbackQueryKey(filters),
+    queryFn: () => fetchAdminFeedback(filters),
+  })
+}
 
 export function useReportsList(filters: ReportListFilters) {
   return useQuery({
