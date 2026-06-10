@@ -12,9 +12,13 @@ import {
 } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as StoreReview from 'expo-store-review'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
+import { FeedbackModal } from '@/components/FeedbackModal'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
+import { SignOutModal } from '@/components/SignOutModal'
 import { Button } from '@/components/ui/Button'
+import { isRatingPromptSupported } from '@/lib/appRating'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile'
 import { useUserMatches } from '@/hooks/useMatches'
@@ -62,17 +66,32 @@ export default function ProfileScreen() {
   const [signingOut, setSigningOut] = useState(false)
   const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showSignOutModal, setShowSignOutModal] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
 
   const onSignOut = async () => {
     setSigningOut(true)
     try {
       await signOut()
+      setShowSignOutModal(false)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'No se pudo cerrar sesión'
       Alert.alert('Cerrar sesión', message)
     } finally {
       setSigningOut(false)
+    }
+  }
+
+  const onRateApp = async () => {
+    if (!isRatingPromptSupported()) {
+      Alert.alert('Valorar app', 'La valoración en tienda solo está disponible en la app móvil.')
+      return
+    }
+    if (await StoreReview.isAvailableAsync()) {
+      await StoreReview.requestReview()
+    } else {
+      Alert.alert('Valorar app', 'No se pudo abrir la valoración en este momento.')
     }
   }
 
@@ -193,6 +212,13 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {isRatingPromptSupported() ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Ayuda</Text>
+          <LinkRow label="Valorar en la tienda" onPress={() => void onRateApp()} isLast />
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Legal</Text>
         <LinkRow
@@ -222,11 +248,17 @@ export default function ProfileScreen() {
         <Text style={styles.editButtonText}>Editar perfil</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.editButton}
+        onPress={() => setShowFeedbackModal(true)}
+        accessibilityRole="button">
+        <Text style={styles.editButtonText}>Enviar feedback</Text>
+      </Pressable>
+
       <Button
         title="Cerrar sesión"
         variant="outline"
-        loading={signingOut}
-        onPress={onSignOut}
+        onPress={() => setShowSignOutModal(true)}
         style={styles.signOutBtn}
         textStyle={styles.signOutLabel}
       />
@@ -237,6 +269,15 @@ export default function ProfileScreen() {
         onPress={() => setShowDeleteModal(true)}
         style={styles.deleteAccountBtn}
       />
+
+      <SignOutModal
+        visible={showSignOutModal}
+        onClose={() => setShowSignOutModal(false)}
+        loading={signingOut}
+        onConfirm={onSignOut}
+      />
+
+      <FeedbackModal visible={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
 
       <DeleteAccountModal
         visible={showDeleteModal}

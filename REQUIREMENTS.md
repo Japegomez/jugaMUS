@@ -23,6 +23,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Perfil ajeno (may. 2026):** pantalla de solo lectura `/(tabs)/profile/[userId]` con nombre, ciudad y teléfono (visible si el visitante comparte partida confirmada con ese usuario, o reglas equivalentes de `get_public_profile`). Historial de partidas del usuario mostrado limitado a las que el visitante puede leer; cada fila abre el detalle de la partida. Acceso desde el nombre/avatar de un participante registrado en la ficha de partida. RPCs `get_viewable_user_profile` y `list_user_viewable_matches` (migración `056`).
 - **Marcador en vivo (may. 2026):** pantalla «Llevar la cuenta» en partidas `in_progress`; estado persistido **solo en el dispositivo** (AsyncStorage / `localStorage`). Incluye fases del mus, envites, órdago y ajuste de puntos. «Registrar resultado» abre el modal con juegos pre-rellenados desde el marcador. No hay sync multi-dispositivo ni persistencia en servidor hasta enviar el resultado oficial.
 - **Marcador sin registro (jun. 2026):** desde login, botón «Llevar la cuenta» → formulario (nombres de parejas + juegos) → mismo marcador local que F12, **sin cuenta ni partida en servidor**. Al terminar, popup con ganador y vuelta al login. Crear/unirse a partidas y torneos sigue requiriendo sesión.
+- **Feedback y UX de cuenta (jun. 2026):** envío de feedback desde perfil (problema, sugerencia, otro) → tabla `user_feedback`; revisión en panel admin con filtro por categoría. Prompt in-app para valorar en App Store cada 3 días (solo móvil nativo). Cerrar sesión con diálogo de confirmación.
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
 - **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
 - **Alcance geográfico MVP**: España completa
@@ -63,7 +64,7 @@ Solo dos roles en el MVP:
 | Rol         | Capacidades                                                                                                                                                                                                 |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`user`**  | Crear, editar y cancelar sus partidas; unirse y abandonar partidas; ver teléfonos de participantes de sus partidas; editar su perfil; configurar notificaciones; eliminar su cuenta; recibir notificaciones |
-| **`admin`** | Todo lo anterior + gestionar reportes, bloquear/desactivar usuarios, eliminar partidas y resultados                                                                                                         |
+| **`admin`** | Todo lo anterior + gestionar reportes, revisar feedback de usuarios, bloquear/desactivar usuarios, eliminar partidas y resultados                                                                           |
 
 - **Sin invitados**: registro obligatorio para cualquier acción
 - Los privilegios de creador de partida se gestionan por el campo `creator_id` (no es un rol separado)
@@ -98,6 +99,9 @@ Solo dos roles en el MVP:
 - **El teléfono solo es visible para participantes de la misma partida confirmada** (también en perfil ajeno vía RPC)
 - Opción de ocultar ubicación exacta a no participantes
 - Eliminación de cuenta con confirmación modal (`DeleteAccountModal`)
+- Envío de feedback (problemas, sugerencias) desde perfil; botón principal al estilo «Editar perfil»
+- Cerrar sesión con confirmación (`SignOutModal`)
+- Valoración en tienda: prompt periódico en móvil (cada 3 días) y acceso manual desde perfil
 
 ### F3 - Ubicaciones (Fase 1)
 
@@ -182,7 +186,8 @@ Solo dos roles en el MVP:
 - Interfaz de admin para ver y gestionar reportes abiertos
 - Acciones: bloquear/desactivar usuario, eliminar partida/resultado
 - Registro de auditoría de todas las acciones administrativas
-- **Portada admin (may. 2026):** solo navegación a moderación de reportes y analíticas detalladas; las métricas viven en la pantalla de analíticas, no en el dashboard.
+- **Portada admin (may. 2026):** navegación a moderación de reportes, feedback de usuarios y analíticas detalladas; las métricas viven en la pantalla de analíticas, no en el dashboard.
+- **Feedback admin (jun. 2026):** listado de `user_feedback` con filtro por categoría (`issue`, `feature`, `other`); solo lectura.
 
 ### F9 - Analítica y panel (Fase 1 + 3)
 

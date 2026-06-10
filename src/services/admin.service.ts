@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { FeedbackCategory } from '@/services/feedback.service'
 import type { Json, Tables } from '@/types/database.types'
 
 export type ReportTargetUserSummary = {
@@ -361,4 +362,44 @@ export async function fetchUserRanking(limit = 20): Promise<UserRankingRow[]> {
     display_name: String(r.display_name),
     match_count: Number(r.match_count ?? 0),
   }))
+}
+
+export type AdminFeedback = Tables<'user_feedback'> & {
+  user_display_name: string | null
+}
+
+export type FeedbackListFilters = {
+  category?: FeedbackCategory | 'all'
+}
+
+export async function fetchAdminFeedback(filters: FeedbackListFilters): Promise<AdminFeedback[]> {
+  let query = supabase
+    .from('user_feedback')
+    .select(
+      `
+      *,
+      user:profiles!user_feedback_user_id_fkey(display_name)
+    `
+    )
+    .order('created_at', { ascending: false })
+
+  if (filters.category && filters.category !== 'all') {
+    query = query.eq('category', filters.category)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(error.message || 'No se pudo cargar el feedback')
+  }
+
+  return (data ?? []).map((row) => {
+    const { user, ...feedback } = row as Tables<'user_feedback'> & {
+      user: { display_name: string } | null
+    }
+    return {
+      ...feedback,
+      user_display_name: user?.display_name ?? null,
+    }
+  })
 }

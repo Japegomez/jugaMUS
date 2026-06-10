@@ -30,6 +30,7 @@ export default function AdminLayout() {
         }}>
         <Stack.Screen name="index" options={{ title: 'Administración' }} />
         <Stack.Screen name="reports" options={{ headerShown: false }} />
+        <Stack.Screen name="feedback" options={{ headerShown: false }} />
         <Stack.Screen name="analytics" options={{ headerShown: false }} />
       </Stack>
       {(!initialized || isLoading || profile?.role !== 'admin') && (

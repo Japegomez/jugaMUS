@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 09/06/2026 (cierre sesión; CI hardening, Quality gate unificado, Dependabot Expo-safe)
+> Actualizado: 10/06/2026 (cierre sesión; feedback usuarios, valoración tienda, confirmación logout)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -15,6 +15,7 @@
 | Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
 | Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
 | UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
 
 ---
 
@@ -72,6 +73,7 @@
   - Tabs: rutas `matches/index`, `profile/index`, etc. en `(tabs)/_layout.tsx` (Expo Router web).
 - [x] Hook `useAuth.ts` con Zustand para estado global de sesión
 - [x] Cerrar sesión desde pantalla de perfil
+- [x] Confirmación modal al cerrar sesión (`SignOutModal`: Confirmar / Cancelar)
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
   - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
   - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
@@ -416,6 +418,19 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Validar workflow Release en `main` (requiere merge `develop` → `main`)
 - [x] Testing interno TestFlight: Sign in with Apple, push, partidas/torneos (QA manual en dispositivo)
 - [ ] Completar ficha App Store Connect (pegar textos, capturas, App Privacy) y **Submit for Review**
+
+---
+
+## UX — Cuenta y feedback (jun. 2026)
+
+- [x] Feedback en app: `FeedbackModal` + tabla `user_feedback` (migración `059`, RLS usuario/admin)
+- [x] Botón «Enviar feedback» en perfil (mismo estilo que Editar perfil, encima de Cerrar sesión)
+- [x] Panel admin «Feedback de usuarios» (`/(admin)/feedback`) con filtro por categoría (`issue` / `feature` / `other`)
+- [x] Prompt valoración en tienda cada 3 días (`expo-store-review`, `AppRatingPromptHost`); enlace manual «Valorar en la tienda» en iOS/Android
+- [x] Confirmación al cerrar sesión (`SignOutModal`)
+- [x] Commit en `develop` (cambios UX cuenta y feedback)
+- [ ] PR opcional si se prefiere revisión antes de merge a `main`
+- [ ] QA: enviar feedback → ver en panel admin; probar filtros, prompt rating (o forzar tras borrar clave AsyncStorage) y logout confirm
 
 ---
 
