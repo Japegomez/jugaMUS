@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ApproveResultModal } from '@/components/matches/ApproveResultModal'
+import { MatchInviteLinkCard } from '@/components/matches/MatchInviteLinkCard'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
@@ -758,6 +759,12 @@ export default function MatchDetailScreen() {
             }
           />
         </View>
+
+        {match.visibility === MATCH_VISIBILITY.LINK ? (
+          <View style={s.section}>
+            <MatchInviteLinkCard matchId={id} />
+          </View>
+        ) : null}
 
         {/* Description */}
         {match.description ? (

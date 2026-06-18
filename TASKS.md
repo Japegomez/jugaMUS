@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 10/06/2026 (cierre sesión; feedback usuarios, valoración tienda, confirmación logout)
+> Actualizado: 10/06/2026 (cierre sesión; marcador «Siguiente ronda», perfil ajeno, enlaces partida, 3º/4º puesto, edición pareja por miembro)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -16,6 +16,7 @@
 | Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
 | UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
 | UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
+| UX — Jun. 2026      | En curso   | Marcador manual, perfil ajeno, enlaces, torneo 3º/4º, parejas        |
 
 ---
 
@@ -139,6 +140,7 @@
 - [x] **Perfil de otro usuario** (`/(tabs)/profile/[userId]`): nombre, ciudad, teléfono (si comparten partida confirmada) e historial navegable a detalle de partida
 - [x] Acceso al perfil ajeno desde la tarjeta de participante registrado en detalle de partida
 - [x] RPCs `get_viewable_user_profile` y `list_user_viewable_matches` (migración `056`); componente compartido `MatchHistoryList` (PR #57)
+- [x] Avatar en perfil ajeno (`AvatarCircle` compartido; `photo_url` en RPC migración `063`)
 
 ### F5 - Descubrir y filtrar
 
@@ -335,6 +337,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Sincronización multi-dispositivo: Supabase Realtime + invalidación de listas (Descubrir, Mis partidas, historial, ficha/cuadro torneo); migración `058`; hook `useExploreListsRealtimeSync`
 - [x] Test unitario `buildBracketLayout`
 - [x] **Editar y eliminar parejas** en detalle del torneo (organizador, inscripción abierta, sin cuadro): modal `EditPairModal`; RPCs `update_tournament_pair` / `remove_tournament_pair` (migración `055`, PR #56)
+- [x] **Editar pareja por miembro** (jugador A/B puede editar su pareja en inscripción; eliminar solo organizador; migración `062`)
+- [x] **3º y 4º puesto** opcional al crear torneo: partido entre perdedores de semifinales (migración `064`; switch en wizard; bloque bajo el cuadro)
 - [x] Enlace **🏆 Ir al torneo** en ficha de partida del cuadro (chip con estilo previo, tamaño ampliado)
 
 ### F11 - Pendiente / opcional
@@ -354,6 +358,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Hook `useLiveScoreboard`: puntos, juegos, fases, envite, órdago, fin de partida
 - [x] Componentes UI: `ScoreboardPairCard`, `PhaseRow`, `PointsAdjustModal`, `OrdagoModal`, `ResetScoreboardModal`
 - [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador global, fases, botón órdago, reinicio local
+- [x] Botón **Siguiente ronda** (suma envites manualmente; hint si faltan ganadores de fase); mismo flujo en marcador guest
 - [x] Detalle partida: botones «Llevar la cuenta» y «Registrar resultado» (partida `in_progress`)
 - [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
 - [x] Reset del marcador local tras registrar resultado correctamente
@@ -427,10 +432,26 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Botón «Enviar feedback» en perfil (mismo estilo que Editar perfil, encima de Cerrar sesión)
 - [x] Panel admin «Feedback de usuarios» (`/(admin)/feedback`) con filtro por categoría (`issue` / `feature` / `other`)
 - [x] Prompt valoración en tienda cada 3 días (`expo-store-review`, `AppRatingPromptHost`); enlace manual «Valorar en la tienda» en iOS/Android
+- [x] Fallback valoración: `requestAppStoreRating()` (nativo → URL tienda → mensaje TestFlight); `playStoreUrl` en `app.json`
 - [x] Confirmación al cerrar sesión (`SignOutModal`)
 - [x] Commit en `develop` (cambios UX cuenta y feedback)
 - [ ] PR opcional si se prefiere revisión antes de merge a `main`
 - [ ] QA: enviar feedback → ver en panel admin; probar filtros, prompt rating (o forzar tras borrar clave AsyncStorage) y logout confirm
+
+---
+
+## UX — Mejoras jun. 2026 (sesión 10/06)
+
+- [x] Perfil ajeno: foto o iniciales (`AvatarCircle`, migración `063`)
+- [x] Marcador: **Siguiente ronda** en lugar de auto-sumar puntos al completar fases; texto guía cuando el botón está desactivado
+- [x] Valorar en tienda: fallback URL + mensaje claro en TestFlight (`storeReview.ts`)
+- [x] Admin: botón ✕ en panel → vuelve a `/(tabs)/profile`
+- [x] Partidas con enlace: tarjeta invitación + copiar link (`jugamus://matches/{id}`); ruta `src/app/matches/[id].tsx`; `expo-clipboard`
+- [x] Torneo: miembros de pareja pueden editarla (migración `062`)
+- [x] Torneo: opción 3º/4º puesto (migración `064`, aplicada en remoto)
+- [x] Apple Sign In + Hide My Email: nombre legible en perfil (migraciones `060`–`061`, `appleDisplayName.ts`)
+- [ ] **Commit en `develop`** de todos los cambios locales (sin push salvo que se pida)
+- [ ] QA: enlace partida (abrir deep link en otro dispositivo/usuario); 3º/4º puesto end-to-end; marcador Siguiente ronda; perfil ajeno con foto
 
 ---
 

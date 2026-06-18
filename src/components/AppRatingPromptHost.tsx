@@ -1,9 +1,9 @@
-import * as StoreReview from 'expo-store-review'
 import { useCallback, useEffect, useState } from 'react'
 
 import { AppRatingPrompt } from '@/components/AppRatingPrompt'
 import { useAuthStore } from '@/hooks/useAuth'
 import { checkShouldShowRatingPrompt, markRatingPromptShown } from '@/lib/appRating'
+import { requestAppStoreRating } from '@/lib/storeReview'
 
 const PROMPT_DELAY_MS = 2500
 
@@ -35,9 +35,7 @@ export function AppRatingPromptHost() {
   }, [sessionUserId])
 
   const rate = useCallback(async () => {
-    if (await StoreReview.isAvailableAsync()) {
-      await StoreReview.requestReview()
-    }
+    await requestAppStoreRating()
     await dismiss()
   }, [dismiss])
 

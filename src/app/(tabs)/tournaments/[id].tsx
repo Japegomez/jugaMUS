@@ -34,6 +34,7 @@ import {
 } from '@/hooks/useTournaments'
 import type { TournamentPairRow } from '@/services/tournaments.service'
 import {
+  canEditTournamentPair,
   canJoinTournamentPair,
   isTournamentPairComplete,
   userIsInTournamentPair,
@@ -66,6 +67,9 @@ function TournamentMatchCard({ node, onPress }: { node: BracketNodeRow; onPress:
 }
 
 function isBracketPlayableNode(node: BracketNodeRow): boolean {
+  if (node.is_third_place) {
+    return !node.is_bye && Boolean(node.pair_a_id && node.pair_b_id)
+  }
   return !node.is_bye && !isPlaceholderNode(node) && Boolean(node.pair_a_id && node.pair_b_id)
 }
 
@@ -132,6 +136,8 @@ export default function TournamentDetailScreen() {
   const bracketGenerated =
     Boolean(tournament.bracket_generated_at) || tournament.status !== TOURNAMENT_STATUS.REGISTRATION
   const nodes = bracket?.nodes ?? []
+  const mainBracketNodes = nodes.filter((n) => !n.is_third_place)
+  const thirdPlaceNode = nodes.find((n) => n.is_third_place) ?? null
   const playableMatches = nodes.filter(isBracketPlayableNode)
   const pendingMatches = playableMatches.filter(
     (n) => n.match_status === MATCH_STATUS.IN_PROGRESS || n.match_status === MATCH_STATUS.PLANNED
@@ -295,7 +301,16 @@ export default function TournamentDetailScreen() {
 
         {tab === 'bracket' ? (
           <View style={s.bracketSection}>
-            <BracketCanvas nodes={nodes} bracketGenerated={bracketGenerated} />
+            <BracketCanvas nodes={mainBracketNodes} bracketGenerated={bracketGenerated} />
+            {thirdPlaceNode ? (
+              <View style={s.thirdPlaceSection}>
+                <Text style={s.thirdPlaceTitle}>3º y 4º puesto</Text>
+                <TournamentMatchCard
+                  node={thirdPlaceNode}
+                  onPress={() => router.push(`/(tabs)/matches/${thirdPlaceNode.match_id}`)}
+                />
+              </View>
+            ) : null}
           </View>
         ) : (
           <View style={s.matchesWrap}>
@@ -330,6 +345,13 @@ export default function TournamentDetailScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>Parejas ({tournament.pairs.length})</Text>
             {tournament.pairs.map((p) => {
+              const canEditPair = canEditTournamentPair(
+                p,
+                userId,
+                isCreator,
+                inRegistration,
+                bracketGenerated
+              )
               const { canJoin, openSlot } = canJoinTournamentPair(
                 p,
                 userId,
@@ -343,8 +365,8 @@ export default function TournamentDetailScreen() {
                   subtitle={
                     inRegistration && !isTournamentPairComplete(p) ? 'Falta un jugador' : undefined
                   }
-                  editLabel={canManagePairs ? 'Editar' : undefined}
-                  onEdit={canManagePairs ? () => setEditingPair(p) : undefined}
+                  editLabel={canEditPair ? 'Editar' : undefined}
+                  onEdit={canEditPair ? () => setEditingPair(p) : undefined}
                   joinLabel={canJoin ? 'Unirme' : undefined}
                   onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
                   joinLoading={joinPair.isPending}
@@ -397,6 +419,7 @@ export default function TournamentDetailScreen() {
         onClose={() => setEditingPair(null)}
         onSubmit={handleEditPair}
         onDelete={confirmDeletePair}
+        canDelete={canManagePairs}
         saveLoading={updatePair.isPending}
         deleteLoading={removePair.isPending}
       />
@@ -439,6 +462,12 @@ const s = StyleSheet.create({
   tabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   tabTextOn: { color: Colors.primary },
   bracketSection: { minHeight: 300, marginBottom: 8 },
+  thirdPlaceSection: { marginTop: 16, gap: 8 },
+  thirdPlaceTitle: {
+    fontSize: 15,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+  },
   matchesWrap: { minHeight: 120 },
   matchesSectionTitle: {
     fontSize: 14,
