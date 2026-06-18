@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 
-import { syncAppleProfileDisplayName } from '@/lib/appleDisplayName'
+import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
 import { getOAuthRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
