@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 
-import { formatAppleFullName, syncAppleProfileDisplayName } from '@/lib/appleDisplayName'
+import { syncAppleProfileDisplayName } from '@/lib/appleDisplayName'
 import { getOAuthRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
@@ -209,14 +209,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { error: new Error('No se obtuvo el token de identidad de Apple') }
       }
 
-      const appleName = formatAppleFullName(credential.fullName)
-
       const { data: appleData, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
-        ...(appleName
-          ? { options: { data: { display_name: appleName, full_name: appleName } } }
-          : {}),
       })
 
       if (error) {
