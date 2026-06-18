@@ -41,6 +41,7 @@ const schema = z
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    include_third_place: z.boolean(),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .superRefine(refinePlaceRequired)
@@ -57,6 +58,7 @@ function createDefaultFormValues(): FormValues {
     place_text: '',
     duration_target_games: 3,
     visibility: MATCH_VISIBILITY.PUBLIC,
+    include_third_place: false,
     notes: '',
   }
 }
@@ -153,6 +155,7 @@ export default function CreateTournamentScreen() {
         visibility: values.visibility,
         location_privacy: 'participants_only',
         creator_joins_as_player: false,
+        include_third_place: values.include_third_place,
       })
       setTournamentId(row.id)
       setStep(2)
@@ -374,6 +377,28 @@ export default function CreateTournamentScreen() {
             />
           </View>
         </View>
+        <View style={s.fieldWrap}>
+          <View style={s.switchRow}>
+            <View style={s.switchTextWrap}>
+              <Text style={s.label}>3º y 4º puesto</Text>
+              <Text style={s.hint}>
+                Crea un partido entre los perdedores de semifinales (requiere al menos 4 parejas en
+                el cuadro).
+              </Text>
+            </View>
+            <Controller
+              control={control}
+              name="include_third_place"
+              render={({ field }) => (
+                <Switch
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                />
+              )}
+            />
+          </View>
+        </View>
         <Controller
           control={control}
           name="notes"
@@ -481,6 +506,8 @@ const s = StyleSheet.create({
   hint: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
   empty: { fontSize: 15, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 16 },
   fieldWrap: { marginBottom: 20 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  switchTextWrap: { flex: 1 },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
   durationRow: { flexDirection: 'row', marginHorizontal: -4 },
   visRow: { flexDirection: 'row', marginHorizontal: -4 },
