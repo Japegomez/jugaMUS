@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,9 +11,10 @@ import {
 } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import * as StoreReview from 'expo-store-review'
+import { requestAppStoreRating } from '@/lib/storeReview'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
+import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { SignOutModal } from '@/components/SignOutModal'
 import { Button } from '@/components/ui/Button'
@@ -35,24 +35,6 @@ type NotifField = Pick<
   | 'notify_on_result'
   | 'notify_on_reminder'
 >
-
-function AvatarCircle({ uri, name }: { uri: string | null; name: string }) {
-  const initials = name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-
-  if (uri) {
-    return <Image source={{ uri }} style={styles.avatar} />
-  }
-
-  return (
-    <View style={styles.avatarFallback}>
-      <Text style={styles.avatarInitials}>{initials || '?'}</Text>
-    </View>
-  )
-}
 
 export default function ProfileScreen() {
   const router = useRouter()
@@ -84,15 +66,7 @@ export default function ProfileScreen() {
   }
 
   const onRateApp = async () => {
-    if (!isRatingPromptSupported()) {
-      Alert.alert('Valorar app', 'La valoración en tienda solo está disponible en la app móvil.')
-      return
-    }
-    if (await StoreReview.isAvailableAsync()) {
-      await StoreReview.requestReview()
-    } else {
-      Alert.alert('Valorar app', 'No se pudo abrir la valoración en este momento.')
-    }
+    await requestAppStoreRating()
   }
 
   const onNotifChange = async (field: keyof NotifField, value: boolean) => {

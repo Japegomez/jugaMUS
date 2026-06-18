@@ -28,7 +28,7 @@ export default function AdminLayout() {
           headerStyle: { backgroundColor: Colors.background },
           headerTitleStyle: { fontFamily: Fonts.semiBold },
         }}>
-        <Stack.Screen name="index" options={{ title: 'Administración' }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="reports" options={{ headerShown: false }} />
         <Stack.Screen name="feedback" options={{ headerShown: false }} />
         <Stack.Screen name="analytics" options={{ headerShown: false }} />

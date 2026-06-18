@@ -29,6 +29,7 @@ type EditPairModalProps = {
   onClose: () => void
   onSubmit: (values: EditPairFormValues) => void | Promise<void>
   onDelete: () => void | Promise<void>
+  canDelete?: boolean
   saveLoading?: boolean
   deleteLoading?: boolean
 }
@@ -46,6 +47,7 @@ type EditPairFormProps = {
   onClose: () => void
   onSubmit: (values: EditPairFormValues) => void | Promise<void>
   onDelete: () => void | Promise<void>
+  canDelete: boolean
   saveLoading?: boolean
   deleteLoading?: boolean
 }
@@ -55,6 +57,7 @@ function EditPairForm({
   onClose,
   onSubmit,
   onDelete,
+  canDelete,
   saveLoading,
   deleteLoading,
 }: EditPairFormProps) {
@@ -142,15 +145,17 @@ function EditPairForm({
             onPress={() => void handleSubmit()}
             loading={saveLoading}
           />
-          <Button
-            title="Eliminar pareja"
-            variant="outline"
-            onPress={() => {
-              void onDelete()
-            }}
-            loading={deleteLoading}
-            style={styles.deleteBtn}
-          />
+          {canDelete ? (
+            <Button
+              title="Eliminar pareja"
+              variant="outline"
+              onPress={() => {
+                void onDelete()
+              }}
+              loading={deleteLoading}
+              style={styles.deleteBtn}
+            />
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -163,6 +168,7 @@ export function EditPairModal({
   onClose,
   onSubmit,
   onDelete,
+  canDelete = true,
   saveLoading,
   deleteLoading,
 }: EditPairModalProps) {
@@ -179,6 +185,7 @@ export function EditPairModal({
           onClose={onClose}
           onSubmit={onSubmit}
           onDelete={onDelete}
+          canDelete={canDelete}
           saveLoading={saveLoading}
           deleteLoading={deleteLoading}
         />

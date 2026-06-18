@@ -33,7 +33,9 @@ export type TournamentInsert = Pick<
   | 'visibility'
   | 'location_privacy'
   | 'creator_joins_as_player'
->
+> & {
+  include_third_place?: boolean
+}
 
 export type TournamentUpdate = Pick<
   TablesUpdate<'tournaments'>,
@@ -59,6 +61,7 @@ export type BracketNodeRow = {
   winner_pair_id: string | null
   match_status: string
   is_bye: boolean
+  is_third_place?: boolean
   is_placeholder?: boolean
   team_a_games: number | null
   team_b_games: number | null
@@ -108,6 +111,7 @@ export async function createTournament(
     p_visibility: data.visibility,
     p_location_privacy: data.location_privacy,
     p_creator_joins_as_player: data.creator_joins_as_player ?? false,
+    p_include_third_place: data.include_third_place ?? false,
   })
 
   if (error) throw new Error(error.message)
@@ -472,7 +476,7 @@ function mapTournamentPairRpcError(message: string): string {
     return 'El cuadro ya está organizado; no se pueden modificar las parejas'
   }
   if (message.includes('forbidden')) {
-    return 'Solo el organizador puede modificar las parejas'
+    return 'Solo el organizador o los miembros de la pareja pueden modificarla'
   }
   if (message.includes('pair_not_found')) {
     return 'La pareja ya no existe'
@@ -495,6 +499,26 @@ export function findUserTournamentPairId(
 
 export function userIsInTournamentPair(pairs: TournamentPairRow[], userId: string): boolean {
   return findUserTournamentPairId(pairs, userId) !== null
+}
+
+export function userIsTournamentPairMember(
+  pair: TournamentPairRow,
+  userId: string | undefined
+): boolean {
+  if (!userId) return false
+  return pair.player_a_user_id === userId || pair.player_b_user_id === userId
+}
+
+/** Organizer or pair member may edit during open registration (before bracket). */
+export function canEditTournamentPair(
+  pair: TournamentPairRow,
+  userId: string | undefined,
+  isCreator: boolean,
+  inRegistration: boolean,
+  bracketGenerated: boolean
+): boolean {
+  if (!userId || !inRegistration || bracketGenerated) return false
+  return isCreator || userIsTournamentPairMember(pair, userId)
 }
 
 export function canJoinTournamentPair(
