@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
+import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useViewableUserMatches } from '@/hooks/useMatches'
@@ -95,6 +96,7 @@ export default function UserProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <AvatarCircle uri={profile.photo_url} name={profile.display_name} />
           <Text style={styles.displayName}>{profile.display_name}</Text>
           {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   backBtn: { marginTop: 8 },
   header: {
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingBottom: 4,
   },
   displayName: {

@@ -32,6 +32,7 @@ export type ViewableUserProfile = {
   display_name: string
   city: string | null
   phone_e164: string | null
+  photo_url: string | null
 }
 
 export type ProfileUpdate = Pick<

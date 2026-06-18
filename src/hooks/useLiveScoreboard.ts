@@ -215,20 +215,24 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
       updateState((prev) => {
         const current = prev.phases[phase]
         const winner = current.winner === team ? null : team
-        const phases = {
-          ...prev.phases,
-          [phase]: { ...current, winner },
+        return {
+          ...prev,
+          phases: {
+            ...prev.phases,
+            [phase]: { ...current, winner },
+          },
         }
-
-        if (!allPhasesHaveWinner(phases)) {
-          return { ...prev, phases }
-        }
-
-        return settlePhases({ ...prev, phases })
       })
     },
     [updateState]
   )
+
+  const advanceRound = useCallback(() => {
+    updateState((prev) => {
+      if (!allPhasesHaveWinner(prev.phases)) return prev
+      return settlePhases(prev)
+    })
+  }, [updateState])
 
   const awardOrdago = useCallback(
     (team: TeamId) => {
@@ -262,6 +266,7 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     adjustGames,
     adjustBet,
     setPhaseWinner,
+    advanceRound,
     awardOrdago,
     reset,
     dismissGameOver,

@@ -50,9 +50,11 @@ export default function ScoreboardScreen() {
     adjustGames,
     adjustBet,
     setPhaseWinner,
+    advanceRound,
     awardOrdago,
     reset,
     dismissGameOver,
+    canSettle,
   } = useLiveScoreboard(id, durationTargetGames)
 
   const [pointsAdjust, setPointsAdjust] = useState<PointsAdjustTarget | null>(null)
@@ -161,7 +163,8 @@ export default function ScoreboardScreen() {
         <Text style={s.subtitle}>{match.title}</Text>
 
         <Text style={s.sectionHint}>
-          Marca el ganador de cada fase. Al completar las cuatro, se suman los envites al marcador.
+          Marca el ganador de cada fase. Cuando las cuatro estén completas, pulsa «Siguiente ronda»
+          para sumar los envites al marcador.
         </Text>
 
         <View style={s.globalRow}>
@@ -198,6 +201,17 @@ export default function ScoreboardScreen() {
         ))}
 
         <Button title="Órdago" onPress={() => setOrdagoVisible(true)} style={s.ordagoBtn} />
+        <Button
+          title="Siguiente ronda"
+          onPress={advanceRound}
+          disabled={!canSettle}
+          style={s.nextRoundBtn}
+        />
+        {!canSettle ? (
+          <Text style={s.nextRoundHint}>
+            Indica el ganador de cada fase para pasar a la siguiente ronda.
+          </Text>
+        ) : null}
         <Button title="Reiniciar marcador" variant="outline" onPress={handleResetPress} />
       </ScrollView>
 
@@ -262,6 +276,15 @@ const s = StyleSheet.create({
   vs: { justifyContent: 'center', paddingHorizontal: 2 },
   vsText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   ordagoBtn: { marginTop: 8, marginBottom: 10, minHeight: 56 },
+  nextRoundBtn: { marginBottom: 10, minHeight: 56 },
+  nextRoundHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: -4,
+    marginBottom: 12,
+    lineHeight: 18,
+  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
