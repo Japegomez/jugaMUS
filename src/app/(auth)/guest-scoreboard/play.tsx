@@ -148,7 +148,7 @@ export default function GuestScoreboardPlayScreen() {
           </Pressable>
         </View>
 
-        <Text style={s.title}>Llevar la cuenta</Text>
+        <Text style={s.title}>Marcador</Text>
         <Text style={s.subtitle}>
           A {durationTargetGames} juego{durationTargetGames > 1 ? 's' : ''}
         </Text>

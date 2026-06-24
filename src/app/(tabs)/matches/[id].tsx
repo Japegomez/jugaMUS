@@ -1079,7 +1079,7 @@ export default function MatchDetailScreen() {
 
           {canOpenScoreboard ? (
             <Button
-              title="Llevar la cuenta"
+              title="Marcador"
               variant="secondary"
               onPress={() => router.push(`/(tabs)/matches/scoreboard/${id}` as Href)}
               style={s.actionBtn}
