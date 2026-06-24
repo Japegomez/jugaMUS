@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -67,15 +68,22 @@ function EditMatchTeamForm({
   const textSlots = useMemo(() => slots.filter((s) => s.kind === 'text'), [slots])
 
   const handleSubmit = async () => {
+    for (const slot of textSlots) {
+      const initial = slot.value.trim()
+      const current = (textByField[slot.field] ?? '').trim()
+      if (initial && !current) {
+        Alert.alert(
+          'Nombre obligatorio',
+          'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+        )
+        return
+      }
+    }
     try {
       await onSubmit({ teamName, textByField })
     } catch {
       // El padre muestra el error; mantenemos el formulario.
     }
-  }
-
-  const clearCompanion = (field: keyof TextPlayerFields) => {
-    setTextByField((prev) => ({ ...prev, [field]: '' }))
   }
 
   return (
@@ -112,32 +120,18 @@ function EditMatchTeamForm({
                   <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
                 </View>
               ) : (
-                <>
-                  <Input
-                    label="Nombre (texto)"
-                    placeholder={index === 0 ? 'Nombre del jugador' : 'Compañero'}
-                    value={textByField[slot.field] ?? ''}
-                    onChangeText={(value) =>
-                      setTextByField((prev) => ({ ...prev, [slot.field]: value }))
-                    }
-                    autoCapitalize="words"
-                  />
-                  {index > 0 || textSlots.length > 1 ? (
-                    <Pressable
-                      onPress={() => clearCompanion(slot.field)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Quitar compañero">
-                      <Text style={styles.clearCompanion}>Quitar compañero</Text>
-                    </Pressable>
-                  ) : null}
-                </>
+                <Input
+                  label="Nombre (texto)"
+                  placeholder={index === 0 ? 'Nombre del jugador' : 'Compañero'}
+                  value={textByField[slot.field] ?? ''}
+                  onChangeText={(value) =>
+                    setTextByField((prev) => ({ ...prev, [slot.field]: value }))
+                  }
+                  autoCapitalize="words"
+                />
               )}
             </View>
           ))}
-
-          <Text style={styles.note}>
-            Deja vacío el nombre de un jugador de texto para quitarlo de la pareja.
-          </Text>
 
           <Button title="Guardar cambios" onPress={() => void handleSubmit()} loading={loading} />
         </ScrollView>
@@ -204,13 +198,4 @@ const styles = StyleSheet.create({
   },
   lockedName: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
   lockedHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
-  clearCompanion: {
-    marginTop: 8,
-    fontSize: 13,
-    color: Colors.danger,
-    fontFamily: Fonts.semiBold,
-    textDecorationLine: 'underline',
-    alignSelf: 'flex-start',
-  },
-  note: { fontSize: 13, color: Colors.textSecondary, marginBottom: 16, lineHeight: 18 },
 })

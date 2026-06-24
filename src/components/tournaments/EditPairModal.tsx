@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -74,6 +75,20 @@ function EditPairForm({
     pair.player_b_display_name?.trim() || (playerBLocked ? 'Jugador registrado' : '')
 
   const handleSubmit = async () => {
+    if (!playerALocked && pair.player_a_text?.trim() && !playerAText.trim()) {
+      Alert.alert(
+        'Nombre obligatorio',
+        'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+      )
+      return
+    }
+    if (!playerBLocked && pair.player_b_text?.trim() && !playerBText.trim()) {
+      Alert.alert(
+        'Nombre obligatorio',
+        'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+      )
+      return
+    }
     try {
       await onSubmit({ name, playerAText, playerBText })
     } catch {

@@ -12,6 +12,8 @@ import {
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { Ionicons } from '@expo/vector-icons'
+
 import { Button } from '@/components/ui/Button'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -20,19 +22,29 @@ interface MatchPasswordModalProps {
   visible: boolean
   onClose: () => void
   onSubmit: (password: string, team: string) => Promise<void>
-  teamOptions: { label: string; value: string; disabled: boolean }[]
+  teamOptions?: { label: string; value: string; disabled: boolean }[]
   isLoading?: boolean
+  /** When true, only asks for password (tournament access). */
+  accessOnly?: boolean
+  title?: string
+  hint?: string
 }
 
 export function MatchPasswordModal({
   visible,
   onClose,
   onSubmit,
-  teamOptions,
+  teamOptions = [],
   isLoading = false,
+  accessOnly = false,
+  title = accessOnly ? 'Acceso al torneo privado' : 'Unirse a partida privada',
+  hint = accessOnly
+    ? 'Este torneo es privado. Introduce la contraseña para ver parejas y unirte.'
+    : 'Esta partida es privada. Introduce la contraseña para unirte.',
 }: MatchPasswordModalProps) {
   const insets = useSafeAreaInsets()
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [selectedTeam, setSelectedTeam] = useState<string>(
     teamOptions.find((t) => !t.disabled)?.value ?? ''
   )
@@ -51,13 +63,13 @@ export function MatchPasswordModal({
       setError('Introduce la contraseña')
       return
     }
-    if (!selectedTeam) {
+    if (!accessOnly && !selectedTeam) {
       setError('Selecciona un equipo')
       return
     }
     setError(null)
     try {
-      await onSubmit(password.trim(), selectedTeam)
+      await onSubmit(password.trim(), accessOnly ? '' : selectedTeam)
       setPassword('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Contraseña incorrecta')
@@ -75,7 +87,7 @@ export function MatchPasswordModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
           <View style={styles.headerLeft} />
-          <Text style={styles.title}>Unirse a partida privada</Text>
+          <Text style={styles.title}>{title}</Text>
           <Pressable onPress={handleClose} hitSlop={12} accessibilityLabel="Cerrar">
             <Text style={styles.closeBtn}>✕</Text>
           </Pressable>
@@ -83,11 +95,9 @@ export function MatchPasswordModal({
 
         <View style={styles.body}>
           <Text style={styles.lockIcon}>🔒</Text>
-          <Text style={styles.hint}>
-            Esta partida es privada. Introduce la contraseña para unirte.
-          </Text>
+          <Text style={styles.hint}>{hint}</Text>
 
-          {availableTeams.length > 1 ? (
+          {!accessOnly && availableTeams.length > 1 ? (
             <>
               <Text style={styles.label}>Equipo</Text>
               <View style={styles.teamRow}>
@@ -110,36 +120,50 @@ export function MatchPasswordModal({
           ) : null}
 
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            style={[styles.input, error ? styles.inputError : null]}
-            placeholder="Contraseña de acceso"
-            placeholderTextColor={Colors.textSecondary}
-            value={password}
-            onChangeText={(v) => {
-              setPassword(v)
-              setError(null)
-            }}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoFocus
-            onSubmitEditing={() => void handleSubmit()}
-            returnKeyType="done"
-          />
+          <View style={[styles.inputWrap, error ? styles.inputError : null]}>
+            <TextInput
+              style={styles.input}
+              placeholder="Contraseña de acceso"
+              placeholderTextColor={Colors.textSecondary}
+              value={password}
+              onChangeText={(v) => {
+                setPassword(v)
+                setError(null)
+              }}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              onSubmitEditing={() => void handleSubmit()}
+              returnKeyType="done"
+            />
+            <Pressable
+              onPress={() => setShowPassword((s) => !s)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              style={styles.eyeBtn}>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={22}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+          </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           {isLoading ? (
             <ActivityIndicator style={styles.loading} color={Colors.primary} />
           ) : (
             <Button
-              title="Unirse"
+              title={accessOnly ? 'Acceder' : 'Unirse'}
               onPress={() => void handleSubmit()}
               style={styles.btn}
-              disabled={availableTeams.length === 0}
+              disabled={!accessOnly && availableTeams.length === 0}
             />
           )}
 
-          {availableTeams.length === 0 ? (
+          {!accessOnly && availableTeams.length === 0 ? (
             <Text style={styles.fullNote}>Ambos equipos están completos.</Text>
           ) : null}
         </View>
@@ -225,20 +249,30 @@ const styles = StyleSheet.create({
   teamChipTextOn: {
     color: Colors.primary,
   },
-  input: {
+  inputWrap: {
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 12,
+    marginBottom: 4,
+  },
+  inputError: {
+    borderColor: '#e53935',
+  },
+  input: {
+    flex: 1,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
     fontFamily: Fonts.regular,
     color: Colors.textPrimary,
-    marginBottom: 4,
   },
-  inputError: {
-    borderColor: '#e53935',
+  eyeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   errorText: {
     fontSize: 13,

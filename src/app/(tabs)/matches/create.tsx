@@ -343,6 +343,7 @@ export default function CreateMatchScreen() {
               onChangeText={field.onChange}
               error={errors.password?.message}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               autoCorrect={false}
             />

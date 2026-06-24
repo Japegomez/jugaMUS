@@ -473,6 +473,7 @@ export default function EditMatchScreen() {
               onChangeText={field.onChange}
               error={errors.password?.message}
               secureTextEntry
+              showPasswordToggle
               autoCapitalize="none"
               autoCorrect={false}
             />

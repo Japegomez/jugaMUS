@@ -25,7 +25,8 @@ const schema = z
     city: z.string().trim().min(1),
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
-    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
+    password: z.string().max(100).optional().or(z.literal('')),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .superRefine(refinePlaceRequired)
@@ -58,7 +59,9 @@ export default function EditTournamentScreen() {
           duration_target_games: tournament.duration_target_games,
           visibility: tournament.visibility as
             | typeof MATCH_VISIBILITY.PUBLIC
-            | typeof MATCH_VISIBILITY.LINK,
+            | typeof MATCH_VISIBILITY.LINK
+            | typeof MATCH_VISIBILITY.PRIVATE,
+          password: '',
           notes: tournament.notes ?? '',
         }
       : undefined,
@@ -66,6 +69,7 @@ export default function EditTournamentScreen() {
 
   const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
+  const visibilityValue = watch('visibility')
 
   const closeToTournament = () => {
     if (!id) {
@@ -113,6 +117,14 @@ export default function EditTournamentScreen() {
   }
 
   const onSubmit = async (values: FormValues) => {
+    const isBecomingPrivate =
+      values.visibility === MATCH_VISIBILITY.PRIVATE &&
+      tournament.visibility !== MATCH_VISIBILITY.PRIVATE
+    if (isBecomingPrivate && !values.password?.trim()) {
+      Alert.alert('Contraseña requerida', 'Introduce una contraseña para el torneo privado.')
+      return
+    }
+
     try {
       await updateTournament.mutateAsync({
         id,
@@ -126,6 +138,7 @@ export default function EditTournamentScreen() {
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
         },
+        password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       closeToTournament()
     } catch (err) {
@@ -247,6 +260,53 @@ export default function EditTournamentScreen() {
           ))}
         </View>
       </View>
+      <View style={s.fieldWrap}>
+        <Text style={s.label}>Visibilidad</Text>
+        <View style={s.chips}>
+          <Pressable
+            style={[s.chip, visibilityValue === MATCH_VISIBILITY.PUBLIC && s.chipOn]}
+            onPress={() =>
+              setValue('visibility', MATCH_VISIBILITY.PUBLIC, { shouldValidate: true })
+            }>
+            <Text style={[s.chipText, visibilityValue === MATCH_VISIBILITY.PUBLIC && s.chipTextOn]}>
+              Pública
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[s.chip, visibilityValue === MATCH_VISIBILITY.PRIVATE && s.chipOn]}
+            onPress={() =>
+              setValue('visibility', MATCH_VISIBILITY.PRIVATE, { shouldValidate: true })
+            }>
+            <Text
+              style={[s.chipText, visibilityValue === MATCH_VISIBILITY.PRIVATE && s.chipTextOn]}>
+              Privada
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      {visibilityValue === MATCH_VISIBILITY.PRIVATE ? (
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              label={
+                tournament.visibility === MATCH_VISIBILITY.PRIVATE
+                  ? 'Nueva contraseña (deja vacío para mantener la actual)'
+                  : 'Contraseña *'
+              }
+              placeholder="Elige una contraseña para acceder"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.password?.message}
+              secureTextEntry
+              showPasswordToggle
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
+        />
+      ) : null}
       <Button
         title="Guardar cambios"
         onPress={handleSubmit(onSubmit)}

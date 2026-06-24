@@ -51,7 +51,7 @@ CREATE OR REPLACE FUNCTION public.set_match_password(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 BEGIN
   IF auth.uid() IS NULL THEN
@@ -88,7 +88,7 @@ CREATE OR REPLACE FUNCTION public.join_private_match(
 RETURNS public.match_participants
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
 DECLARE
   v_match   public.matches%ROWTYPE;

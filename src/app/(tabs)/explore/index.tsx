@@ -205,6 +205,7 @@ export default function ExploreScreen() {
       startBefore: filters.startBefore,
       minFreeSlots: filters.minFreeSlots,
       contentType: filters.contentType,
+      visibility: filters.visibility ?? 'all',
     }),
     [filters]
   )

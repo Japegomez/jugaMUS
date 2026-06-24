@@ -95,6 +95,7 @@ export type ParticipantWithProfile = ParticipantRow & {
 
 export type MatchWithParticipants = MatchRow & {
   participants: ParticipantWithProfile[]
+  viewer_has_full_access?: boolean
 }
 
 export type MatchInsert = Pick<
@@ -348,6 +349,9 @@ function mapMatchTeamRpcError(message: string): string {
   if (message.includes('forbidden')) return 'No tienes permiso para editar este equipo'
   if (message.includes('invalid_text_field')) return 'Campo de jugador no válido'
   if (message.includes('roster_full')) return 'El equipo ya está completo'
+  if (message.includes('cannot_clear_text_player')) {
+    return 'No puedes quitar jugadores de la pareja; solo editar el nombre.'
+  }
   return message
 }
 
@@ -433,6 +437,25 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
 
   if (error) throw new Error(error.message)
 
+  const matchRow = raw as MatchRow
+
+  let viewerHasFullAccess = matchRow.visibility !== MATCH_VISIBILITY.PRIVATE
+  if (matchRow.visibility === MATCH_VISIBILITY.PRIVATE) {
+    const { data: canAccess, error: accessError } = await supabase.rpc('viewer_can_access_match', {
+      p_match_id: id,
+    })
+    if (accessError) throw new Error(accessError.message)
+    viewerHasFullAccess = Boolean(canAccess)
+  }
+
+  if (!viewerHasFullAccess) {
+    return {
+      ...matchRow,
+      participants: [],
+      viewer_has_full_access: false,
+    }
+  }
+
   const { data: roster, error: rosterError } = await supabase.rpc(
     'list_match_participant_display',
     {
@@ -445,32 +468,33 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
   if (rosterError) {
     if (!isMissingPostgrestRpcError(rosterError)) {
       throw new Error(rosterError.message)
+    } else {
+      const { data: nested, error: nestedError } = await supabase
+        .from('matches')
+        .select(
+          `*,
+           participants:match_participants(
+             id, match_id, user_id, team, state, joined_at, left_at,
+             profile:profiles(id, display_name, photo_url, city)
+           )`
+        )
+        .eq('id', id)
+        .single()
+      if (nestedError) throw new Error(nestedError.message)
+      const rawNested = nested as MatchRow & {
+        participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
+      }
+      participants = (rawNested.participants ?? []).map((p) => ({
+        ...p,
+        profile: p.profile ?? {
+          id: p.user_id,
+          display_name: 'Usuario',
+          photo_url: null,
+          city: null,
+          phone_e164: null,
+        },
+      }))
     }
-    const { data: nested, error: nestedError } = await supabase
-      .from('matches')
-      .select(
-        `*,
-         participants:match_participants(
-           id, match_id, user_id, team, state, joined_at, left_at,
-           profile:profiles(id, display_name, photo_url, city)
-         )`
-      )
-      .eq('id', id)
-      .single()
-    if (nestedError) throw new Error(nestedError.message)
-    const rawNested = nested as MatchRow & {
-      participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
-    }
-    participants = (rawNested.participants ?? []).map((p) => ({
-      ...p,
-      profile: p.profile ?? {
-        id: p.user_id,
-        display_name: 'Usuario',
-        photo_url: null,
-        city: null,
-        phone_e164: null,
-      },
-    }))
   } else {
     type RosterRow = {
       participant_id: string
@@ -503,7 +527,11 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
     }))
   }
 
-  return { ...(raw as MatchRow), participants }
+  return {
+    ...matchRow,
+    participants,
+    viewer_has_full_access: true,
+  }
 }
 
 export async function updateMatch(
@@ -565,6 +593,15 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 /** Set or replace the bcrypt password of a private match (creator only). */
 export async function setMatchPassword(matchId: string, password: string): Promise<void> {
   const { error } = await supabase.rpc('set_match_password', {
+    p_match_id: matchId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+}
+
+/** Verify password and grant read access to a private match (does not join). */
+export async function grantMatchPasswordAccess(matchId: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('grant_match_password_access', {
     p_match_id: matchId,
     p_password: password,
   })

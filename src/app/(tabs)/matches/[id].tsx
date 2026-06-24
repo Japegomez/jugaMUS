@@ -33,8 +33,8 @@ import { ReportModal } from '@/components/ui/ReportModal'
 import { useAuthStore } from '@/hooks/useAuth'
 import {
   useCancelMatch,
+  useGrantMatchPasswordAccess,
   useJoinMatch,
-  useJoinPrivateMatch,
   useLeaveMatch,
   useMatch,
   useRecordMatchResultDirect,
@@ -463,7 +463,7 @@ export default function MatchDetailScreen() {
     }, [refetchMatch, refetchResult])
   )
   const joinMatch = useJoinMatch()
-  const joinPrivateMatch = useJoinPrivateMatch()
+  const grantAccess = useGrantMatchPasswordAccess()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
   const updateMatchTeam = useUpdateMatchTeam()
@@ -484,7 +484,15 @@ export default function MatchDetailScreen() {
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
+  const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
+
+  const needsPrivateAccess = Boolean(
+    match &&
+    match.visibility === MATCH_VISIBILITY.PRIVATE &&
+    match.viewer_has_full_access === false &&
+    match.creator_id !== userId
+  )
+  const passwordModalVisible = needsPrivateAccess && !passwordModalDismissed
   const [reportModal, setReportModal] = useState<{
     targetType: ReportTargetType
     targetId: string
@@ -563,7 +571,13 @@ export default function MatchDetailScreen() {
   const slotsA = freeTeamSlots(match, match.participants, TEAM.A)
   const slotsB = freeTeamSlots(match, match.participants, TEAM.B)
   const hasSlots = slotsA > 0 || slotsB > 0
-  const canJoin = isPlanned && hasSlots && !isParticipant && !isCancelled && !match.tournament_id
+  const canJoin =
+    isPlanned &&
+    hasSlots &&
+    !isParticipant &&
+    !isCancelled &&
+    !match.tournament_id &&
+    !needsPrivateAccess
   const canLeave = isPlanned && isParticipant && !match.tournament_id
 
   const latestResult = resultBundle?.result ?? null
@@ -684,7 +698,18 @@ export default function MatchDetailScreen() {
     const editableFields = editableTextSlotsForTeam(match.participants, editableTeam, draftText)
     const textUpdates: Partial<Record<keyof typeof draftText, string | null>> = {}
     for (const field of editableFields) {
-      textUpdates[field] = values.textByField[field]?.trim() || null
+      const newVal = values.textByField[field]?.trim() || null
+      const oldVal = rosterText[field]?.trim() || null
+      if (oldVal && !newVal) {
+        Alert.alert(
+          'Nombre obligatorio',
+          'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+        )
+        return
+      }
+      if (newVal !== oldVal) {
+        textUpdates[field] = newVal
+      }
     }
 
     const mergedText = { ...rosterText, ...textUpdates }
@@ -709,11 +734,6 @@ export default function MatchDetailScreen() {
 
   const handleJoin = async (team: string) => {
     if (!userId) return
-    if (match?.visibility === MATCH_VISIBILITY.PRIVATE) {
-      setJoinModalVisible(false)
-      setPasswordModalVisible(true)
-      return
-    }
     try {
       await joinMatch.mutateAsync({ matchId: id, userId, team })
       setJoinModalVisible(false)
@@ -722,10 +742,10 @@ export default function MatchDetailScreen() {
     }
   }
 
-  const handleJoinPrivate = async (password: string, team: string) => {
-    if (!userId) return
-    await joinPrivateMatch.mutateAsync({ matchId: id, team, password, userId })
-    setPasswordModalVisible(false)
+  const handleGrantAccess = async (password: string) => {
+    await grantAccess.mutateAsync({ matchId: id, password })
+    setPasswordModalDismissed(true)
+    await refetchMatch()
   }
 
   const handleConfirmLeave = async () => {
@@ -893,64 +913,83 @@ export default function MatchDetailScreen() {
         {/* Participants */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>Participantes</Text>
-          <TeamSection
-            team={TEAM.A}
-            teamLabel={teamAName}
-            freeSlots={slotsA}
-            participants={match.participants}
-            rosterText={{
-              team_a_player_1: match.team_a_player_1,
-              team_a_player_2: match.team_a_player_2,
-              team_b_player_1: match.team_b_player_1,
-              team_b_player_2: match.team_b_player_2,
-            }}
-            matchId={id}
-            canRevealPhone={Boolean(myParticipation)}
-            currentUserId={userId}
-            onReportUser={
-              isParticipant
-                ? (reportedUserId, displayName) =>
-                    setReportModal({
-                      targetType: 'user',
-                      targetId: reportedUserId,
-                      targetLabel: displayName,
-                    })
-                : undefined
-            }
-            editLabel={canEditTeam && editableTeam === TEAM.A ? 'Editar' : undefined}
-            onEdit={
-              canEditTeam && editableTeam === TEAM.A ? () => setEditTeamVisible(true) : undefined
-            }
-          />
-          <TeamSection
-            team={TEAM.B}
-            teamLabel={teamBName}
-            freeSlots={slotsB}
-            participants={match.participants}
-            rosterText={{
-              team_a_player_1: match.team_a_player_1,
-              team_a_player_2: match.team_a_player_2,
-              team_b_player_1: match.team_b_player_1,
-              team_b_player_2: match.team_b_player_2,
-            }}
-            matchId={id}
-            canRevealPhone={Boolean(myParticipation)}
-            currentUserId={userId}
-            onReportUser={
-              isParticipant
-                ? (reportedUserId, displayName) =>
-                    setReportModal({
-                      targetType: 'user',
-                      targetId: reportedUserId,
-                      targetLabel: displayName,
-                    })
-                : undefined
-            }
-            editLabel={canEditTeam && editableTeam === TEAM.B ? 'Editar' : undefined}
-            onEdit={
-              canEditTeam && editableTeam === TEAM.B ? () => setEditTeamVisible(true) : undefined
-            }
-          />
+          {needsPrivateAccess ? (
+            <>
+              <Text style={s.privateGateText}>
+                Introduce la contraseña para unirte y ver el plantel.
+              </Text>
+              <Button
+                title="Introducir contraseña"
+                onPress={() => setPasswordModalDismissed(false)}
+                style={s.privateGateBtn}
+              />
+            </>
+          ) : (
+            <>
+              <TeamSection
+                team={TEAM.A}
+                teamLabel={teamAName}
+                freeSlots={slotsA}
+                participants={match.participants}
+                rosterText={{
+                  team_a_player_1: match.team_a_player_1,
+                  team_a_player_2: match.team_a_player_2,
+                  team_b_player_1: match.team_b_player_1,
+                  team_b_player_2: match.team_b_player_2,
+                }}
+                matchId={id}
+                canRevealPhone={Boolean(myParticipation)}
+                currentUserId={userId}
+                onReportUser={
+                  isParticipant
+                    ? (reportedUserId, displayName) =>
+                        setReportModal({
+                          targetType: 'user',
+                          targetId: reportedUserId,
+                          targetLabel: displayName,
+                        })
+                    : undefined
+                }
+                editLabel={canEditTeam && editableTeam === TEAM.A ? 'Editar' : undefined}
+                onEdit={
+                  canEditTeam && editableTeam === TEAM.A
+                    ? () => setEditTeamVisible(true)
+                    : undefined
+                }
+              />
+              <TeamSection
+                team={TEAM.B}
+                teamLabel={teamBName}
+                freeSlots={slotsB}
+                participants={match.participants}
+                rosterText={{
+                  team_a_player_1: match.team_a_player_1,
+                  team_a_player_2: match.team_a_player_2,
+                  team_b_player_1: match.team_b_player_1,
+                  team_b_player_2: match.team_b_player_2,
+                }}
+                matchId={id}
+                canRevealPhone={Boolean(myParticipation)}
+                currentUserId={userId}
+                onReportUser={
+                  isParticipant
+                    ? (reportedUserId, displayName) =>
+                        setReportModal({
+                          targetType: 'user',
+                          targetId: reportedUserId,
+                          targetLabel: displayName,
+                        })
+                    : undefined
+                }
+                editLabel={canEditTeam && editableTeam === TEAM.B ? 'Editar' : undefined}
+                onEdit={
+                  canEditTeam && editableTeam === TEAM.B
+                    ? () => setEditTeamVisible(true)
+                    : undefined
+                }
+              />
+            </>
+          )}
         </View>
 
         {/* Resultado (F7) */}
@@ -989,11 +1028,7 @@ export default function MatchDetailScreen() {
           {canJoin ? (
             <Button
               title="Unirse a la partida"
-              onPress={() =>
-                match.visibility === MATCH_VISIBILITY.PRIVATE
-                  ? setPasswordModalVisible(true)
-                  : setJoinModalVisible(true)
-              }
+              onPress={() => setJoinModalVisible(true)}
               style={s.actionBtn}
             />
           ) : null}
@@ -1135,13 +1170,12 @@ export default function MatchDetailScreen() {
 
       <MatchPasswordModal
         visible={passwordModalVisible}
-        onClose={() => setPasswordModalVisible(false)}
-        onSubmit={handleJoinPrivate}
-        teamOptions={[
-          { label: teamAName, value: TEAM.A, disabled: slotsA === 0 },
-          { label: teamBName, value: TEAM.B, disabled: slotsB === 0 },
-        ]}
-        isLoading={joinPrivateMatch.isPending}
+        onClose={() => setPasswordModalDismissed(true)}
+        onSubmit={(password) => handleGrantAccess(password)}
+        accessOnly
+        title="Acceso a partida privada"
+        hint="Introduce la contraseña para ver la partida. Después podrás unirte con el botón de abajo."
+        isLoading={grantAccess.isPending}
       />
 
       {myParticipation ? (
@@ -1308,6 +1342,8 @@ const s = StyleSheet.create({
   descText: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
   resultEmpty: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic' },
   resultHint: { fontSize: 14, color: Colors.textSecondary, marginTop: 10, lineHeight: 20 },
+  privateGateText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 12 },
+  privateGateBtn: { alignSelf: 'flex-start' },
   actions: { gap: 10 },
   actionBtn: {},
   reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },

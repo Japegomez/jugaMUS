@@ -8,8 +8,8 @@ import {
   getMyMatchesDashboard,
   getUserMatches,
   getViewableUserMatches,
+  grantMatchPasswordAccess,
   joinMatch,
-  joinPrivateMatch,
   leaveMatch,
   listPublicMatchesPage,
   recordMatchResultDirect,
@@ -77,6 +77,7 @@ export function publicTournamentsExploreQueryKey(filters: PublicTournamentsListF
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
+    filters.visibility ?? 'all',
   ] as const
 }
 
@@ -297,24 +298,14 @@ export function useJoinMatch() {
   })
 }
 
-export function useJoinPrivateMatch() {
+export function useGrantMatchPasswordAccess() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      matchId,
-      team,
-      password,
-    }: {
-      matchId: string
-      team: string
-      password: string
-      userId: string
-    }) => joinPrivateMatch(matchId, team, password),
-    onSuccess: (_participant, { matchId, userId }) => {
+    mutationFn: ({ matchId, password }: { matchId: string; password: string }) =>
+      grantMatchPasswordAccess(matchId, password),
+    onSuccess: (_data, { matchId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
-      invalidatePublicMatchesExplore(queryClient)
-      invalidateMyMatchesDashboard(queryClient, userId)
     },
   })
 }
