@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
   MATCH_STATUS,
+  MATCH_VISIBILITY,
   MAX_PLAYERS_PER_TEAM,
   MATCH_PAGE_SIZE,
   RESULT_STATUS,
@@ -50,6 +51,7 @@ export type MatchRow = {
   duration_target_games: number
   visibility: string
   location_privacy: string
+  password_hash: string | null
   status: string
   creator_id: string
   team_a_name: string
@@ -391,7 +393,11 @@ const TEXT_PLAYER_UPDATE_KEYS = [
 
 // ─── Match CRUD ───────────────────────────────────────────────────────────────
 
-export async function createMatch(userId: string, data: MatchInsert): Promise<MatchRow> {
+export async function createMatch(
+  userId: string,
+  data: MatchInsert,
+  password?: string
+): Promise<MatchRow> {
   const startAt = startAtToTimestamptzIso(data.start_at)
 
   const { data: row, error } = await supabase
@@ -401,6 +407,10 @@ export async function createMatch(userId: string, data: MatchInsert): Promise<Ma
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password) {
+    await setMatchPassword(row.id, password)
+  }
 
   try {
     const participant = await joinMatch(row.id, userId, TEAM.A)
@@ -496,7 +506,11 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
   return { ...(raw as MatchRow), participants }
 }
 
-export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchRow> {
+export async function updateMatch(
+  id: string,
+  data: MatchUpdate,
+  password?: string
+): Promise<MatchRow> {
   const touchesTextPlayers = TEXT_PLAYER_UPDATE_KEYS.some((k) => k in data)
 
   if (touchesTextPlayers) {
@@ -528,6 +542,11 @@ export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchR
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password?.trim()) {
+    await setMatchPassword(id, password.trim())
+  }
+
   return row as MatchRow
 }
 
@@ -541,6 +560,47 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 
   if (error) throw new Error(error.message)
   return row as MatchRow
+}
+
+/** Set or replace the bcrypt password of a private match (creator only). */
+export async function setMatchPassword(matchId: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('set_match_password', {
+    p_match_id: matchId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+}
+
+function mapPrivateMatchRpcError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('password_empty')) return 'La contraseña no puede estar vacía'
+  if (message.includes('forbidden')) return 'No tienes permiso para modificar esta partida'
+  if (message.includes('match_not_found')) return 'Partida no encontrada'
+  if (message.includes('not_private_match')) return 'Esta partida no es privada'
+  if (message.includes('match_not_joinable')) return 'La partida ya no está disponible'
+  if (message.includes('tournament_match')) {
+    return 'Esta partida pertenece a un torneo. Accede desde la ficha del torneo.'
+  }
+  if (message.includes('match_no_password')) return 'Esta partida no tiene contraseña configurada'
+  if (message.includes('wrong_password')) return 'Contraseña incorrecta'
+  if (message.includes('already_participant')) return 'Ya participas en esta partida'
+  return message
+}
+
+/** Join a private match after verifying the password. */
+export async function joinPrivateMatch(
+  matchId: string,
+  team: string,
+  password: string
+): Promise<ParticipantRow> {
+  const { data, error } = await supabase.rpc('join_private_match', {
+    p_match_id: matchId,
+    p_team: team,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+  if (!data) throw new Error('No se pudo unir a la partida')
+  return data as ParticipantRow
 }
 
 // ─── Participants ─────────────────────────────────────────────────────────────
@@ -1046,6 +1106,8 @@ type ListPublicMatchesRpc = Database['public']['Functions']['list_public_matches
 
 export type { ExploreContentType } from '@/constants'
 
+export type VisibilityFilter = 'all' | 'public' | 'private'
+
 export type PublicMatchesListFilters = {
   search: string
   city: string
@@ -1058,6 +1120,8 @@ export type PublicMatchesListFilters = {
   /** 0 = no filter; otherwise require at least N free slots (of 4). */
   minFreeSlots: number
   contentType: ExploreContentType
+  /** 'all' = public + private (default), 'public' = only public, 'private' = only private. */
+  visibility: VisibilityFilter
 }
 
 function emptyToUndefined(s: string | null | undefined): string | undefined {
@@ -1101,6 +1165,8 @@ export async function listPublicMatchesPage(
       filters.minFreeSlots > 0 && filters.minFreeSlots <= 4 ? filters.minFreeSlots : undefined,
     p_limit: limit,
     p_offset: offset,
+    p_visibility:
+      filters.visibility && filters.visibility !== 'all' ? filters.visibility : undefined,
   }
 
   const { data, error } = await supabase.rpc('list_public_matches', args)

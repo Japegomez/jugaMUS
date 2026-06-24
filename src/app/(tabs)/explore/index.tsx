@@ -31,7 +31,11 @@ import {
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/constants'
 import { useInfinitePublicMatches, usePublicTournamentsExplore } from '@/hooks/useMatches'
-import type { PublicMatchExplorerRow, PublicMatchesListFilters } from '@/services/matches.service'
+import type {
+  PublicMatchExplorerRow,
+  PublicMatchesListFilters,
+  VisibilityFilter,
+} from '@/services/matches.service'
 import type { PublicTournamentsListFilters, TournamentRow } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -48,6 +52,7 @@ const DEFAULT_FILTERS = (): PublicMatchesListFilters => ({
   startBefore: null,
   minFreeSlots: 0,
   contentType: 'all',
+  visibility: 'all',
 })
 
 function statusLabel(status: string) {
@@ -167,6 +172,7 @@ export default function ExploreScreen() {
   const [draftDateFromIso, setDraftDateFromIso] = useState<string | null>(null)
   const [draftDateToIso, setDraftDateToIso] = useState<string | null>(null)
   const [draftContentType, setDraftContentType] = useState<ExploreContentType>('all')
+  const [draftVisibility, setDraftVisibility] = useState<VisibilityFilter>('all')
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -241,6 +247,7 @@ export default function ExploreScreen() {
     setDraftStatus(filters.status)
     setDraftMinFree(filters.minFreeSlots)
     setDraftContentType(filters.contentType)
+    setDraftVisibility(filters.visibility ?? 'all')
     setDraftHidePast(filters.hideCelebrated)
     setDraftDateFromIso(null)
     setDraftDateToIso(null)
@@ -266,6 +273,7 @@ export default function ExploreScreen() {
       status: draftStatus,
       minFreeSlots: draftMinFree,
       contentType: draftContentType,
+      visibility: draftVisibility,
       hideCelebrated: draftHidePast,
       startAfter,
       startBefore,
@@ -279,6 +287,7 @@ export default function ExploreScreen() {
     draftHidePast,
     draftMinFree,
     draftStatus,
+    draftVisibility,
   ])
 
   const clearFilters = useCallback(() => {
@@ -289,6 +298,7 @@ export default function ExploreScreen() {
     setDraftDateFromIso(null)
     setDraftDateToIso(null)
     setDraftContentType('all')
+    setDraftVisibility('all')
     setFilters(DEFAULT_FILTERS())
     setSearchDraft('')
     setFilterModalOpen(false)
@@ -302,6 +312,7 @@ export default function ExploreScreen() {
     if (filters.startBefore) n += 1
     if (!filters.hideCelebrated) n += 1
     if (filters.contentType !== 'all') n += 1
+    if ((filters.visibility ?? 'all') !== 'all') n += 1
     return n
   }, [filters])
 
@@ -311,7 +322,7 @@ export default function ExploreScreen() {
 
   const listHeader = (
     <View style={styles.listHeader}>
-      <ScreenHeader title="Descubrir" subtitle="Partidas y torneos públicos" />
+      <ScreenHeader title="Descubrir" subtitle="Partidas y torneos" />
 
       <TextInput
         style={styles.search}
@@ -416,10 +427,10 @@ export default function ExploreScreen() {
             <Text style={styles.emptyTitle}>Nada por aquí</Text>
             <Text style={styles.emptyText}>
               {filters.contentType === 'matches'
-                ? 'No hay partidas públicas que coincidan con tu búsqueda y filtros.'
+                ? 'No hay partidas que coincidan con tu búsqueda y filtros.'
                 : filters.contentType === 'tournaments'
-                  ? 'No hay torneos públicos que coincidan con tu búsqueda y filtros.'
-                  : 'No hay partidas ni torneos públicos que coincidan con tu búsqueda y filtros.'}{' '}
+                  ? 'No hay torneos que coincidan con tu búsqueda y filtros.'
+                  : 'No hay partidas ni torneos que coincidan con tu búsqueda y filtros.'}{' '}
               Prueba a ampliar fechas o quitar filtros.
             </Text>
             <Button
@@ -468,6 +479,29 @@ export default function ExploreScreen() {
                       key={opt.id}
                       style={[styles.chip, selected && styles.chipOn]}
                       onPress={() => setDraftContentType(opt.value)}>
+                      <Text style={[styles.chipText, selected && styles.chipTextOn]}>
+                        {opt.label}
+                      </Text>
+                    </Pressable>
+                  )
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>Visibilidad</Text>
+              <View style={styles.chipsWrap}>
+                {(
+                  [
+                    { id: 'va', label: 'Todas', value: 'all' as VisibilityFilter },
+                    { id: 'vp', label: 'Públicas', value: 'public' as VisibilityFilter },
+                    { id: 'vr', label: 'Privadas', value: 'private' as VisibilityFilter },
+                  ] as const
+                ).map((opt) => {
+                  const selected = draftVisibility === opt.value
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      style={[styles.chip, selected && styles.chipOn]}
+                      onPress={() => setDraftVisibility(opt.value)}>
                       <Text style={[styles.chipText, selected && styles.chipTextOn]}>
                         {opt.label}
                       </Text>

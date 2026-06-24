@@ -44,7 +44,8 @@ const editMatchSchema = z
     city: z.string().trim().min(1, 'Selecciona una ciudad o pueblo'),
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
-    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
+    password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
     team_a_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
     team_b_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
     team_a_player_2: z
@@ -158,6 +159,7 @@ export default function EditMatchScreen() {
       place_text: '',
       duration_target_games: 3,
       visibility: MATCH_VISIBILITY.PUBLIC,
+      password: '',
       team_a_name: '',
       team_b_name: '',
       team_a_player_2: '',
@@ -179,7 +181,9 @@ export default function EditMatchScreen() {
         duration_target_games: match.duration_target_games,
         visibility: match.visibility as
           | typeof MATCH_VISIBILITY.PUBLIC
-          | typeof MATCH_VISIBILITY.LINK,
+          | typeof MATCH_VISIBILITY.LINK
+          | typeof MATCH_VISIBILITY.PRIVATE,
+        password: '',
         team_a_name: isUnspecifiedTeamName(match.team_a_name, TEAM.A) ? '' : match.team_a_name,
         team_b_name: isUnspecifiedTeamName(match.team_b_name, TEAM.B) ? '' : match.team_b_name,
         team_a_player_2: match.team_a_player_2 ?? '',
@@ -231,6 +235,14 @@ export default function EditMatchScreen() {
       return
     }
 
+    const isBecomingPrivate =
+      values.visibility === MATCH_VISIBILITY.PRIVATE &&
+      match.visibility !== MATCH_VISIBILITY.PRIVATE
+    if (isBecomingPrivate && !values.password?.trim()) {
+      Alert.alert('Contraseña requerida', 'Introduce una contraseña para la partida privada.')
+      return
+    }
+
     try {
       await updateMatch.mutateAsync({
         id,
@@ -264,6 +276,7 @@ export default function EditMatchScreen() {
             match.team_b_player_2
           ),
         },
+        password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       router.back()
     } catch (err) {
@@ -421,7 +434,7 @@ export default function EditMatchScreen() {
         <View style={s.visRow}>
           <Chip
             label="Pública"
-            sublabel="Aparece en el listado"
+            sublabel="En el listado"
             selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
             onPress={() =>
               setValue('visibility', MATCH_VISIBILITY.PUBLIC, {
@@ -430,11 +443,11 @@ export default function EditMatchScreen() {
             }
           />
           <Chip
-            label="Con enlace"
-            sublabel="Solo accesible con el link"
-            selected={visibilityValue === MATCH_VISIBILITY.LINK}
+            label="Privada"
+            sublabel="Con contraseña"
+            selected={visibilityValue === MATCH_VISIBILITY.PRIVATE}
             onPress={() =>
-              setValue('visibility', MATCH_VISIBILITY.LINK, {
+              setValue('visibility', MATCH_VISIBILITY.PRIVATE, {
                 shouldValidate: true,
               })
             }
@@ -442,6 +455,30 @@ export default function EditMatchScreen() {
         </View>
         {errors.visibility ? <Text style={s.error}>{errors.visibility.message}</Text> : null}
       </View>
+
+      {/* Contraseña (solo visible cuando es privada) */}
+      {visibilityValue === MATCH_VISIBILITY.PRIVATE ? (
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              label={
+                match?.visibility === MATCH_VISIBILITY.PRIVATE
+                  ? 'Nueva contraseña (deja vacío para mantener la actual)'
+                  : 'Contraseña *'
+              }
+              placeholder="Elige una contraseña para acceder"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.password?.message}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
+        />
+      ) : null}
 
       <View style={s.fieldWrap}>
         <Text style={s.label}>Equipos y jugadores (opcional)</Text>

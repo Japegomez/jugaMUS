@@ -21,7 +21,7 @@ import {
   EditMatchTeamModal,
   type EditMatchTeamFormValues,
 } from '@/components/matches/EditMatchTeamModal'
-import { MatchInviteLinkCard } from '@/components/matches/MatchInviteLinkCard'
+import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
@@ -34,6 +34,7 @@ import { useAuthStore } from '@/hooks/useAuth'
 import {
   useCancelMatch,
   useJoinMatch,
+  useJoinPrivateMatch,
   useLeaveMatch,
   useMatch,
   useRecordMatchResultDirect,
@@ -462,6 +463,7 @@ export default function MatchDetailScreen() {
     }, [refetchMatch, refetchResult])
   )
   const joinMatch = useJoinMatch()
+  const joinPrivateMatch = useJoinPrivateMatch()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
   const updateMatchTeam = useUpdateMatchTeam()
@@ -482,6 +484,7 @@ export default function MatchDetailScreen() {
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
   const [reportModal, setReportModal] = useState<{
     targetType: ReportTargetType
     targetId: string
@@ -706,12 +709,23 @@ export default function MatchDetailScreen() {
 
   const handleJoin = async (team: string) => {
     if (!userId) return
+    if (match?.visibility === MATCH_VISIBILITY.PRIVATE) {
+      setJoinModalVisible(false)
+      setPasswordModalVisible(true)
+      return
+    }
     try {
       await joinMatch.mutateAsync({ matchId: id, userId, team })
       setJoinModalVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo unir a la partida')
     }
+  }
+
+  const handleJoinPrivate = async (password: string, team: string) => {
+    if (!userId) return
+    await joinPrivateMatch.mutateAsync({ matchId: id, team, password, userId })
+    setPasswordModalVisible(false)
   }
 
   const handleConfirmLeave = async () => {
@@ -859,16 +873,14 @@ export default function MatchDetailScreen() {
           <InfoRow
             icon="👁️"
             text={
-              match.visibility === MATCH_VISIBILITY.PUBLIC ? 'Partida pública' : 'Solo con enlace'
+              match.visibility === MATCH_VISIBILITY.PRIVATE
+                ? 'Partida privada (con contraseña)'
+                : match.visibility === MATCH_VISIBILITY.PUBLIC
+                  ? 'Partida pública'
+                  : 'Solo con enlace'
             }
           />
         </View>
-
-        {match.visibility === MATCH_VISIBILITY.LINK ? (
-          <View style={s.section}>
-            <MatchInviteLinkCard matchId={id} />
-          </View>
-        ) : null}
 
         {/* Description */}
         {match.description ? (
@@ -977,7 +989,11 @@ export default function MatchDetailScreen() {
           {canJoin ? (
             <Button
               title="Unirse a la partida"
-              onPress={() => setJoinModalVisible(true)}
+              onPress={() =>
+                match.visibility === MATCH_VISIBILITY.PRIVATE
+                  ? setPasswordModalVisible(true)
+                  : setJoinModalVisible(true)
+              }
               style={s.actionBtn}
             />
           ) : null}
@@ -1115,6 +1131,17 @@ export default function MatchDetailScreen() {
         onClose={() => setEditTeamVisible(false)}
         onSubmit={handleEditTeam}
         loading={updateMatchTeam.isPending}
+      />
+
+      <MatchPasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalVisible(false)}
+        onSubmit={handleJoinPrivate}
+        teamOptions={[
+          { label: teamAName, value: TEAM.A, disabled: slotsA === 0 },
+          { label: teamBName, value: TEAM.B, disabled: slotsB === 0 },
+        ]}
+        isLoading={joinPrivateMatch.isPending}
       />
 
       {myParticipation ? (

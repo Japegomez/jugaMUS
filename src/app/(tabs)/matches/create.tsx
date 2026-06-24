@@ -45,7 +45,8 @@ const createMatchSchema = z
     city: z.string().trim().min(1, 'Selecciona una ciudad o pueblo'),
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
-    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
+    password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
     notes: z.string().trim().max(300, 'Notas demasiado largas').optional().or(z.literal('')),
     team_a_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
     team_b_name: z.string().trim().max(40, 'Nombre demasiado largo').optional().or(z.literal('')),
@@ -69,6 +70,15 @@ const createMatchSchema = z
       .or(z.literal('')),
   })
   .superRefine(refinePlaceRequired)
+  .superRefine((data, ctx) => {
+    if (data.visibility === MATCH_VISIBILITY.PRIVATE && !data.password?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Introduce una contraseña para la partida privada',
+        path: ['password'],
+      })
+    }
+  })
 
 type CreateMatchValues = z.infer<typeof createMatchSchema>
 
@@ -86,6 +96,7 @@ function createDefaultFormValues(): CreateMatchValues {
     place_text: '',
     duration_target_games: 3,
     visibility: MATCH_VISIBILITY.PUBLIC,
+    password: '',
     notes: '',
     team_a_name: '',
     team_b_name: '',
@@ -144,20 +155,23 @@ export default function CreateMatchScreen() {
     }
     try {
       const match = await createMatch.mutateAsync({
-        title: values.title,
-        description: values.description || null,
-        start_at: values.start_at,
-        city: values.city,
-        ...placePayload(values),
-        duration_target_games: values.duration_target_games,
-        visibility: values.visibility,
-        location_privacy: 'participants_only',
-        team_a_name: (values.team_a_name ?? '').trim(),
-        team_b_name: (values.team_b_name ?? '').trim(),
-        team_a_player_1: null,
-        team_a_player_2: textPlayerOrNull(values.team_a_player_2),
-        team_b_player_1: textPlayerOrNull(values.team_b_player_1),
-        team_b_player_2: textPlayerOrNull(values.team_b_player_2),
+        data: {
+          title: values.title,
+          description: values.description || null,
+          start_at: values.start_at,
+          city: values.city,
+          ...placePayload(values),
+          duration_target_games: values.duration_target_games,
+          visibility: values.visibility,
+          location_privacy: 'participants_only',
+          team_a_name: (values.team_a_name ?? '').trim(),
+          team_b_name: (values.team_b_name ?? '').trim(),
+          team_a_player_1: null,
+          team_a_player_2: textPlayerOrNull(values.team_a_player_2),
+          team_b_player_1: textPlayerOrNull(values.team_b_player_1),
+          team_b_player_2: textPlayerOrNull(values.team_b_player_2),
+        },
+        password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       router.replace(`/(tabs)/matches/${match.id}`)
     } catch (err) {
@@ -298,21 +312,43 @@ export default function CreateMatchScreen() {
         <View style={s.visRow}>
           <Chip
             label="Pública"
-            sublabel="Aparece en el listado"
+            sublabel="En el listado"
             selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
             onPress={() =>
               setValue('visibility', MATCH_VISIBILITY.PUBLIC, { shouldValidate: true })
             }
           />
           <Chip
-            label="Con enlace"
-            sublabel="Solo accesible con el link"
-            selected={visibilityValue === MATCH_VISIBILITY.LINK}
-            onPress={() => setValue('visibility', MATCH_VISIBILITY.LINK, { shouldValidate: true })}
+            label="Privada"
+            sublabel="Con contraseña"
+            selected={visibilityValue === MATCH_VISIBILITY.PRIVATE}
+            onPress={() =>
+              setValue('visibility', MATCH_VISIBILITY.PRIVATE, { shouldValidate: true })
+            }
           />
         </View>
         {errors.visibility ? <Text style={s.error}>{errors.visibility.message}</Text> : null}
       </View>
+
+      {/* Contraseña (solo visible cuando es privada) */}
+      {visibilityValue === MATCH_VISIBILITY.PRIVATE ? (
+        <Controller
+          control={control}
+          name="password"
+          render={({ field }) => (
+            <Input
+              label="Contraseña *"
+              placeholder="Elige una contraseña para acceder"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.password?.message}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
+        />
+      ) : null}
 
       {/* Equipos y jugadores */}
       <View style={s.fieldWrap}>

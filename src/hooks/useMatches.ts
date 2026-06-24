@@ -9,6 +9,7 @@ import {
   getUserMatches,
   getViewableUserMatches,
   joinMatch,
+  joinPrivateMatch,
   leaveMatch,
   listPublicMatchesPage,
   recordMatchResultDirect,
@@ -109,6 +110,7 @@ export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) 
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
+    filters.visibility ?? 'all',
   ] as const
 }
 
@@ -194,9 +196,9 @@ export function useCreateMatch() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: async (data: MatchInsert) => {
+    mutationFn: async ({ data, password }: { data: MatchInsert; password?: string }) => {
       if (!sessionUserId) throw new Error('No autenticado')
-      const match = await createMatch(sessionUserId, data)
+      const match = await createMatch(sessionUserId, data, password)
       await queryClient.prefetchQuery({
         queryKey: matchQueryKey(match.id),
         queryFn: () => getMatch(match.id),
@@ -221,7 +223,8 @@ export function useUpdateMatch() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: MatchUpdate }) => updateMatch(id, data),
+    mutationFn: ({ id, data, password }: { id: string; data: MatchUpdate; password?: string }) =>
+      updateMatch(id, data, password),
     onSuccess: (updated) => {
       queryClient.setQueryData(matchQueryKey(updated.id), (prev: unknown) => {
         if (!prev) return prev
@@ -286,6 +289,28 @@ export function useJoinMatch() {
   return useMutation({
     mutationFn: ({ matchId, userId, team }: { matchId: string; userId: string; team: string }) =>
       joinMatch(matchId, userId, team),
+    onSuccess: (_participant, { matchId, userId }) => {
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
+      invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, userId)
+    },
+  })
+}
+
+export function useJoinPrivateMatch() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      matchId,
+      team,
+      password,
+    }: {
+      matchId: string
+      team: string
+      password: string
+      userId: string
+    }) => joinPrivateMatch(matchId, team, password),
     onSuccess: (_participant, { matchId, userId }) => {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
       invalidatePublicMatchesExplore(queryClient)

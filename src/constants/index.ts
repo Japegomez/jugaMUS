@@ -17,6 +17,7 @@ export const RESULT_STATUS = {
 export const MATCH_VISIBILITY = {
   PUBLIC: 'public',
   LINK: 'link',
+  PRIVATE: 'private',
 } as const
 
 export const TOURNAMENT_STATUS = {
