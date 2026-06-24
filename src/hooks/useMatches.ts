@@ -13,8 +13,14 @@ import {
   listPublicMatchesPage,
   recordMatchResultDirect,
   updateMatch,
+  updateMatchTeam,
 } from '@/services/matches.service'
-import type { MatchInsert, MatchUpdate, PublicMatchesListFilters } from '@/services/matches.service'
+import type {
+  MatchInsert,
+  MatchUpdate,
+  PublicMatchesListFilters,
+  UpdateMatchTeamInput,
+} from '@/services/matches.service'
 import {
   listPublicTournamentsFiltered,
   type PublicTournamentsListFilters,
@@ -221,6 +227,24 @@ export function useUpdateMatch() {
         if (!prev) return prev
         return { ...(prev as object), ...updated }
       })
+      invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
+    },
+  })
+}
+
+export function useUpdateMatchTeam() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: (input: UpdateMatchTeamInput) => updateMatchTeam(input),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(matchQueryKey(updated.id), (prev: unknown) => {
+        if (!prev) return prev
+        return { ...(prev as object), ...updated }
+      })
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(updated.id) })
       invalidatePublicMatchesExplore(queryClient)
       invalidateMyMatchesDashboard(queryClient, sessionUserId)
     },

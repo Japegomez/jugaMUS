@@ -1070,6 +1070,14 @@ export type Database = {
         Args: { p_pair_id: string }
         Returns: undefined
       }
+      update_match_team: {
+        Args: {
+          p_match_id: string
+          p_team_name: string
+          p_text_updates?: Json
+        }
+        Returns: Database['public']['Tables']['matches']['Row']
+      }
       update_tournament_pair: {
         Args: {
           p_name: string

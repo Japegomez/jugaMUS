@@ -149,6 +149,8 @@ type TextPlayerFields = Pick<
   'team_a_player_1' | 'team_a_player_2' | 'team_b_player_1' | 'team_b_player_2'
 >
 
+export type { TextPlayerFields }
+
 function textPlayerNamesOnTeam(match: TextPlayerFields, team: string): string[] {
   const slots =
     team === TEAM.B
@@ -259,6 +261,116 @@ export function validateTextRosterCapacity(
     }
   }
   return null
+}
+
+export type MatchTeamEditSlot =
+  | { kind: 'registered'; displayName: string }
+  | { kind: 'text'; field: keyof TextPlayerFields; value: string }
+
+function textFieldsForTeam(team: string): (keyof TextPlayerFields)[] {
+  return team === TEAM.B
+    ? ['team_b_player_1', 'team_b_player_2']
+    : ['team_a_player_1', 'team_a_player_2']
+}
+
+/** Roster slots for the team edit modal (registered locked, text editable). */
+export function buildMatchTeamEditSlots(
+  match: TextPlayerFields,
+  participants: ParticipantWithProfile[],
+  team: string
+): MatchTeamEditSlot[] {
+  const [field1, field2] = textFieldsForTeam(team)
+  const registered = activeParticipants(participants)
+    .filter((p) => p.team === team)
+    .sort((a, b) => a.joined_at.localeCompare(b.joined_at))
+
+  const text1 = match[field1]?.trim() || null
+  const text2 = match[field2]?.trim() || null
+  const slots: MatchTeamEditSlot[] = []
+  let regIdx = 0
+
+  if (text1) {
+    slots.push({ kind: 'text', field: field1, value: text1 })
+  } else if (registered[regIdx]) {
+    slots.push({
+      kind: 'registered',
+      displayName: registered[regIdx].profile.display_name?.trim() || 'Jugador registrado',
+    })
+    regIdx++
+  }
+
+  const firstName =
+    slots[0]?.kind === 'text'
+      ? slots[0].value
+      : slots[0]?.kind === 'registered'
+        ? slots[0].displayName
+        : null
+
+  if (text2 && text2 !== firstName) {
+    slots.push({ kind: 'text', field: field2, value: text2 })
+  } else if (registered[regIdx]) {
+    slots.push({
+      kind: 'registered',
+      displayName: registered[regIdx].profile.display_name?.trim() || 'Jugador registrado',
+    })
+  }
+
+  return slots.slice(0, 2)
+}
+
+/** Active participant on a standalone planned match may edit their team roster. */
+export function canEditMatchTeam(
+  match: Pick<MatchRow, 'status' | 'tournament_id'>,
+  participants: ParticipantWithProfile[],
+  userId: string | undefined
+): { canEdit: boolean; team: string | null } {
+  if (!userId || match.tournament_id || match.status !== MATCH_STATUS.PLANNED) {
+    return { canEdit: false, team: null }
+  }
+
+  const mine = activeParticipants(participants).find((p) => p.user_id === userId)
+  if (!mine) return { canEdit: false, team: null }
+
+  return { canEdit: true, team: mine.team }
+}
+
+function mapMatchTeamRpcError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('match_not_found')) return 'Partida no encontrada'
+  if (message.includes('tournament_match_not_editable')) {
+    return 'Las partidas de torneo no se pueden editar desde aquí'
+  }
+  if (message.includes('match_not_planned')) {
+    return 'Solo puedes editar la pareja mientras la partida está planificada'
+  }
+  if (message.includes('forbidden')) return 'No tienes permiso para editar este equipo'
+  if (message.includes('invalid_text_field')) return 'Campo de jugador no válido'
+  if (message.includes('roster_full')) return 'El equipo ya está completo'
+  return message
+}
+
+export type UpdateMatchTeamInput = {
+  matchId: string
+  teamName: string
+  textUpdates: Partial<Record<keyof TextPlayerFields, string | null>>
+}
+
+export async function updateMatchTeam(input: UpdateMatchTeamInput): Promise<MatchRow> {
+  const textUpdates: Record<string, string | null> = {}
+  for (const [key, value] of Object.entries(input.textUpdates)) {
+    if (value === undefined) continue
+    textUpdates[key] = value?.trim() ? value.trim() : null
+  }
+
+  const { data, error } = await supabase.rpc('update_match_team', {
+    p_match_id: input.matchId,
+    p_team_name: input.teamName?.trim() ?? '',
+    p_text_updates: textUpdates,
+  })
+
+  if (error) throw new Error(mapMatchTeamRpcError(error.message))
+  if (!data) throw new Error('No se pudo actualizar el equipo')
+  return data as MatchRow
 }
 
 export type { ResolveTeamNameMatch } from '@/utils/matchTeamNames'

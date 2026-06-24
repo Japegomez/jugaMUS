@@ -17,6 +17,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ApproveResultModal } from '@/components/matches/ApproveResultModal'
+import {
+  EditMatchTeamModal,
+  type EditMatchTeamFormValues,
+} from '@/components/matches/EditMatchTeamModal'
 import { MatchInviteLinkCard } from '@/components/matches/MatchInviteLinkCard'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
@@ -33,10 +37,18 @@ import {
   useLeaveMatch,
   useMatch,
   useRecordMatchResultDirect,
+  useUpdateMatchTeam,
 } from '@/hooks/useMatches'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import { freeTeamSlots, getParticipantProfile, resolveTeamName } from '@/services/matches.service'
+import {
+  buildMatchTeamEditSlots,
+  canEditMatchTeam,
+  editableTextSlotsForTeam,
+  validateTextRosterCapacity,
+} from '@/services/matches.service'
+import { isUnspecifiedTeamName } from '@/utils/matchTeamNames'
 import type { ParticipantProfile, ParticipantWithProfile } from '@/services/matches.service'
 import { collectTeamRosterEntries } from '@/utils/matchTeamNames'
 import type { ReportTargetType } from '@/services/reports.service'
@@ -222,6 +234,8 @@ interface TeamSectionProps {
   canRevealPhone: boolean
   currentUserId?: string
   onReportUser?: (userId: string, displayName: string) => void
+  editLabel?: string
+  onEdit?: () => void
 }
 
 function TextPlayerRow({ name }: { name: string }) {
@@ -242,6 +256,8 @@ function TeamSection({
   canRevealPhone,
   currentUserId,
   onReportUser,
+  editLabel,
+  onEdit,
 }: TeamSectionProps) {
   const entries = collectTeamRosterEntries(rosterText, participants, team)
 
@@ -249,11 +265,22 @@ function TeamSection({
     <View style={team_s.wrap}>
       <View style={team_s.header}>
         <Text style={team_s.title}>{teamLabel}</Text>
-        <Text style={team_s.slots}>
-          {freeSlots > 0
-            ? `${freeSlots} plaza${freeSlots > 1 ? 's' : ''} libre${freeSlots > 1 ? 's' : ''}`
-            : 'Completo'}
-        </Text>
+        <View style={team_s.headerRight}>
+          {onEdit && editLabel ? (
+            <Pressable
+              onPress={onEdit}
+              accessibilityRole="button"
+              accessibilityLabel={editLabel}
+              style={team_s.editBtn}>
+              <Text style={team_s.editText}>{editLabel}</Text>
+            </Pressable>
+          ) : null}
+          <Text style={team_s.slots}>
+            {freeSlots > 0
+              ? `${freeSlots} plaza${freeSlots > 1 ? 's' : ''} libre${freeSlots > 1 ? 's' : ''}`
+              : 'Completo'}
+          </Text>
+        </View>
       </View>
       {entries.length === 0 ? (
         <Text style={team_s.empty}>Sin jugadores aún</Text>
@@ -290,7 +317,10 @@ const team_s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  title: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  title: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary, flex: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  editBtn: { paddingVertical: 2, paddingHorizontal: 4 },
+  editText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.primary },
   slots: { fontSize: 13, color: Colors.textSecondary },
   empty: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
 })
@@ -434,6 +464,7 @@ export default function MatchDetailScreen() {
   const joinMatch = useJoinMatch()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
+  const updateMatchTeam = useUpdateMatchTeam()
   const submitResultMut = useSubmitResult()
   const submitConfirmationMut = useSubmitConfirmation()
   const recordResultDirectMut = useRecordMatchResultDirect()
@@ -450,6 +481,7 @@ export default function MatchDetailScreen() {
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
+  const [editTeamVisible, setEditTeamVisible] = useState(false)
   const [reportModal, setReportModal] = useState<{
     targetType: ReportTargetType
     targetId: string
@@ -599,6 +631,78 @@ export default function MatchDetailScreen() {
   const status = matchStatusDisplay(match)
   const teamAName = resolveTeamName(match, TEAM.A, match.participants)
   const teamBName = resolveTeamName(match, TEAM.B, match.participants)
+
+  const { canEdit: canEditTeam, team: editableTeam } = canEditMatchTeam(
+    match,
+    match.participants,
+    userId
+  )
+  const editTeamSlots =
+    editableTeam && canEditTeam
+      ? buildMatchTeamEditSlots(
+          {
+            team_a_player_1: match.team_a_player_1,
+            team_a_player_2: match.team_a_player_2,
+            team_b_player_1: match.team_b_player_1,
+            team_b_player_2: match.team_b_player_2,
+          },
+          match.participants,
+          editableTeam
+        )
+      : []
+  const editTeamLabel =
+    editableTeam === TEAM.B ? teamBName : editableTeam === TEAM.A ? teamAName : ''
+  const editCustomTeamName =
+    editableTeam &&
+    !isUnspecifiedTeamName(
+      editableTeam === TEAM.B ? match.team_b_name : match.team_a_name,
+      editableTeam
+    )
+      ? (editableTeam === TEAM.B ? match.team_b_name : match.team_a_name).trim()
+      : ''
+
+  const handleEditTeam = async (values: EditMatchTeamFormValues) => {
+    if (!editableTeam) return
+
+    const rosterText = {
+      team_a_player_1: match.team_a_player_1,
+      team_a_player_2: match.team_a_player_2,
+      team_b_player_1: match.team_b_player_1,
+      team_b_player_2: match.team_b_player_2,
+    }
+
+    const draftText = { ...rosterText }
+    for (const slot of editTeamSlots) {
+      if (slot.kind === 'text') {
+        draftText[slot.field] = values.textByField[slot.field]?.trim() || null
+      }
+    }
+
+    const editableFields = editableTextSlotsForTeam(match.participants, editableTeam, draftText)
+    const textUpdates: Partial<Record<keyof typeof draftText, string | null>> = {}
+    for (const field of editableFields) {
+      textUpdates[field] = values.textByField[field]?.trim() || null
+    }
+
+    const mergedText = { ...rosterText, ...textUpdates }
+    const rosterError = validateTextRosterCapacity(match.participants, mergedText, match)
+    if (rosterError) {
+      Alert.alert('Plantilla completa', rosterError)
+      return
+    }
+
+    try {
+      await updateMatchTeam.mutateAsync({
+        matchId: id,
+        teamName: values.teamName,
+        textUpdates,
+      })
+      setEditTeamVisible(false)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
+      throw err
+    }
+  }
 
   const handleJoin = async (team: string) => {
     if (!userId) return
@@ -801,6 +905,10 @@ export default function MatchDetailScreen() {
                     })
                 : undefined
             }
+            editLabel={canEditTeam && editableTeam === TEAM.A ? 'Editar' : undefined}
+            onEdit={
+              canEditTeam && editableTeam === TEAM.A ? () => setEditTeamVisible(true) : undefined
+            }
           />
           <TeamSection
             team={TEAM.B}
@@ -825,6 +933,10 @@ export default function MatchDetailScreen() {
                       targetLabel: displayName,
                     })
                 : undefined
+            }
+            editLabel={canEditTeam && editableTeam === TEAM.B ? 'Editar' : undefined}
+            onEdit={
+              canEditTeam && editableTeam === TEAM.B ? () => setEditTeamVisible(true) : undefined
             }
           />
         </View>
@@ -993,6 +1105,16 @@ export default function MatchDetailScreen() {
         onClose={() => setLeaveMatchVisible(false)}
         loading={leaveMatch.isPending}
         onConfirm={handleConfirmLeave}
+      />
+
+      <EditMatchTeamModal
+        visible={editTeamVisible}
+        teamLabel={editTeamLabel}
+        customTeamName={editCustomTeamName}
+        slots={editTeamSlots}
+        onClose={() => setEditTeamVisible(false)}
+        onSubmit={handleEditTeam}
+        loading={updateMatchTeam.isPending}
       />
 
       {myParticipation ? (
