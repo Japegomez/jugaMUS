@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -139,7 +139,17 @@ export default function MatchesScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const { data, isPending, isError, refetch, isRefetching } = useMyMatchesDashboard()
+  const { data, isPending, isError, refetch } = useMyMatchesDashboard()
+  const [isUserRefreshing, setIsUserRefreshing] = useState(false)
+
+  const onUserRefresh = useCallback(async () => {
+    setIsUserRefreshing(true)
+    try {
+      await refetch()
+    } finally {
+      setIsUserRefreshing(false)
+    }
+  }, [refetch])
 
   const createFab = <CreateFab />
   const topPadding = screenTopPadding(insets.top)
@@ -153,7 +163,7 @@ export default function MatchesScreen() {
     )
   }
 
-  if (isPending) {
+  if (isPending && !data) {
     return (
       <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -208,8 +218,8 @@ export default function MatchesScreen() {
         }}
         ListHeaderComponent={<ScreenHeader title="Mis partidas" />}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 88 }]}
-        refreshing={isRefetching}
-        onRefresh={() => void refetch()}
+        refreshing={isUserRefreshing}
+        onRefresh={() => void onUserRefresh()}
       />
       {createFab}
     </View>

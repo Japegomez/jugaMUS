@@ -10,6 +10,7 @@ import {
   generateTournamentBracket,
   getTournament,
   getTournamentBracket,
+  grantTournamentPasswordAccess,
   joinTournamentPair,
   recordTournamentMatchAsReferee,
   removeTournamentPair,
@@ -44,11 +45,11 @@ export function useTournament(id: string) {
   })
 }
 
-export function useTournamentBracket(id: string) {
+export function useTournamentBracket(id: string, enabled = true) {
   return useQuery({
     queryKey: tournamentBracketQueryKey(id),
     queryFn: () => getTournamentBracket(id),
-    enabled: Boolean(id),
+    enabled: Boolean(id) && enabled,
     staleTime: TOURNAMENT_QUERY_STALE_TIME,
     refetchOnWindowFocus: true,
   })
@@ -59,9 +60,9 @@ export function useCreateTournament() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: (data: TournamentInsert) => {
+    mutationFn: ({ data, password }: { data: TournamentInsert; password?: string }) => {
       if (!sessionUserId) throw new Error('No autenticado')
-      return createTournament(sessionUserId, data)
+      return createTournament(sessionUserId, data, password)
     },
     onSuccess: (row) => {
       queryClient.invalidateQueries({ queryKey: tournamentQueryKey(row.id) })
@@ -76,12 +77,32 @@ export function useUpdateTournament() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: TournamentUpdate }) =>
-      updateTournament(id, data),
+    mutationFn: ({
+      id,
+      data,
+      password,
+    }: {
+      id: string
+      data: TournamentUpdate
+      password?: string
+    }) => updateTournament(id, data, password),
     onSuccess: (row) => {
       invalidateTournamentQueries(queryClient, row.id)
       invalidatePublicExplore(queryClient)
       invalidateMyMatchesDashboard(queryClient, sessionUserId)
+    },
+  })
+}
+
+export function useGrantTournamentPasswordAccess() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ tournamentId, password }: { tournamentId: string; password: string }) =>
+      grantTournamentPasswordAccess(tournamentId, password),
+    onSuccess: (_void, { tournamentId }) => {
+      invalidateTournamentQueries(queryClient, tournamentId)
+      invalidatePublicExplore(queryClient)
     },
   })
 }

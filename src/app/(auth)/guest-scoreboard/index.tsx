@@ -68,8 +68,8 @@ export default function GuestScoreboardSetupScreen() {
   } = useForm<SetupValues>({
     resolver: zodResolver(setupSchema),
     defaultValues: {
-      teamAName: '',
-      teamBName: '',
+      teamAName: 'Pareja A',
+      teamBName: 'Pareja B',
       durationTargetGames: 3,
     },
   })
@@ -94,7 +94,7 @@ export default function GuestScoreboardSetupScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Llevar la cuenta</Text>
+        <Text style={styles.heading}>Marcador</Text>
         <Text style={styles.sub}>
           Indica los nombres de las parejas y a cuántos juegos se juega la partida.
         </Text>

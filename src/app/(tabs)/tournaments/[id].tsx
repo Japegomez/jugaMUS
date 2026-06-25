@@ -19,13 +19,15 @@ import { EditPairModal, type EditPairFormValues } from '@/components/tournaments
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
-import { MATCH_STATUS, TOURNAMENT_STATUS } from '@/constants'
+import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
+import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
 import {
   useAddTournamentPair,
   useGenerateTournamentBracket,
+  useGrantTournamentPasswordAccess,
   useJoinTournamentPair,
   useRemoveTournamentPair,
   useUpdateTournamentPair,
@@ -86,24 +88,35 @@ export default function TournamentDetailScreen() {
     refetch: refetchTournament,
     isRefetching: isRefetchingTournament,
   } = useTournament(id)
+
+  const [tab, setTab] = useState<TabKey>('bracket')
+  const [pairModalOpen, setPairModalOpen] = useState(false)
+  const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
+  const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
+
+  const needsPassword = Boolean(
+    tournament &&
+    tournament.visibility === MATCH_VISIBILITY.PRIVATE &&
+    tournament.viewer_has_full_access === false
+  )
+  const passwordModalVisible = needsPassword && !passwordModalDismissed
+
   const {
     data: bracket,
     refetch: refetchBracket,
     isRefetching: isRefetchingBracket,
-  } = useTournamentBracket(id)
+  } = useTournamentBracket(id, !needsPassword)
+
   const generateBracket = useGenerateTournamentBracket()
+  const grantAccess = useGrantTournamentPasswordAccess()
   const addPair = useAddTournamentPair()
   const joinPair = useJoinTournamentPair()
   const updatePair = useUpdateTournamentPair()
   const removePair = useRemoveTournamentPair()
 
-  const [tab, setTab] = useState<TabKey>('bracket')
-  const [pairModalOpen, setPairModalOpen] = useState(false)
-  const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
-
   const refetchAll = useCallback(async () => {
-    await Promise.all([refetchTournament(), refetchBracket()])
-  }, [refetchTournament, refetchBracket])
+    await Promise.all([refetchTournament(), ...(needsPassword ? [] : [refetchBracket()])])
+  }, [refetchTournament, refetchBracket, needsPassword])
 
   useFocusEffect(
     useCallback(() => {
@@ -112,6 +125,12 @@ export default function TournamentDetailScreen() {
   )
 
   const isRefreshing = isRefetchingTournament || isRefetchingBracket
+
+  const handleGrantAccess = async (password: string) => {
+    await grantAccess.mutateAsync({ tournamentId: id, password })
+    setPasswordModalDismissed(true)
+    await refetchAll()
+  }
 
   if (isLoading) {
     return (
@@ -282,128 +301,154 @@ export default function TournamentDetailScreen() {
         </View>
         {tournament.description ? <Text style={s.desc}>{tournament.description}</Text> : null}
 
-        <View style={s.tabs}>
-          <Pressable
-            style={[s.tab, tab === 'bracket' && s.tabOn]}
-            onPress={() => setTab('bracket')}
-            accessibilityRole="button"
-            accessibilityState={{ selected: tab === 'bracket' }}>
-            <Text style={[s.tabText, tab === 'bracket' && s.tabTextOn]}>Cuadro</Text>
-          </Pressable>
-          <Pressable
-            style={[s.tab, tab === 'matches' && s.tabOn]}
-            onPress={() => setTab('matches')}
-            accessibilityRole="button"
-            accessibilityState={{ selected: tab === 'matches' }}>
-            <Text style={[s.tabText, tab === 'matches' && s.tabTextOn]}>Partidos</Text>
-          </Pressable>
-        </View>
-
-        {tab === 'bracket' ? (
-          <View style={s.bracketSection}>
-            <BracketCanvas nodes={mainBracketNodes} bracketGenerated={bracketGenerated} />
-            {thirdPlaceNode ? (
-              <View style={s.thirdPlaceSection}>
-                <Text style={s.thirdPlaceTitle}>3º y 4º puesto</Text>
-                <TournamentMatchCard
-                  node={thirdPlaceNode}
-                  onPress={() => router.push(`/(tabs)/matches/${thirdPlaceNode.match_id}`)}
-                />
-              </View>
-            ) : null}
+        {needsPassword ? (
+          <View style={s.privateGate}>
+            <Text style={s.privateGateIcon}>🔒</Text>
+            <Text style={s.privateGateTitle}>Torneo privado</Text>
+            <Text style={s.privateGateText}>
+              Introduce la contraseña para ver parejas, cuadro y unirte.
+            </Text>
+            <Button
+              title="Introducir contraseña"
+              onPress={() => setPasswordModalDismissed(false)}
+            />
           </View>
         ) : (
-          <View style={s.matchesWrap}>
-            <Text style={s.matchesSectionTitle}>Pendientes</Text>
-            {pendingMatches.length === 0 ? (
-              <Text style={s.empty}>No hay partidos pendientes.</Text>
-            ) : (
-              pendingMatches.map((m) => (
-                <TournamentMatchCard
-                  key={m.match_id}
-                  node={m}
-                  onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
-                />
-              ))
-            )}
-            <Text style={[s.matchesSectionTitle, s.matchesSectionTitleSpaced]}>Terminados</Text>
-            {finishedMatches.length === 0 ? (
-              <Text style={s.empty}>No hay partidos terminados.</Text>
-            ) : (
-              finishedMatches.map((m) => (
-                <TournamentMatchCard
-                  key={m.match_id}
-                  node={m}
-                  onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
-                />
-              ))
-            )}
-          </View>
-        )}
+          <>
+            <View style={s.tabs}>
+              <Pressable
+                style={[s.tab, tab === 'bracket' && s.tabOn]}
+                onPress={() => setTab('bracket')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tab === 'bracket' }}>
+                <Text style={[s.tabText, tab === 'bracket' && s.tabTextOn]}>Cuadro</Text>
+              </Pressable>
+              <Pressable
+                style={[s.tab, tab === 'matches' && s.tabOn]}
+                onPress={() => setTab('matches')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tab === 'matches' }}>
+                <Text style={[s.tabText, tab === 'matches' && s.tabTextOn]}>Partidos</Text>
+              </Pressable>
+            </View>
 
-        {tournament.pairs.length > 0 ? (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Parejas ({tournament.pairs.length})</Text>
-            {tournament.pairs.map((p) => {
-              const canEditPair = canEditTournamentPair(
-                p,
-                userId,
-                isCreator,
-                inRegistration,
-                bracketGenerated
-              )
-              const { canJoin, openSlot } = canJoinTournamentPair(
-                p,
-                userId,
-                tournament.pairs,
-                inRegistration
-              )
-              return (
-                <PairCard
-                  key={p.id}
-                  pair={p}
-                  subtitle={
-                    inRegistration && !isTournamentPairComplete(p) ? 'Falta un jugador' : undefined
-                  }
-                  editLabel={canEditPair ? 'Editar' : undefined}
-                  onEdit={canEditPair ? () => setEditingPair(p) : undefined}
-                  joinLabel={canJoin ? 'Unirme' : undefined}
-                  onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
-                  joinLoading={joinPair.isPending}
-                />
-              )
-            })}
-          </View>
-        ) : null}
+            {tab === 'bracket' ? (
+              <View style={s.bracketSection}>
+                <BracketCanvas nodes={mainBracketNodes} bracketGenerated={bracketGenerated} />
+                {thirdPlaceNode ? (
+                  <View style={s.thirdPlaceSection}>
+                    <Text style={s.thirdPlaceTitle}>3º y 4º puesto</Text>
+                    <TournamentMatchCard
+                      node={thirdPlaceNode}
+                      onPress={() => router.push(`/(tabs)/matches/${thirdPlaceNode.match_id}`)}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <View style={s.matchesWrap}>
+                <Text style={s.matchesSectionTitle}>Pendientes</Text>
+                {pendingMatches.length === 0 ? (
+                  <Text style={s.empty}>No hay partidos pendientes.</Text>
+                ) : (
+                  pendingMatches.map((m) => (
+                    <TournamentMatchCard
+                      key={m.match_id}
+                      node={m}
+                      onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
+                    />
+                  ))
+                )}
+                <Text style={[s.matchesSectionTitle, s.matchesSectionTitleSpaced]}>Terminados</Text>
+                {finishedMatches.length === 0 ? (
+                  <Text style={s.empty}>No hay partidos terminados.</Text>
+                ) : (
+                  finishedMatches.map((m) => (
+                    <TournamentMatchCard
+                      key={m.match_id}
+                      node={m}
+                      onPress={() => router.push(`/(tabs)/matches/${m.match_id}`)}
+                    />
+                  ))
+                )}
+              </View>
+            )}
 
-        <View style={s.actions}>
-          {inRegistration ? (
-            <>
-              <Button
-                title="Añadir pareja"
-                variant="outline"
-                onPress={() => setPairModalOpen(true)}
-              />
-              {isCreator ? (
+            {tournament.pairs.length > 0 ? (
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>Parejas ({tournament.pairs.length})</Text>
+                {tournament.pairs.map((p) => {
+                  const canEditPair = canEditTournamentPair(
+                    p,
+                    userId,
+                    isCreator,
+                    inRegistration,
+                    bracketGenerated
+                  )
+                  const { canJoin, openSlot } = canJoinTournamentPair(
+                    p,
+                    userId,
+                    tournament.pairs,
+                    inRegistration
+                  )
+                  return (
+                    <PairCard
+                      key={p.id}
+                      pair={p}
+                      subtitle={
+                        inRegistration && !isTournamentPairComplete(p)
+                          ? 'Falta un jugador'
+                          : undefined
+                      }
+                      editLabel={canEditPair ? 'Editar' : undefined}
+                      onEdit={canEditPair ? () => setEditingPair(p) : undefined}
+                      joinLabel={canJoin ? 'Unirme' : undefined}
+                      onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
+                      joinLoading={joinPair.isPending}
+                    />
+                  )
+                })}
+              </View>
+            ) : null}
+
+            <View style={s.actions}>
+              {inRegistration ? (
+                <>
+                  <Button
+                    title="Añadir pareja"
+                    variant="outline"
+                    onPress={() => setPairModalOpen(true)}
+                  />
+                  {isCreator ? (
+                    <Button
+                      title="Organizar cuadro"
+                      onPress={() => void handleGenerate()}
+                      loading={generateBracket.isPending}
+                      style={s.actionGap}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+              {isCreator && inRegistration ? (
                 <Button
-                  title="Organizar cuadro"
-                  onPress={() => void handleGenerate()}
-                  loading={generateBracket.isPending}
+                  title="Editar torneo"
+                  variant="secondary"
+                  onPress={() => router.push(`/(tabs)/tournaments/edit/${id}` as Href)}
                   style={s.actionGap}
                 />
               ) : null}
-            </>
-          ) : null}
-          {isCreator && inRegistration ? (
-            <Button
-              title="Editar torneo"
-              variant="secondary"
-              onPress={() => router.push(`/(tabs)/tournaments/edit/${id}` as Href)}
-              style={s.actionGap}
-            />
-          ) : null}
-        </View>
+            </View>
+          </>
+        )}
       </ScrollView>
+
+      <MatchPasswordModal
+        visible={passwordModalVisible}
+        onClose={() => setPasswordModalDismissed(true)}
+        onSubmit={(password) => handleGrantAccess(password)}
+        accessOnly
+        isLoading={grantAccess.isPending}
+      />
 
       <AddPairModal
         visible={pairModalOpen}
@@ -448,6 +493,24 @@ const s = StyleSheet.create({
   meta: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   organizer: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
   desc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 12 },
+  privateGate: {
+    marginTop: 16,
+    padding: 20,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    gap: 8,
+  },
+  privateGateIcon: { fontSize: 32 },
+  privateGateTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  privateGateText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   tabs: { flexDirection: 'row', marginBottom: 12, gap: 8 },
   tab: {
     flex: 1,

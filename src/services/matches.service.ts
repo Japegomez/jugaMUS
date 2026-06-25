@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
   MATCH_STATUS,
+  MATCH_VISIBILITY,
   MAX_PLAYERS_PER_TEAM,
   MATCH_PAGE_SIZE,
   RESULT_STATUS,
@@ -50,6 +51,7 @@ export type MatchRow = {
   duration_target_games: number
   visibility: string
   location_privacy: string
+  password_hash: string | null
   status: string
   creator_id: string
   team_a_name: string
@@ -93,6 +95,7 @@ export type ParticipantWithProfile = ParticipantRow & {
 
 export type MatchWithParticipants = MatchRow & {
   participants: ParticipantWithProfile[]
+  viewer_has_full_access?: boolean
 }
 
 export type MatchInsert = Pick<
@@ -148,6 +151,8 @@ type TextPlayerFields = Pick<
   MatchRow,
   'team_a_player_1' | 'team_a_player_2' | 'team_b_player_1' | 'team_b_player_2'
 >
+
+export type { TextPlayerFields }
 
 function textPlayerNamesOnTeam(match: TextPlayerFields, team: string): string[] {
   const slots =
@@ -261,6 +266,119 @@ export function validateTextRosterCapacity(
   return null
 }
 
+export type MatchTeamEditSlot =
+  | { kind: 'registered'; displayName: string }
+  | { kind: 'text'; field: keyof TextPlayerFields; value: string }
+
+function textFieldsForTeam(team: string): (keyof TextPlayerFields)[] {
+  return team === TEAM.B
+    ? ['team_b_player_1', 'team_b_player_2']
+    : ['team_a_player_1', 'team_a_player_2']
+}
+
+/** Roster slots for the team edit modal (registered locked, text editable). */
+export function buildMatchTeamEditSlots(
+  match: TextPlayerFields,
+  participants: ParticipantWithProfile[],
+  team: string
+): MatchTeamEditSlot[] {
+  const [field1, field2] = textFieldsForTeam(team)
+  const registered = activeParticipants(participants)
+    .filter((p) => p.team === team)
+    .sort((a, b) => a.joined_at.localeCompare(b.joined_at))
+
+  const text1 = match[field1]?.trim() || null
+  const text2 = match[field2]?.trim() || null
+  const slots: MatchTeamEditSlot[] = []
+  let regIdx = 0
+
+  if (text1) {
+    slots.push({ kind: 'text', field: field1, value: text1 })
+  } else if (registered[regIdx]) {
+    slots.push({
+      kind: 'registered',
+      displayName: registered[regIdx].profile.display_name?.trim() || 'Jugador registrado',
+    })
+    regIdx++
+  }
+
+  const firstName =
+    slots[0]?.kind === 'text'
+      ? slots[0].value
+      : slots[0]?.kind === 'registered'
+        ? slots[0].displayName
+        : null
+
+  if (text2 && text2 !== firstName) {
+    slots.push({ kind: 'text', field: field2, value: text2 })
+  } else if (registered[regIdx]) {
+    slots.push({
+      kind: 'registered',
+      displayName: registered[regIdx].profile.display_name?.trim() || 'Jugador registrado',
+    })
+  }
+
+  return slots.slice(0, 2)
+}
+
+/** Active participant on a standalone planned match may edit their team roster. */
+export function canEditMatchTeam(
+  match: Pick<MatchRow, 'status' | 'tournament_id'>,
+  participants: ParticipantWithProfile[],
+  userId: string | undefined
+): { canEdit: boolean; team: string | null } {
+  if (!userId || match.tournament_id || match.status !== MATCH_STATUS.PLANNED) {
+    return { canEdit: false, team: null }
+  }
+
+  const mine = activeParticipants(participants).find((p) => p.user_id === userId)
+  if (!mine) return { canEdit: false, team: null }
+
+  return { canEdit: true, team: mine.team }
+}
+
+function mapMatchTeamRpcError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('match_not_found')) return 'Partida no encontrada'
+  if (message.includes('tournament_match_not_editable')) {
+    return 'Las partidas de torneo no se pueden editar desde aquí'
+  }
+  if (message.includes('match_not_planned')) {
+    return 'Solo puedes editar la pareja mientras la partida está planificada'
+  }
+  if (message.includes('forbidden')) return 'No tienes permiso para editar este equipo'
+  if (message.includes('invalid_text_field')) return 'Campo de jugador no válido'
+  if (message.includes('roster_full')) return 'El equipo ya está completo'
+  if (message.includes('cannot_clear_text_player')) {
+    return 'No puedes quitar jugadores de la pareja; solo editar el nombre.'
+  }
+  return message
+}
+
+export type UpdateMatchTeamInput = {
+  matchId: string
+  teamName: string
+  textUpdates: Partial<Record<keyof TextPlayerFields, string | null>>
+}
+
+export async function updateMatchTeam(input: UpdateMatchTeamInput): Promise<MatchRow> {
+  const textUpdates: Record<string, string | null> = {}
+  for (const [key, value] of Object.entries(input.textUpdates)) {
+    if (value === undefined) continue
+    textUpdates[key] = value?.trim() ? value.trim() : null
+  }
+
+  const { data, error } = await supabase.rpc('update_match_team', {
+    p_match_id: input.matchId,
+    p_team_name: input.teamName?.trim() ?? '',
+    p_text_updates: textUpdates,
+  })
+
+  if (error) throw new Error(mapMatchTeamRpcError(error.message))
+  if (!data) throw new Error('No se pudo actualizar el equipo')
+  return data as MatchRow
+}
+
 export type { ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 export {
   collectTeamPlayerNames,
@@ -279,7 +397,11 @@ const TEXT_PLAYER_UPDATE_KEYS = [
 
 // ─── Match CRUD ───────────────────────────────────────────────────────────────
 
-export async function createMatch(userId: string, data: MatchInsert): Promise<MatchRow> {
+export async function createMatch(
+  userId: string,
+  data: MatchInsert,
+  password?: string
+): Promise<MatchRow> {
   const startAt = startAtToTimestamptzIso(data.start_at)
 
   const { data: row, error } = await supabase
@@ -289,6 +411,10 @@ export async function createMatch(userId: string, data: MatchInsert): Promise<Ma
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password) {
+    await setMatchPassword(row.id, password)
+  }
 
   try {
     const participant = await joinMatch(row.id, userId, TEAM.A)
@@ -311,6 +437,25 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
 
   if (error) throw new Error(error.message)
 
+  const matchRow = raw as MatchRow
+
+  let viewerHasFullAccess = matchRow.visibility !== MATCH_VISIBILITY.PRIVATE
+  if (matchRow.visibility === MATCH_VISIBILITY.PRIVATE) {
+    const { data: canAccess, error: accessError } = await supabase.rpc('viewer_can_access_match', {
+      p_match_id: id,
+    })
+    if (accessError) throw new Error(accessError.message)
+    viewerHasFullAccess = Boolean(canAccess)
+  }
+
+  if (!viewerHasFullAccess) {
+    return {
+      ...matchRow,
+      participants: [],
+      viewer_has_full_access: false,
+    }
+  }
+
   const { data: roster, error: rosterError } = await supabase.rpc(
     'list_match_participant_display',
     {
@@ -323,32 +468,33 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
   if (rosterError) {
     if (!isMissingPostgrestRpcError(rosterError)) {
       throw new Error(rosterError.message)
+    } else {
+      const { data: nested, error: nestedError } = await supabase
+        .from('matches')
+        .select(
+          `*,
+           participants:match_participants(
+             id, match_id, user_id, team, state, joined_at, left_at,
+             profile:profiles(id, display_name, photo_url, city)
+           )`
+        )
+        .eq('id', id)
+        .single()
+      if (nestedError) throw new Error(nestedError.message)
+      const rawNested = nested as MatchRow & {
+        participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
+      }
+      participants = (rawNested.participants ?? []).map((p) => ({
+        ...p,
+        profile: p.profile ?? {
+          id: p.user_id,
+          display_name: 'Usuario',
+          photo_url: null,
+          city: null,
+          phone_e164: null,
+        },
+      }))
     }
-    const { data: nested, error: nestedError } = await supabase
-      .from('matches')
-      .select(
-        `*,
-         participants:match_participants(
-           id, match_id, user_id, team, state, joined_at, left_at,
-           profile:profiles(id, display_name, photo_url, city)
-         )`
-      )
-      .eq('id', id)
-      .single()
-    if (nestedError) throw new Error(nestedError.message)
-    const rawNested = nested as MatchRow & {
-      participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
-    }
-    participants = (rawNested.participants ?? []).map((p) => ({
-      ...p,
-      profile: p.profile ?? {
-        id: p.user_id,
-        display_name: 'Usuario',
-        photo_url: null,
-        city: null,
-        phone_e164: null,
-      },
-    }))
   } else {
     type RosterRow = {
       participant_id: string
@@ -381,10 +527,18 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
     }))
   }
 
-  return { ...(raw as MatchRow), participants }
+  return {
+    ...matchRow,
+    participants,
+    viewer_has_full_access: true,
+  }
 }
 
-export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchRow> {
+export async function updateMatch(
+  id: string,
+  data: MatchUpdate,
+  password?: string
+): Promise<MatchRow> {
   const touchesTextPlayers = TEXT_PLAYER_UPDATE_KEYS.some((k) => k in data)
 
   if (touchesTextPlayers) {
@@ -416,6 +570,11 @@ export async function updateMatch(id: string, data: MatchUpdate): Promise<MatchR
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password?.trim()) {
+    await setMatchPassword(id, password.trim())
+  }
+
   return row as MatchRow
 }
 
@@ -429,6 +588,56 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 
   if (error) throw new Error(error.message)
   return row as MatchRow
+}
+
+/** Set or replace the bcrypt password of a private match (creator only). */
+export async function setMatchPassword(matchId: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('set_match_password', {
+    p_match_id: matchId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+}
+
+/** Verify password and grant read access to a private match (does not join). */
+export async function grantMatchPasswordAccess(matchId: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('grant_match_password_access', {
+    p_match_id: matchId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+}
+
+function mapPrivateMatchRpcError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('password_empty')) return 'La contraseña no puede estar vacía'
+  if (message.includes('forbidden')) return 'No tienes permiso para modificar esta partida'
+  if (message.includes('match_not_found')) return 'Partida no encontrada'
+  if (message.includes('not_private_match')) return 'Esta partida no es privada'
+  if (message.includes('match_not_joinable')) return 'La partida ya no está disponible'
+  if (message.includes('tournament_match')) {
+    return 'Esta partida pertenece a un torneo. Accede desde la ficha del torneo.'
+  }
+  if (message.includes('match_no_password')) return 'Esta partida no tiene contraseña configurada'
+  if (message.includes('wrong_password')) return 'Contraseña incorrecta'
+  if (message.includes('already_participant')) return 'Ya participas en esta partida'
+  return message
+}
+
+/** Join a private match after verifying the password. */
+export async function joinPrivateMatch(
+  matchId: string,
+  team: string,
+  password: string
+): Promise<ParticipantRow> {
+  const { data, error } = await supabase.rpc('join_private_match', {
+    p_match_id: matchId,
+    p_team: team,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateMatchRpcError(error.message))
+  if (!data) throw new Error('No se pudo unir a la partida')
+  return data as ParticipantRow
 }
 
 // ─── Participants ─────────────────────────────────────────────────────────────
@@ -934,6 +1143,8 @@ type ListPublicMatchesRpc = Database['public']['Functions']['list_public_matches
 
 export type { ExploreContentType } from '@/constants'
 
+export type VisibilityFilter = 'all' | 'public' | 'private'
+
 export type PublicMatchesListFilters = {
   search: string
   city: string
@@ -946,6 +1157,8 @@ export type PublicMatchesListFilters = {
   /** 0 = no filter; otherwise require at least N free slots (of 4). */
   minFreeSlots: number
   contentType: ExploreContentType
+  /** 'all' = public + private (default), 'public' = only public, 'private' = only private. */
+  visibility: VisibilityFilter
 }
 
 function emptyToUndefined(s: string | null | undefined): string | undefined {
@@ -989,6 +1202,8 @@ export async function listPublicMatchesPage(
       filters.minFreeSlots > 0 && filters.minFreeSlots <= 4 ? filters.minFreeSlots : undefined,
     p_limit: limit,
     p_offset: offset,
+    p_visibility:
+      filters.visibility && filters.visibility !== 'all' ? filters.visibility : undefined,
   }
 
   const { data, error } = await supabase.rpc('list_public_matches', args)

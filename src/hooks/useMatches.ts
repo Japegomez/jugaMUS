@@ -8,13 +8,20 @@ import {
   getMyMatchesDashboard,
   getUserMatches,
   getViewableUserMatches,
+  grantMatchPasswordAccess,
   joinMatch,
   leaveMatch,
   listPublicMatchesPage,
   recordMatchResultDirect,
   updateMatch,
+  updateMatchTeam,
 } from '@/services/matches.service'
-import type { MatchInsert, MatchUpdate, PublicMatchesListFilters } from '@/services/matches.service'
+import type {
+  MatchInsert,
+  MatchUpdate,
+  PublicMatchesListFilters,
+  UpdateMatchTeamInput,
+} from '@/services/matches.service'
 import {
   listPublicTournamentsFiltered,
   type PublicTournamentsListFilters,
@@ -70,6 +77,7 @@ export function publicTournamentsExploreQueryKey(filters: PublicTournamentsListF
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
+    filters.visibility ?? 'all',
   ] as const
 }
 
@@ -103,6 +111,7 @@ export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) 
     filters.startAfter ?? '',
     filters.startBefore ?? '',
     filters.minFreeSlots,
+    filters.visibility ?? 'all',
   ] as const
 }
 
@@ -188,9 +197,9 @@ export function useCreateMatch() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: async (data: MatchInsert) => {
+    mutationFn: async ({ data, password }: { data: MatchInsert; password?: string }) => {
       if (!sessionUserId) throw new Error('No autenticado')
-      const match = await createMatch(sessionUserId, data)
+      const match = await createMatch(sessionUserId, data, password)
       await queryClient.prefetchQuery({
         queryKey: matchQueryKey(match.id),
         queryFn: () => getMatch(match.id),
@@ -215,12 +224,31 @@ export function useUpdateMatch() {
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: MatchUpdate }) => updateMatch(id, data),
+    mutationFn: ({ id, data, password }: { id: string; data: MatchUpdate; password?: string }) =>
+      updateMatch(id, data, password),
     onSuccess: (updated) => {
       queryClient.setQueryData(matchQueryKey(updated.id), (prev: unknown) => {
         if (!prev) return prev
         return { ...(prev as object), ...updated }
       })
+      invalidatePublicMatchesExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
+    },
+  })
+}
+
+export function useUpdateMatchTeam() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: (input: UpdateMatchTeamInput) => updateMatchTeam(input),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(matchQueryKey(updated.id), (prev: unknown) => {
+        if (!prev) return prev
+        return { ...(prev as object), ...updated }
+      })
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(updated.id) })
       invalidatePublicMatchesExplore(queryClient)
       invalidateMyMatchesDashboard(queryClient, sessionUserId)
     },
@@ -266,6 +294,18 @@ export function useJoinMatch() {
       queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
       invalidatePublicMatchesExplore(queryClient)
       invalidateMyMatchesDashboard(queryClient, userId)
+    },
+  })
+}
+
+export function useGrantMatchPasswordAccess() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ matchId, password }: { matchId: string; password: string }) =>
+      grantMatchPasswordAccess(matchId, password),
+    onSuccess: (_data, { matchId }) => {
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
     },
   })
 }

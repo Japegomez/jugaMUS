@@ -230,6 +230,7 @@ export type Database = {
           duration_target_games: number
           id: string
           location_privacy: string
+          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -259,6 +260,7 @@ export type Database = {
           duration_target_games: number
           id?: string
           location_privacy?: string
+          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at: string
@@ -288,6 +290,7 @@ export type Database = {
           duration_target_games?: number
           id?: string
           location_privacy?: string
+          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at?: string
@@ -731,6 +734,7 @@ export type Database = {
           id: string
           location_privacy: string
           notes: string | null
+          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -919,6 +923,7 @@ export type Database = {
           id: string
           location_privacy: string
           notes: string | null
+          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -1070,6 +1075,42 @@ export type Database = {
         Args: { p_pair_id: string }
         Returns: undefined
       }
+      update_match_team: {
+        Args: {
+          p_match_id: string
+          p_team_name: string
+          p_text_updates?: Json
+        }
+        Returns: Database['public']['Tables']['matches']['Row']
+      }
+      set_match_password: {
+        Args: { p_match_id: string; p_password: string }
+        Returns: undefined
+      }
+      join_private_match: {
+        Args: { p_match_id: string; p_team: string; p_password: string }
+        Returns: Database['public']['Tables']['match_participants']['Row']
+      }
+      set_tournament_password: {
+        Args: { p_tournament_id: string; p_password: string }
+        Returns: undefined
+      }
+      grant_tournament_password_access: {
+        Args: { p_tournament_id: string; p_password: string }
+        Returns: undefined
+      }
+      grant_match_password_access: {
+        Args: { p_match_id: string; p_password: string }
+        Returns: undefined
+      }
+      viewer_can_access_match: {
+        Args: { p_match_id: string }
+        Returns: boolean
+      }
+      viewer_can_access_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       update_tournament_pair: {
         Args: {
           p_name: string
@@ -1138,6 +1179,7 @@ export type Database = {
           p_start_after?: string
           p_start_before?: string
           p_status?: string
+          p_visibility?: string
         }
         Returns: {
           city: string

@@ -1,22 +1,22 @@
 # Tareas - jugaMUS
 
-> Actualizado: 10/06/2026 (cierre sesión; marcador «Siguiente ronda», perfil ajeno, enlaces partida, 3º/4º puesto, edición pareja por miembro)
+> Actualizado: 25/06/2026 (cierre sesión; partidas/torneos privados con contraseña, Marcador UI, edición parejas sin quitar miembros)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                                          |
-| ------------------- | ---------- | -------------------------------------------------------------------- |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                    |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                 |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                    |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
-| UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
-| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
-| UX — Jun. 2026      | En curso   | Marcador manual, perfil ajeno, enlaces, torneo 3º/4º, parejas        |
+| Fase                | Estado     | Descripción                                                                            |
+| ------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                                      |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                                   |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                                      |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                                    |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama                   |
+| UI — Ultra Limpio   | Completada | Rediseño visual                                                                        |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión                             |
+| UX — Jun. 2026      | En curso   | Marcador manual, perfil ajeno, enlaces, torneo 3º/4º, parejas, privados con contraseña |
 
 ---
 
@@ -340,6 +340,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Editar pareja por miembro** (jugador A/B puede editar su pareja en inscripción; eliminar solo organizador; migración `062`)
 - [x] **3º y 4º puesto** opcional al crear torneo: partido entre perdedores de semifinales (migración `064`; switch en wizard; bloque bajo el cuadro)
 - [x] Enlace **🏆 Ir al torneo** en ficha de partida del cuadro (chip con estilo previo, tamaño ampliado)
+- [x] **Partidas privadas con contraseña** (migración `066`): visibilidad `private`, listado en Descubrir, contraseña para ver ficha y unirse por botón habitual (`068` grants)
+- [x] **Torneos privados con contraseña** (migración `067`): mismo flujo que partidas; filtro de visibilidad en Descubrir para torneos
+- [x] **Edición de parejas:** no se pueden quitar miembros de texto al editar; solo renombrar (migración `069`, UI `EditPairModal` / `EditMatchTeamModal`)
 
 ### F11 - Pendiente / opcional
 
@@ -359,7 +362,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Componentes UI: `ScoreboardPairCard`, `PhaseRow`, `PointsAdjustModal`, `OrdagoModal`, `ResetScoreboardModal`
 - [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador global, fases, botón órdago, reinicio local
 - [x] Botón **Siguiente ronda** (suma envites manualmente; hint si faltan ganadores de fase); mismo flujo en marcador guest
-- [x] Detalle partida: botones «Llevar la cuenta» y «Registrar resultado» (partida `in_progress`)
+- [x] Detalle partida: botones «Marcador» y «Registrar resultado» (partida `in_progress`)
 - [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
 - [x] Reset del marcador local tras registrar resultado correctamente
 - [x] Commit + PR `feature/scoreboard` → `develop` (revisor/asignado Japegomez)
@@ -369,11 +372,11 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 > Rama de trabajo: `feature/scoreboard_without_login` (desde `develop`).
 
-- [x] Botón «Llevar la cuenta» en login (destacado) + texto orientativo (sesión vs cuenta sin registro)
-- [x] Formulario rápido: nombres pareja A/B + juegos a ganar (1–6) en `/(auth)/guest-scoreboard`
+- [x] Botón **Marcador** en login (destacado) + texto orientativo (sesión vs cuenta sin registro)
+- [x] Formulario rápido: nombres pareja A/B (por defecto «Pareja A» / «Pareja B») + juegos a ganar (1–6) en `/(auth)/guest-scoreboard`; título de pantalla «Marcador»
 - [x] Marcador reutilizando `useLiveScoreboard` y componentes F12 (`/(auth)/guest-scoreboard/play`)
 - [x] Popup fin de partida con ganador y «Volver al inicio» → login; estado local con `GUEST_SCOREBOARD_STORAGE_ID`
-- [ ] Commit + PR `feature/scoreboard_without_login` → `develop` (revisor/asignado Japegomez)
+- [ ] Commit + PR `feature/scoreboard_without_login` → `develop` (revisor/asignado Japegomez) — flujo guest ya en `develop`; cerrar rama si procede
 - [ ] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web)
 
 ---
@@ -450,8 +453,21 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Torneo: miembros de pareja pueden editarla (migración `062`)
 - [x] Torneo: opción 3º/4º puesto (migración `064`, aplicada en remoto)
 - [x] Apple Sign In + Hide My Email: nombre legible en perfil (migraciones `060`–`061`, `appleDisplayName.ts`)
-- [ ] **Commit en `develop`** de todos los cambios locales (sin push salvo que se pida)
+- [ ] **Commit en `develop`** de todos los cambios locales (sin push salvo que se pida) — hecho en sesiones posteriores; ver abajo
 - [ ] QA: enlace partida (abrir deep link en otro dispositivo/usuario); 3º/4º puesto end-to-end; marcador Siguiente ronda; perfil ajeno con foto
+
+---
+
+## UX — Privados y Marcador (sesión 25/06)
+
+- [x] Partidas privadas: contraseña del creador, listado en Descubrir (filtro Privadas), grant de acceso antes de unirse (migraciones `066`, `068`)
+- [x] Torneos privados: mismo patrón (migración `067`); create/edit con chip Privada + contraseña
+- [x] Explore: filtro de visibilidad aplica también a torneos
+- [x] Edición parejas: prohibido vaciar jugadores de texto; solo cambiar nombre (migración `069`)
+- [x] UI Marcador: botones y pantallas guest renombrados; defaults «Pareja A» / «Pareja B»
+- [x] Commits en `develop` (`f6da993`, `d808e07`, `7170584`); rama **7 commits** por delante de `origin/develop`
+- [ ] Push `develop` + PR → `main` (release)
+- [ ] QA: partida privada (contraseña → ver → unirse); torneo privado; filtro Descubrir Privadas
 
 ---
 

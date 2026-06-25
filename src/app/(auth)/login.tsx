@@ -81,12 +81,12 @@ export default function LoginScreen() {
         showsVerticalScrollIndicator={false}>
         <Text style={styles.heading}>{APP_DISPLAY_NAME}</Text>
         <Text style={styles.infoText}>
-          Si deseas llevar la cuenta de una partida sin registro, pulsa Llevar la cuenta. Para crear
-          o unirse a partidas y torneos, inicia sesión.
+          Si deseas llevar la cuenta de una partida sin registro, pulsa Marcador. Para crear o
+          unirse a partidas y torneos, inicia sesión.
         </Text>
 
         <Button
-          title="Llevar la cuenta"
+          title="Marcador"
           onPress={() => router.push('/(auth)/guest-scoreboard' as Href)}
           style={styles.scoreboardBtn}
           textStyle={styles.scoreboardBtnLabel}

@@ -40,11 +40,21 @@ const schema = z
     city: z.string().trim().min(1, 'Selecciona ciudad'),
     ...placeFormFields,
     duration_target_games: z.number().int().min(1).max(6),
-    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK]),
+    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
+    password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
     include_third_place: z.boolean(),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .superRefine(refinePlaceRequired)
+  .superRefine((data, ctx) => {
+    if (data.visibility === MATCH_VISIBILITY.PRIVATE && !data.password?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Introduce una contraseña para el torneo privado',
+        path: ['password'],
+      })
+    }
+  })
 
 type FormValues = z.infer<typeof schema>
 
@@ -58,6 +68,7 @@ function createDefaultFormValues(): FormValues {
     place_text: '',
     duration_target_games: 3,
     visibility: MATCH_VISIBILITY.PUBLIC,
+    password: '',
     include_third_place: false,
     notes: '',
   }
@@ -145,17 +156,20 @@ export default function CreateTournamentScreen() {
   const onStep1 = async (values: FormValues) => {
     try {
       const row = await createTournament.mutateAsync({
-        title: values.title,
-        description: values.description || null,
-        notes: values.notes || null,
-        start_at: values.start_at,
-        city: values.city,
-        ...placePayload(values),
-        duration_target_games: values.duration_target_games,
-        visibility: values.visibility,
-        location_privacy: 'participants_only',
-        creator_joins_as_player: false,
-        include_third_place: values.include_third_place,
+        data: {
+          title: values.title,
+          description: values.description || null,
+          notes: values.notes || null,
+          start_at: values.start_at,
+          city: values.city,
+          ...placePayload(values),
+          duration_target_games: values.duration_target_games,
+          visibility: values.visibility,
+          location_privacy: 'participants_only',
+          creator_joins_as_player: false,
+          include_third_place: values.include_third_place,
+        },
+        password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       setTournamentId(row.id)
       setStep(2)
@@ -361,22 +375,41 @@ export default function CreateTournamentScreen() {
           <View style={s.visRow}>
             <Chip
               label="Pública"
-              sublabel="Aparece en listados"
+              sublabel="En el listado"
               selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
               onPress={() =>
                 setValue('visibility', MATCH_VISIBILITY.PUBLIC, { shouldValidate: true })
               }
             />
             <Chip
-              label="Con enlace"
-              sublabel="Solo con invitación"
-              selected={visibilityValue === MATCH_VISIBILITY.LINK}
+              label="Privada"
+              sublabel="Con contraseña"
+              selected={visibilityValue === MATCH_VISIBILITY.PRIVATE}
               onPress={() =>
-                setValue('visibility', MATCH_VISIBILITY.LINK, { shouldValidate: true })
+                setValue('visibility', MATCH_VISIBILITY.PRIVATE, { shouldValidate: true })
               }
             />
           </View>
         </View>
+        {visibilityValue === MATCH_VISIBILITY.PRIVATE ? (
+          <Controller
+            control={control}
+            name="password"
+            render={({ field }) => (
+              <Input
+                label="Contraseña *"
+                placeholder="Elige una contraseña para acceder"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.password?.message}
+                secureTextEntry
+                showPasswordToggle
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            )}
+          />
+        ) : null}
         <View style={s.fieldWrap}>
           <View style={s.switchRow}>
             <View style={s.switchTextWrap}>

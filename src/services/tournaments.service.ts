@@ -1,6 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { mapResultRpcError } from '@/services/results.service'
-import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/constants'
+import {
+  MATCH_STATUS,
+  MATCH_VISIBILITY,
+  TOURNAMENT_STATUS,
+  type ExploreContentType,
+} from '@/constants'
+import type { VisibilityFilter } from '@/services/matches.service'
 import type { Tables, TablesInsert, TablesUpdate } from '@/types/database.types'
 import { formatTeamNameFromPlayers } from '@/utils/matchTeamNames'
 
@@ -71,6 +77,7 @@ export type BracketNodeRow = {
 export type TournamentWithPairs = TournamentRow & {
   pairs: TournamentPairRow[]
   organizer_display_name?: string | null
+  viewer_has_full_access?: boolean
 }
 
 export type TournamentBracket = {
@@ -97,7 +104,8 @@ export type UpdatePairInput = {
 
 export async function createTournament(
   _userId: string,
-  data: TournamentInsert
+  data: TournamentInsert,
+  password?: string
 ): Promise<TournamentRow> {
   const { data: row, error } = await supabase.rpc('create_tournament', {
     p_title: data.title,
@@ -116,7 +124,13 @@ export async function createTournament(
 
   if (error) throw new Error(error.message)
   if (!row) throw new Error('No se pudo crear el torneo')
-  return row as TournamentRow
+
+  const tournament = row as TournamentRow
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password?.trim()) {
+    await setTournamentPassword(tournament.id, password.trim())
+  }
+
+  return tournament
 }
 
 export async function getTournament(id: string): Promise<TournamentWithPairs> {
@@ -133,6 +147,25 @@ export async function getTournament(id: string): Promise<TournamentWithPairs> {
 
   const tournamentRow = tournament as TournamentRow & {
     creator_profile?: { display_name: string } | null
+  }
+
+  let viewerHasFullAccess = tournamentRow.visibility !== MATCH_VISIBILITY.PRIVATE
+  if (tournamentRow.visibility === MATCH_VISIBILITY.PRIVATE) {
+    const { data: canAccess, error: accessError } = await supabase.rpc(
+      'viewer_can_access_tournament',
+      { p_tournament_id: id }
+    )
+    if (accessError) throw new Error(accessError.message)
+    viewerHasFullAccess = Boolean(canAccess)
+  }
+
+  if (!viewerHasFullAccess) {
+    return {
+      ...(tournamentRow as TournamentRow),
+      organizer_display_name: tournamentRow.creator_profile?.display_name ?? null,
+      pairs: [],
+      viewer_has_full_access: false,
+    }
   }
 
   const { data: pairs, error: pairsError } = await supabase
@@ -163,10 +196,15 @@ export async function getTournament(id: string): Promise<TournamentWithPairs> {
     ...(tournamentRow as TournamentRow),
     organizer_display_name: tournamentRow.creator_profile?.display_name ?? null,
     pairs: mappedPairs,
+    viewer_has_full_access: true,
   }
 }
 
-export async function updateTournament(id: string, data: TournamentUpdate): Promise<TournamentRow> {
+export async function updateTournament(
+  id: string,
+  data: TournamentUpdate,
+  password?: string
+): Promise<TournamentRow> {
   const payload: TournamentUpdate =
     data.start_at !== undefined
       ? { ...data, start_at: startAtToTimestamptzIso(data.start_at) }
@@ -180,7 +218,43 @@ export async function updateTournament(id: string, data: TournamentUpdate): Prom
     .single()
 
   if (error) throw new Error(error.message)
+
+  if (data.visibility === MATCH_VISIBILITY.PRIVATE && password?.trim()) {
+    await setTournamentPassword(id, password.trim())
+  }
+
   return row as TournamentRow
+}
+
+function mapPrivateTournamentRpcError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('password_empty')) return 'La contraseña no puede estar vacía'
+  if (message.includes('forbidden')) return 'No tienes permiso para modificar este torneo'
+  if (message.includes('tournament_not_found')) return 'Torneo no encontrado'
+  if (message.includes('not_private_tournament')) return 'Este torneo no es privado'
+  if (message.includes('tournament_no_password'))
+    return 'Este torneo no tiene contraseña configurada'
+  if (message.includes('wrong_password')) return 'Contraseña incorrecta'
+  return message
+}
+
+export async function setTournamentPassword(tournamentId: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('set_tournament_password', {
+    p_tournament_id: tournamentId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateTournamentRpcError(error.message))
+}
+
+export async function grantTournamentPasswordAccess(
+  tournamentId: string,
+  password: string
+): Promise<void> {
+  const { error } = await supabase.rpc('grant_tournament_password_access', {
+    p_tournament_id: tournamentId,
+    p_password: password,
+  })
+  if (error) throw new Error(mapPrivateTournamentRpcError(error.message))
 }
 
 export async function addTournamentPair(input: AddPairInput): Promise<TournamentPairRow> {
@@ -261,6 +335,7 @@ export type PublicTournamentsListFilters = {
   startBefore: string | null
   minFreeSlots: number
   contentType: ExploreContentType
+  visibility: VisibilityFilter
 }
 
 export type UserTournamentSummary = {
@@ -300,11 +375,16 @@ export async function listPublicTournamentsFiltered(
   const statuses = tournamentStatusesFromExploreFilter(filters.status)
   if (statuses !== null && statuses.length === 0) return []
 
-  let query = supabase
-    .from('tournaments')
-    .select('*')
-    .eq('visibility', 'public')
-    .neq('status', TOURNAMENT_STATUS.CANCELLED)
+  let query = supabase.from('tournaments').select('*').neq('status', TOURNAMENT_STATUS.CANCELLED)
+
+  const visibility = filters.visibility ?? 'all'
+  if (visibility === 'public') {
+    query = query.eq('visibility', 'public')
+  } else if (visibility === 'private') {
+    query = query.eq('visibility', 'private')
+  } else {
+    query = query.in('visibility', ['public', 'private'])
+  }
 
   const city = filters.city.trim()
   if (city) query = query.ilike('city', `%${city}%`)
@@ -480,6 +560,9 @@ function mapTournamentPairRpcError(message: string): string {
   }
   if (message.includes('pair_not_found')) {
     return 'La pareja ya no existe'
+  }
+  if (message.includes('cannot_clear_text_player')) {
+    return 'No puedes quitar jugadores de la pareja; solo editar el nombre.'
   }
   return message
 }
