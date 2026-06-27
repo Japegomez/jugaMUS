@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.javiwacho.musapp",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "jugaMUS accede a tus fotos para que puedas elegir una imagen de perfil. La foto se sube a tu cuenta y la verán otros jugadores en las partidas y torneos en los que participes."
       }
     },
     "android": {
