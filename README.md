@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="icon-512.png" alt="Icono de jugaMUS" width="128" height="128" />
+<img src="assets/play-store/icon-512.png" alt="Icono de jugaMUS" width="128" height="128" />
 
 # 🃏 jugaMUS
 
