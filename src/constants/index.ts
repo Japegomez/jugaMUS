@@ -58,16 +58,19 @@ export const TAB_SCREEN_QUERY_OPTIONS = {
   refetchOnWindowFocus: true,
 } as const
 
-export const MUS_PHASES = ['grande', 'pequena', 'pares', 'juego'] as const
-export type MusPhase = (typeof MUS_PHASES)[number]
-
-export const MUS_DEFAULT_BET = 2
+/** Puntos que suman una partida de mus (un juego). */
 export const MUS_POINTS_PER_GAME = 40
-export const MUS_POINTS_SLIDER_MAX = 40
 
-export const MUS_PHASE_LABELS: Record<MusPhase, string> = {
-  grande: 'Grande',
-  pequena: 'Pequeña',
-  pares: 'Pares',
-  juego: 'Juego',
+/** Rondas del marcador horizontal (croquis): contadores centrales. */
+export const MUS_ROUNDS = ['grande', 'chica', 'pares', 'juego'] as const
+export type MusRound = (typeof MUS_ROUNDS)[number]
+
+export const MUS_ROUND_LABELS: Record<MusRound, string> = {
+  grande: 'GRANDE',
+  chica: 'PEQUEÑA',
+  pares: 'PARES',
+  juego: 'JUEGO',
 }
+
+/** Puntos que suma un toque sobre el contador central de ronda. */
+export const MUS_ROUND_TAP_POINTS = 2

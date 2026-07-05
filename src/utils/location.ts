@@ -4,7 +4,7 @@ export function formatCityAndPlace(
   placeDefined: boolean,
   placeText: string | null | undefined
 ): string {
-  const cityLabel = city.trim() || '—'
+  const cityLabel = city.trim() || 'Ciudad por definir'
 
   if (placeDefined && placeText?.trim()) {
     return `${cityLabel} · ${placeText.trim()}`

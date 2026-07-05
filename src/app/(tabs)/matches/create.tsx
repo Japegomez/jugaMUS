@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useRouter } from 'expo-router'
 import { useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -24,17 +24,15 @@ import {
   requiresFutureStartAtForIncompleteRoster,
 } from '@/utils/matchCreateForm'
 import { showFormFieldsMissingAlert } from '@/utils/formValidation'
-import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+
+const DEFAULT_MATCH_TITLE = 'Partida'
+const DEFAULT_MATCH_CITY = 'Ciudad por definir'
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const createMatchSchema = z
   .object({
-    title: z
-      .string()
-      .trim()
-      .min(3, 'El título debe tener al menos 3 caracteres')
-      .max(80, 'El título es demasiado largo'),
+    title: z.string().trim().max(80, 'El título es demasiado largo').optional().or(z.literal('')),
     description: z
       .string()
       .trim()
@@ -42,8 +40,18 @@ const createMatchSchema = z
       .optional()
       .or(z.literal('')),
     start_at: z.string().min(1, 'Selecciona fecha y hora'),
-    city: z.string().trim().min(1, 'Selecciona una ciudad o pueblo'),
-    ...placeFormFields,
+    city: z
+      .string()
+      .trim()
+      .max(120, 'Nombre de ciudad demasiado largo')
+      .optional()
+      .or(z.literal('')),
+    place_text: z
+      .string()
+      .trim()
+      .max(150, 'Texto de lugar demasiado largo')
+      .optional()
+      .or(z.literal('')),
     duration_target_games: z.number().int().min(1).max(6),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
     password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
@@ -69,7 +77,6 @@ const createMatchSchema = z
       .optional()
       .or(z.literal('')),
   })
-  .superRefine(refinePlaceRequired)
   .superRefine((data, ctx) => {
     if (data.visibility === MATCH_VISIBILITY.PRIVATE && !data.password?.trim()) {
       ctx.addIssue({
@@ -83,7 +90,9 @@ const createMatchSchema = z
 type CreateMatchValues = z.infer<typeof createMatchSchema>
 
 function defaultStartAt() {
-  return dateToLocalIsoString(new Date())
+  const d = new Date()
+  d.setMinutes(d.getMinutes() + 10)
+  return dateToLocalIsoString(d)
 }
 
 function createDefaultFormValues(): CreateMatchValues {
@@ -92,7 +101,6 @@ function createDefaultFormValues(): CreateMatchValues {
     description: '',
     start_at: defaultStartAt(),
     city: '',
-    place_defined: true,
     place_text: '',
     duration_target_games: 3,
     visibility: MATCH_VISIBILITY.PUBLIC,
@@ -111,6 +119,17 @@ function createDefaultFormValues(): CreateMatchValues {
 function textPlayerOrNull(value?: string): string | null {
   const trimmed = value?.trim()
   return trimmed ? trimmed : null
+}
+
+function matchPlacePayload(placeText?: string): {
+  place_defined: boolean
+  place_text: string | null
+} {
+  const trimmed = placeText?.trim()
+  if (trimmed) {
+    return { place_defined: true, place_text: trimmed }
+  }
+  return { place_defined: false, place_text: null }
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -138,7 +157,6 @@ export default function CreateMatchScreen() {
     }, [reset])
   )
 
-  const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
 
@@ -156,11 +174,11 @@ export default function CreateMatchScreen() {
     try {
       const match = await createMatch.mutateAsync({
         data: {
-          title: values.title,
+          title: values.title?.trim() || DEFAULT_MATCH_TITLE,
           description: values.description || null,
           start_at: values.start_at,
-          city: values.city,
-          ...placePayload(values),
+          city: values.city?.trim() || DEFAULT_MATCH_CITY,
+          ...matchPlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
@@ -182,7 +200,18 @@ export default function CreateMatchScreen() {
   return (
     <KeyboardAwareScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+      <View style={s.closeBar}>
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar">
+          <Text style={s.closeX}>✕</Text>
+        </Pressable>
+      </View>
+
       <Text style={s.heading}>Nueva partida</Text>
 
       {/* Título */}
@@ -191,9 +220,9 @@ export default function CreateMatchScreen() {
         name="title"
         render={({ field }) => (
           <Input
-            label="Título *"
-            placeholder="Ej. Partida de los martes"
-            value={field.value}
+            label="Título"
+            placeholder="Partida"
+            value={field.value ?? ''}
             onChangeText={field.onChange}
             error={errors.title?.message}
             autoCapitalize="sentences"
@@ -226,7 +255,7 @@ export default function CreateMatchScreen() {
         render={({ field }) => (
           <DateTimePicker
             label="Fecha y hora *"
-            value={field.value}
+            value={field.value ?? ''}
             onChange={field.onChange}
             error={errors.start_at?.message}
           />
@@ -239,54 +268,30 @@ export default function CreateMatchScreen() {
         name="city"
         render={({ field }) => (
           <MunicipalityPicker
-            label="Ciudad o pueblo *"
-            value={field.value}
+            label="Ciudad o pueblo"
+            value={field.value ?? ''}
             onChangeText={field.onChange}
             error={errors.city?.message}
+            placeholder="Ciudad por definir"
           />
         )}
       />
 
       {/* Lugar (texto) */}
-      {placeDefined ? (
-        <Controller
-          control={control}
-          name="place_text"
-          render={({ field }) => (
-            <Input
-              label="Lugar *"
-              placeholder="Ej. Bar El Rincón, Mesa del fondo"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.place_text?.message}
-              autoCapitalize="sentences"
-            />
-          )}
-        />
-      ) : null}
-
-      {/* Lugar por definir */}
-      <View style={s.row}>
-        <View style={s.rowText}>
-          <Text style={s.rowLabel}>Lugar por definir</Text>
-          <Text style={s.rowHint}>Activa si aún no sabes dónde será</Text>
-        </View>
-        <Controller
-          control={control}
-          name="place_defined"
-          render={({ field }) => (
-            <Switch
-              value={!field.value}
-              onValueChange={(v) => {
-                field.onChange(!v)
-                if (v) setValue('place_text', '', { shouldValidate: true })
-              }}
-              trackColor={{ true: Colors.primary, false: Colors.border }}
-              thumbColor={Colors.white}
-            />
-          )}
-        />
-      </View>
+      <Controller
+        control={control}
+        name="place_text"
+        render={({ field }) => (
+          <Input
+            label="Lugar"
+            placeholder="Lugar por definir"
+            value={field.value ?? ''}
+            onChangeText={field.onChange}
+            error={errors.place_text?.message}
+            autoCapitalize="sentences"
+          />
+        )}
+      />
 
       {/* Duración */}
       <View style={s.fieldWrap}>
@@ -365,7 +370,7 @@ export default function CreateMatchScreen() {
             <Input
               label="Nombre equipo A (opcional)"
               placeholder="Jugador1 - Jugador2"
-              value={field.value}
+              value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.team_a_name?.message}
               autoCapitalize="words"
@@ -393,7 +398,7 @@ export default function CreateMatchScreen() {
             <Input
               label="Nombre equipo B (opcional)"
               placeholder="Jugador1 - Jugador2"
-              value={field.value}
+              value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.team_b_name?.message}
               autoCapitalize="words"
@@ -460,8 +465,6 @@ export default function CreateMatchScreen() {
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
 
-import { Pressable } from 'react-native'
-
 interface ChipProps {
   label: string
   sublabel?: string
@@ -509,6 +512,13 @@ const chip = StyleSheet.create({
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
+  closeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    marginHorizontal: -4,
+  },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   heading: {
     fontSize: 24,
     fontFamily: Fonts.bold,
@@ -530,21 +540,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: -4,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 16,
-  },
-  rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 16, color: Colors.textPrimary, fontFamily: Fonts.medium },
-  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
   teamLabel: {
     fontSize: 14,

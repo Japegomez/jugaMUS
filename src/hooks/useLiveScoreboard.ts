@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { MUS_DEFAULT_BET, MUS_PHASES, MUS_POINTS_PER_GAME, type MusPhase } from '@/constants'
-import { TEAM } from '@/constants'
+import { MUS_POINTS_PER_GAME, MUS_ROUNDS, MUS_ROUND_TAP_POINTS, TEAM } from '@/constants'
+import type { MusRound } from '@/constants'
 import {
   clearScoreboardState,
   loadScoreboardState,
@@ -10,17 +10,12 @@ import {
 
 export type TeamId = typeof TEAM.A | typeof TEAM.B
 
-export type PhaseState = {
-  bet: number
-  winner: TeamId | null
-}
-
 export type LiveScoreboardState = {
   pointsA: number
   pointsB: number
   gamesA: number
   gamesB: number
-  phases: Record<MusPhase, PhaseState>
+  rounds: Record<MusRound, number>
 }
 
 export type GameOverResult = {
@@ -29,13 +24,16 @@ export type GameOverResult = {
   gamesB: number
 }
 
-function createDefaultPhases(): Record<MusPhase, PhaseState> {
-  return MUS_PHASES.reduce(
-    (acc, phase) => {
-      acc[phase] = { bet: MUS_DEFAULT_BET, winner: null }
+/** Máximo de pasos que se pueden deshacer. */
+const HISTORY_LIMIT = 100
+
+function createDefaultRounds(): Record<MusRound, number> {
+  return MUS_ROUNDS.reduce(
+    (acc, round) => {
+      acc[round] = 0
       return acc
     },
-    {} as Record<MusPhase, PhaseState>
+    {} as Record<MusRound, number>
   )
 }
 
@@ -45,59 +43,50 @@ export function createDefaultScoreboardState(): LiveScoreboardState {
     pointsB: 0,
     gamesA: 0,
     gamesB: 0,
-    phases: createDefaultPhases(),
+    rounds: createDefaultRounds(),
   }
 }
 
-function allPhasesHaveWinner(phases: Record<MusPhase, PhaseState>): boolean {
-  return MUS_PHASES.every((phase) => phases[phase].winner !== null)
+/** Valida que el estado persistido tenga la forma actual (con `rounds`). */
+function isValidState(value: unknown): value is LiveScoreboardState {
+  if (!value || typeof value !== 'object') return false
+  const s = value as Partial<LiveScoreboardState>
+  return (
+    typeof s.pointsA === 'number' &&
+    typeof s.pointsB === 'number' &&
+    typeof s.gamesA === 'number' &&
+    typeof s.gamesB === 'number' &&
+    !!s.rounds &&
+    MUS_ROUNDS.every((r) => typeof s.rounds?.[r] === 'number')
+  )
 }
 
-function applyGameWin(
-  state: LiveScoreboardState,
-  team: TeamId
-): { state: LiveScoreboardState; gameOver: GameOverResult | null } {
-  const next: LiveScoreboardState = {
+/** Inicia un juego nuevo: suma un juego a la pareja y resetea puntos y rondas. */
+function startNewGame(state: LiveScoreboardState, team: TeamId): LiveScoreboardState {
+  return {
     ...state,
     pointsA: 0,
     pointsB: 0,
     gamesA: team === TEAM.A ? state.gamesA + 1 : state.gamesA,
     gamesB: team === TEAM.B ? state.gamesB + 1 : state.gamesB,
-    phases: createDefaultPhases(),
-  }
-
-  return {
-    state: next,
-    gameOver: null,
+    rounds: createDefaultRounds(),
   }
 }
 
-function settlePhases(state: LiveScoreboardState): LiveScoreboardState {
-  let pointsA = state.pointsA
-  let pointsB = state.pointsB
+/** Aplica un nuevo total de puntos a una pareja; si llega a 40, cierra el juego. */
+function withPairPoints(
+  state: LiveScoreboardState,
+  team: TeamId,
+  nextPoints: number
+): LiveScoreboardState {
+  const clamped = Math.max(0, nextPoints)
+  const updated: LiveScoreboardState =
+    team === TEAM.A ? { ...state, pointsA: clamped } : { ...state, pointsB: clamped }
 
-  for (const phase of MUS_PHASES) {
-    const { bet, winner } = state.phases[phase]
-    if (winner === TEAM.A) pointsA += bet
-    else if (winner === TEAM.B) pointsB += bet
+  if (clamped >= MUS_POINTS_PER_GAME) {
+    return startNewGame(updated, team)
   }
-
-  let next: LiveScoreboardState = {
-    ...state,
-    pointsA,
-    pointsB,
-    phases: createDefaultPhases(),
-  }
-
-  if (pointsA >= MUS_POINTS_PER_GAME) {
-    const result = applyGameWin(next, TEAM.A)
-    next = result.state
-  } else if (pointsB >= MUS_POINTS_PER_GAME) {
-    const result = applyGameWin(next, TEAM.B)
-    next = result.state
-  }
-
-  return next
+  return updated
 }
 
 function checkGameOver(
@@ -117,6 +106,10 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
   const [state, setState] = useState<LiveScoreboardState>(createDefaultScoreboardState)
   const [loaded, setLoaded] = useState(false)
   const [gameOver, setGameOver] = useState<GameOverResult | null>(null)
+  const [canUndo, setCanUndo] = useState(false)
+
+  const stateRef = useRef(state)
+  const historyRef = useRef<LiveScoreboardState[]>([])
   const skipPersistRef = useRef(false)
 
   useEffect(() => {
@@ -124,7 +117,8 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     void (async () => {
       const saved = await loadScoreboardState(matchId)
       if (cancelled) return
-      if (saved) {
+      if (saved && isValidState(saved)) {
+        stateRef.current = saved
         setState(saved)
         const over = checkGameOver(saved, durationTargetGames)
         if (over) setGameOver(over)
@@ -141,109 +135,116 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     void saveScoreboardState(matchId, state)
   }, [matchId, state, loaded])
 
-  const updateState = useCallback(
-    (updater: (prev: LiveScoreboardState) => LiveScoreboardState) => {
-      setState((prev) => {
-        const next = updater(prev)
-        const over = checkGameOver(next, durationTargetGames)
-        setGameOver(over)
-        return next
-      })
+  /** Aplica un cambio guardando el estado anterior en el historial de deshacer. */
+  const commit = useCallback(
+    (compute: (prev: LiveScoreboardState) => LiveScoreboardState) => {
+      const prev = stateRef.current
+      const next = compute(prev)
+      if (next === prev) return
+
+      historyRef.current.push(prev)
+      if (historyRef.current.length > HISTORY_LIMIT) historyRef.current.shift()
+      setCanUndo(true)
+
+      stateRef.current = next
+      setState(next)
+      setGameOver(checkGameOver(next, durationTargetGames))
     },
     [durationTargetGames]
   )
 
-  const addPoints = useCallback(
-    (team: TeamId, amount: number) => {
-      updateState((prev) => {
-        const next =
-          team === TEAM.A
-            ? { ...prev, pointsA: prev.pointsA + amount }
-            : { ...prev, pointsB: prev.pointsB + amount }
-
-        if (next.pointsA >= MUS_POINTS_PER_GAME) return applyGameWin(next, TEAM.A).state
-        if (next.pointsB >= MUS_POINTS_PER_GAME) return applyGameWin(next, TEAM.B).state
-        return next
-      })
-    },
-    [updateState]
-  )
-
-  const subtractPoints = useCallback(
-    (team: TeamId, amount: number) => {
-      updateState((prev) =>
-        team === TEAM.A
-          ? { ...prev, pointsA: Math.max(0, prev.pointsA - amount) }
-          : { ...prev, pointsB: Math.max(0, prev.pointsB - amount) }
+  /** Suma 1 punto (toque sobre el cuadro blanco). */
+  const tapPairPoint = useCallback(
+    (team: TeamId) => {
+      commit((prev) =>
+        withPairPoints(prev, team, (team === TEAM.A ? prev.pointsA : prev.pointsB) + 1)
       )
     },
-    [updateState]
+    [commit]
   )
 
+  /** Ajuste manual de puntos de una pareja (−1, +1, +5). */
+  const adjustPairPoints = useCallback(
+    (team: TeamId, delta: number) => {
+      commit((prev) =>
+        withPairPoints(prev, team, (team === TEAM.A ? prev.pointsA : prev.pointsB) + delta)
+      )
+    },
+    [commit]
+  )
+
+  /** Toque sobre el contador central de ronda: suma 2 puntos. */
+  const tapRound = useCallback(
+    (round: MusRound) => {
+      commit((prev) => ({
+        ...prev,
+        rounds: { ...prev.rounds, [round]: prev.rounds[round] + MUS_ROUND_TAP_POINTS },
+      }))
+    },
+    [commit]
+  )
+
+  /** Ajuste manual del contador de ronda (+1, +5). */
+  const adjustRound = useCallback(
+    (round: MusRound, delta: number) => {
+      commit((prev) => ({
+        ...prev,
+        rounds: { ...prev.rounds, [round]: Math.max(0, prev.rounds[round] + delta) },
+      }))
+    },
+    [commit]
+  )
+
+  /** Vuelca los puntos de una ronda a una pareja (flecha izquierda/derecha). */
+  const awardRound = useCallback(
+    (round: MusRound, team: TeamId) => {
+      commit((prev) => {
+        const amount = prev.rounds[round]
+        if (amount <= 0) return prev
+        const cleared: LiveScoreboardState = {
+          ...prev,
+          rounds: { ...prev.rounds, [round]: 0 },
+        }
+        return withPairPoints(
+          cleared,
+          team,
+          (team === TEAM.A ? cleared.pointsA : cleared.pointsB) + amount
+        )
+      })
+    },
+    [commit]
+  )
+
+  /** Ajuste manual de juegos. Al sumar un juego se resetean los puntos. */
   const adjustGames = useCallback(
     (team: TeamId, delta: number) => {
-      updateState((prev) => {
-        const next =
-          team === TEAM.A
-            ? { ...prev, gamesA: Math.max(0, prev.gamesA + delta) }
-            : { ...prev, gamesB: Math.max(0, prev.gamesB + delta) }
-        return next
+      commit((prev) => {
+        if (delta > 0) return startNewGame(prev, team)
+        return team === TEAM.A
+          ? { ...prev, gamesA: Math.max(0, prev.gamesA - 1) }
+          : { ...prev, gamesB: Math.max(0, prev.gamesB - 1) }
       })
     },
-    [updateState]
+    [commit]
   )
 
-  const adjustBet = useCallback(
-    (phase: MusPhase, delta: number) => {
-      updateState((prev) => {
-        const current = prev.phases[phase]
-        const bet = Math.max(1, current.bet + delta)
-        return {
-          ...prev,
-          phases: {
-            ...prev.phases,
-            [phase]: { ...current, bet },
-          },
-        }
-      })
-    },
-    [updateState]
-  )
-
-  const setPhaseWinner = useCallback(
-    (phase: MusPhase, team: TeamId) => {
-      updateState((prev) => {
-        const current = prev.phases[phase]
-        const winner = current.winner === team ? null : team
-        return {
-          ...prev,
-          phases: {
-            ...prev.phases,
-            [phase]: { ...current, winner },
-          },
-        }
-      })
-    },
-    [updateState]
-  )
-
-  const advanceRound = useCallback(() => {
-    updateState((prev) => {
-      if (!allPhasesHaveWinner(prev.phases)) return prev
-      return settlePhases(prev)
-    })
-  }, [updateState])
-
-  const awardOrdago = useCallback(
-    (team: TeamId) => {
-      updateState((prev) => applyGameWin(prev, team).state)
-    },
-    [updateState]
-  )
+  const undo = useCallback(() => {
+    const history = historyRef.current
+    if (history.length === 0) return
+    const prevState = history[history.length - 1]
+    historyRef.current = history.slice(0, -1)
+    setCanUndo(historyRef.current.length > 0)
+    stateRef.current = prevState
+    setState(prevState)
+    setGameOver(checkGameOver(prevState, durationTargetGames))
+  }, [durationTargetGames])
 
   const reset = useCallback(async () => {
     skipPersistRef.current = true
     const fresh = createDefaultScoreboardState()
+    stateRef.current = fresh
+    historyRef.current = []
+    setCanUndo(false)
     setState(fresh)
     setGameOver(null)
     await clearScoreboardState(matchId)
@@ -254,20 +255,18 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     setGameOver(null)
   }, [])
 
-  const canSettle = useMemo(() => allPhasesHaveWinner(state.phases), [state.phases])
-
   return {
     state,
     loaded,
     gameOver,
-    canSettle,
-    addPoints,
-    subtractPoints,
+    canUndo,
+    tapPairPoint,
+    adjustPairPoints,
+    tapRound,
+    adjustRound,
+    awardRound,
     adjustGames,
-    adjustBet,
-    setPhaseWinner,
-    advanceRound,
-    awardOrdago,
+    undo,
     reset,
     dismissGameOver,
   }
