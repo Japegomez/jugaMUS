@@ -1,22 +1,22 @@
 # Tareas - jugaMUS
 
-> Actualizado: 25/06/2026 (cierre sesión; partidas/torneos privados con contraseña, Marcador UI, edición parejas sin quitar miembros)
+> Actualizado: 05/07/2026 (marcador horizontal, crear partida, empezar partida manual)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                                                            |
-| ------------------- | ---------- | -------------------------------------------------------------------------------------- |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                                      |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                                   |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                                      |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                                    |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama                   |
-| UI — Ultra Limpio   | Completada | Rediseño visual                                                                        |
-| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión                             |
-| UX — Jun. 2026      | En curso   | Marcador manual, perfil ajeno, enlaces, torneo 3º/4º, parejas, privados con contraseña |
+| Fase                | Estado     | Descripción                                                            |
+| ------------------- | ---------- | ---------------------------------------------------------------------- |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                      |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                   |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                      |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                    |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama   |
+| UI — Ultra Limpio   | Completada | Rediseño visual                                                        |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión             |
+| UX — Jul. 2026      | En curso   | Marcador horizontal, crear partida con defaults, orientación landscape |
 
 ---
 
@@ -120,8 +120,9 @@
   - [x] Botón "Unirse" (si hay plaza y no eres participante)
   - [x] Botón "Abandonar" (si eres participante y partida en estado `planned`)
   - [x] Confirmación de abandonar con `LeaveMatchModal` (web); re-unión tras abandonar actualiza fila existente (sin error 23505).
-  - [x] Botones "Editar" y "Cancelar" (solo para el creador)
-  - [x] Cancelar partida también en `in_progress` (creador, sin exigir ser participante); confirmación con modal (`CancelMatchModal`) para que funcione en web (sin `Alert`).
+  - [x] Botones "Editar", "Empezar" y "Cancelar" (solo para el creador en `planned`; cancelar también en `in_progress`)
+  - [x] **Empezar partida** (creador, `planned`): `start_at` = ahora y estado → `in_progress` (`startMatch` en cliente)
+  - [x] Cancelar partida también en `in_progress` (creador); confirmación con `CancelMatchModal` (web)
   - [x] Teléfonos visibles solo si eres participante confirmado
   - [x] Jugadores por nombre (texto) en crear/editar; nombres de equipo editables; creador como jugador 1 equipo A al crear.
   - [x] Plazas libres / cron / explore cuentan jugadores de texto (`016` + `freeTeamSlots` en cliente).
@@ -129,7 +130,7 @@
   - [x] Marcador directo por creador en partidas sin otros registrados (`record_match_result_direct`); botón solo con partida `in_progress` (`017`).
   - [x] FAB «Nueva partida» en pantalla Mis partidas (como Descubrir).
   - [x] Nombres de equipo por defecto desde plantilla (`matchTeamNames`: `Jugador1 - Jugador2`; orden alineado con lista de integrantes).
-  - [x] Crear partida: hora de inicio = ahora al abrir formulario; reset al entrar en pantalla (sin arrastrar última partida).
+  - [x] Crear partida: hora de inicio por defecto +10 min al abrir formulario; reset al entrar en pantalla
   - [x] Promoción a `in_progress` al crear/unirse si `start_at <= now` y plantilla completa (4 plazas).
   - [x] Cron/plantilla (`050`/`051`): join solo en `planned`; sin roster completo al llegar la hora → `cancelled`; explore filtra `start_at >= now`.
   - [x] Detalle partida: refetch al foco (`useMatch` + `useFocusEffect`) — etiqueta de estado coherente con Mis partidas en móvil.
@@ -356,17 +357,17 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### F12 - Marcador local durante la partida
 
-- [x] Constantes de mus (`MUS_PHASES`, apuesta por defecto, puntos por juego, etiquetas de fase) en `src/constants/index.ts`
+- [x] Constantes de mus (`MUS_POINTS_PER_GAME`, `MUS_ROUNDS`, etiquetas) en `src/constants/index.ts`
 - [x] Persistencia cross-platform (`src/lib/scoreboardStorage.ts`: AsyncStorage / `localStorage`)
-- [x] Hook `useLiveScoreboard`: puntos, juegos, fases, envite, órdago, fin de partida
-- [x] Componentes UI: `ScoreboardPairCard`, `PhaseRow`, `PointsAdjustModal`, `OrdagoModal`, `ResetScoreboardModal`
-- [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador global, fases, botón órdago, reinicio local
-- [x] Botón **Siguiente ronda** (suma envites manualmente; hint si faltan ganadores de fase); mismo flujo en marcador guest
+- [x] Hook `useLiveScoreboard`: puntos, juegos, contadores de ronda (GRANDE, PEQUEÑA, PARES, JUEGO), historial deshacer, fin de partida
+- [x] Componente horizontal `ScoreboardBoard` + `ResetScoreboardModal`; bloqueo landscape con `expo-screen-orientation` (`useOrientationLock`)
+- [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador solo horizontal; reinicio (↺ arriba derecha) y deshacer (↶ abajo derecha)
+- [x] A 40 puntos suma 1 juego y resetea puntos/rondas; juego manual también resetea puntos
 - [x] Detalle partida: botones «Marcador» y «Registrar resultado» (partida `in_progress`)
 - [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
 - [x] Reset del marcador local tras registrar resultado correctamente
 - [x] Commit + PR `feature/scoreboard` → `develop` (revisor/asignado Japegomez)
-- [x] QA en Android / iOS / web: flujo completo marcador → registrar resultado → historial
+- [ ] QA en Android / iOS / web con build nativo (orientación landscape requiere rebuild; no Expo Go)
 
 ### F13 - Marcador sin registro (guest)
 
@@ -374,10 +375,23 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 - [x] Botón **Marcador** en login (destacado) + texto orientativo (sesión vs cuenta sin registro)
 - [x] Formulario rápido: nombres pareja A/B (por defecto «Pareja A» / «Pareja B») + juegos a ganar (1–6) en `/(auth)/guest-scoreboard`; título de pantalla «Marcador»
-- [x] Marcador reutilizando `useLiveScoreboard` y componentes F12 (`/(auth)/guest-scoreboard/play`)
+- [x] Marcador reutilizando `useLiveScoreboard` y `ScoreboardBoard` (`/(auth)/guest-scoreboard/play`)
 - [x] Popup fin de partida con ganador y «Volver al inicio» → login; estado local con `GUEST_SCOREBOARD_STORAGE_ID`
 - [ ] Commit + PR `feature/scoreboard_without_login` → `develop` (revisor/asignado Japegomez) — flujo guest ya en `develop`; cerrar rama si procede
-- [ ] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web)
+- [ ] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web; landscape nativo)
+
+---
+
+## UX — Marcador horizontal y crear partida (sesión 05/07)
+
+- [x] Marcador horizontal: contadores de pareja (toque +1, botones −1/+1/+5), rondas centrales (toque +2, flechas asignan puntos), juegos manuales
+- [x] Deshacer último cambio (historial en memoria); reiniciar marcador con confirmación
+- [x] `expo-screen-orientation`: landscape en marcador; portrait global en resto de app (`app.json` `orientation: default`)
+- [x] Crear partida: título opcional (default «Partida»), ciudad opcional («Ciudad por definir»), lugar opcional (sin toggle «Lugar por definir»)
+- [x] Crear partida: fecha/hora por defecto +10 min; botón ✕ para cerrar pantalla
+- [x] `formatCityAndPlace`: ciudad vacía muestra «Ciudad por definir»
+- [x] Detalle partida: botón **Empezar partida** (creador, `planned`) junto a Editar y Cancelar
+- [ ] QA: crear partida con campos vacíos; empezar partida manual; marcador horizontal en build nativo
 
 ---
 

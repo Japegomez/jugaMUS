@@ -1,42 +1,28 @@
 import { useCallback, useState } from 'react'
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import * as ScreenOrientation from 'expo-screen-orientation'
 
-import { OrdagoModal } from '@/components/matches/OrdagoModal'
-import { PhaseRow } from '@/components/matches/PhaseRow'
-import { PointsAdjustModal, type PointsAdjustMode } from '@/components/matches/PointsAdjustModal'
 import { ResetScoreboardModal } from '@/components/matches/ResetScoreboardModal'
-import { ScoreboardPairCard } from '@/components/matches/ScoreboardPairCard'
+import { ScoreboardBoard } from '@/components/matches/ScoreboardBoard'
 import { Button } from '@/components/ui/Button'
-import { MUS_PHASES, MATCH_STATUS, TEAM } from '@/constants'
+import { MATCH_STATUS, TEAM } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMatch } from '@/hooks/useMatches'
-import { useLiveScoreboard, type TeamId } from '@/hooks/useLiveScoreboard'
+import { useLiveScoreboard } from '@/hooks/useLiveScoreboard'
+import { useOrientationLock } from '@/hooks/useOrientationLock'
 import { resolveTeamName } from '@/services/matches.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
-import { screenTopPadding } from '@/theme/layout'
-
-type PointsAdjustTarget = {
-  team: TeamId
-  mode: PointsAdjustMode
-  teamName: string
-}
 
 export default function ScoreboardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const userId = useAuthStore((s) => s.session?.user.id)
+  const userId = useAuthStore((state) => state.session?.user.id)
+
+  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
 
   const { data: match, isLoading, isError } = useMatch(id)
 
@@ -45,20 +31,18 @@ export default function ScoreboardScreen() {
     state,
     loaded,
     gameOver,
-    addPoints,
-    subtractPoints,
+    canUndo,
+    tapPairPoint,
+    adjustPairPoints,
+    tapRound,
+    adjustRound,
+    awardRound,
     adjustGames,
-    adjustBet,
-    setPhaseWinner,
-    advanceRound,
-    awardOrdago,
+    undo,
     reset,
     dismissGameOver,
-    canSettle,
   } = useLiveScoreboard(id, durationTargetGames)
 
-  const [pointsAdjust, setPointsAdjust] = useState<PointsAdjustTarget | null>(null)
-  const [ordagoVisible, setOrdagoVisible] = useState(false)
   const [resetVisible, setResetVisible] = useState(false)
   const [resetting, setResetting] = useState(false)
 
@@ -78,6 +62,16 @@ export default function ScoreboardScreen() {
       },
     } as Href)
   }, [dismissGameOver, gameOver, id, router])
+
+  const handleResetConfirm = async () => {
+    setResetting(true)
+    try {
+      await reset()
+      setResetVisible(false)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   if (isLoading || !loaded) {
     return (
@@ -100,7 +94,6 @@ export default function ScoreboardScreen() {
   const isParticipant = activeParticipants.some((p) => p.user_id === userId)
   const isInProgress = match.status === MATCH_STATUS.IN_PROGRESS
 
-  // Permitimos scoreboard también en partidos de torneos.
   if (!userId || !isParticipant || !isInProgress) {
     return (
       <View style={s.centered}>
@@ -110,125 +103,35 @@ export default function ScoreboardScreen() {
     )
   }
 
-  const handlePointsAdjust = (direction: 'add' | 'subtract', team: TeamId) => {
-    const teamName = team === TEAM.A ? teamAName : teamBName
-    setPointsAdjust({ team, mode: direction, teamName })
-  }
-
-  const handlePointsConfirm = (amount: number) => {
-    if (!pointsAdjust) return
-    if (pointsAdjust.mode === 'add') addPoints(pointsAdjust.team, amount)
-    else subtractPoints(pointsAdjust.team, amount)
-    setPointsAdjust(null)
-  }
-
-  const handleGamesAdjust = (direction: 'add' | 'subtract', team: TeamId) => {
-    adjustGames(team, direction === 'add' ? 1 : -1)
-  }
-
-  const handleResetPress = () => setResetVisible(true)
-
-  const handleResetConfirm = async () => {
-    setResetting(true)
-    try {
-      await reset()
-      setResetVisible(false)
-    } finally {
-      setResetting(false)
-    }
-  }
-
   const winnerName = gameOver?.team === TEAM.A ? teamAName : teamBName
   const scoreLine =
     gameOver != null ? `${teamAName} ${gameOver.gamesA} – ${gameOver.gamesB} ${teamBName}` : ''
 
   return (
-    <>
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.container}
-        keyboardShouldPersistTaps="handled">
-        <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
-          <View style={{ flex: 1 }} />
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar">
-            <Text style={s.closeX}>✕</Text>
-          </Pressable>
-        </View>
-
-        <Text style={s.title}>Llevar la cuenta</Text>
-        <Text style={s.subtitle}>{match.title}</Text>
-
-        <Text style={s.sectionHint}>
-          Marca el ganador de cada fase. Cuando las cuatro estén completas, pulsa «Siguiente ronda»
-          para sumar los envites al marcador.
-        </Text>
-
-        <View style={s.globalRow}>
-          <ScoreboardPairCard
-            teamName={teamAName}
-            points={state.pointsA}
-            games={state.gamesA}
-            onAdjustPoints={(dir) => handlePointsAdjust(dir, TEAM.A)}
-            onAdjustGames={(dir) => handleGamesAdjust(dir, TEAM.A)}
-          />
-          <View style={s.vs}>
-            <Text style={s.vsText}>vs</Text>
-          </View>
-          <ScoreboardPairCard
-            teamName={teamBName}
-            points={state.pointsB}
-            games={state.gamesB}
-            onAdjustPoints={(dir) => handlePointsAdjust(dir, TEAM.B)}
-            onAdjustGames={(dir) => handleGamesAdjust(dir, TEAM.B)}
-          />
-        </View>
-
-        {MUS_PHASES.map((phase) => (
-          <PhaseRow
-            key={phase}
-            phase={phase}
-            bet={state.phases[phase].bet}
-            winnerTeam={state.phases[phase].winner}
-            teamAName={teamAName}
-            teamBName={teamBName}
-            onAdjustBet={(delta) => adjustBet(phase, delta)}
-            onSelectWinner={(team) => setPhaseWinner(phase, team)}
-          />
-        ))}
-
-        <Button title="Órdago" onPress={() => setOrdagoVisible(true)} style={s.ordagoBtn} />
-        <Button
-          title="Siguiente ronda"
-          onPress={advanceRound}
-          disabled={!canSettle}
-          style={s.nextRoundBtn}
-        />
-        {!canSettle ? (
-          <Text style={s.nextRoundHint}>
-            Indica el ganador de cada fase para pasar a la siguiente ronda.
-          </Text>
-        ) : null}
-        <Button title="Reiniciar marcador" variant="outline" onPress={handleResetPress} />
-      </ScrollView>
-
-      <PointsAdjustModal
-        visible={pointsAdjust !== null}
-        mode={pointsAdjust?.mode ?? 'add'}
-        teamName={pointsAdjust?.teamName ?? ''}
-        onClose={() => setPointsAdjust(null)}
-        onConfirm={handlePointsConfirm}
-      />
-
-      <OrdagoModal
-        visible={ordagoVisible}
+    <View
+      style={[
+        s.root,
+        {
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          paddingBottom: insets.bottom,
+        },
+      ]}>
+      <ScoreboardBoard
         teamAName={teamAName}
         teamBName={teamBName}
-        onClose={() => setOrdagoVisible(false)}
-        onSelectWinner={awardOrdago}
+        state={state}
+        canUndo={canUndo}
+        onTapPairPoint={tapPairPoint}
+        onAdjustPairPoints={adjustPairPoints}
+        onTapRound={tapRound}
+        onAdjustRound={adjustRound}
+        onAwardRound={awardRound}
+        onAdjustGames={adjustGames}
+        onUndo={undo}
+        onReset={() => setResetVisible(true)}
+        onClose={() => router.back()}
       />
 
       <ResetScoreboardModal
@@ -253,45 +156,30 @@ export default function ScoreboardScreen() {
           </View>
         </View>
       </Modal>
-    </>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
-  scroll: { flex: 1, backgroundColor: Colors.background },
-  container: { padding: 20, paddingBottom: 40 },
-  closeBar: {
-    flexDirection: 'row',
+  root: { flex: 1, backgroundColor: Colors.primary },
+  centered: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 8,
-    marginHorizontal: -4,
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: Colors.background,
   },
-  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
-  title: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 12 },
-  sectionHint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 16, lineHeight: 18 },
-  globalRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginBottom: 24 },
-  vs: { justifyContent: 'center', paddingHorizontal: 2 },
-  vsText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
-  ordagoBtn: { marginTop: 8, marginBottom: 10, minHeight: 56 },
-  nextRoundBtn: { marginBottom: 10, minHeight: 56 },
-  nextRoundHint: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: -4,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
+  errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 24,
   },
   gameOverCard: {
+    width: '100%',
+    maxWidth: 420,
     backgroundColor: Colors.background,
     borderRadius: 16,
     padding: 24,

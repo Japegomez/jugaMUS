@@ -12,6 +12,8 @@ import {
   useFonts,
 } from '@expo-google-fonts/dm-sans'
 import * as SplashScreen from 'expo-splash-screen'
+import { useOrientationLock } from '@/hooks/useOrientationLock'
+import * as ScreenOrientation from 'expo-screen-orientation'
 import { useAuthStore } from '@/hooks/useAuth'
 import { AppRatingPromptHost } from '@/components/AppRatingPromptHost'
 import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
@@ -44,6 +46,7 @@ function RootLayout() {
 
   useNotifications()
   useBackgroundSessionTimeout()
+  useOrientationLock(ScreenOrientation.OrientationLock.PORTRAIT_UP)
 
   useEffect(() => {
     useAuthStore.getState().initializeAuth()
