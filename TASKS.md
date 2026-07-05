@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 05/07/2026 (marcador horizontal, formulario crear partida simplificado)
+> Actualizado: 05/07/2026 (marcador horizontal, crear partida, empezar partida manual)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -120,8 +120,9 @@
   - [x] Botón "Unirse" (si hay plaza y no eres participante)
   - [x] Botón "Abandonar" (si eres participante y partida en estado `planned`)
   - [x] Confirmación de abandonar con `LeaveMatchModal` (web); re-unión tras abandonar actualiza fila existente (sin error 23505).
-  - [x] Botones "Editar" y "Cancelar" (solo para el creador)
-  - [x] Cancelar partida también en `in_progress` (creador, sin exigir ser participante); confirmación con modal (`CancelMatchModal`) para que funcione en web (sin `Alert`).
+  - [x] Botones "Editar", "Empezar" y "Cancelar" (solo para el creador en `planned`; cancelar también en `in_progress`)
+  - [x] **Empezar partida** (creador, `planned`): `start_at` = ahora y estado → `in_progress` (`startMatch` en cliente)
+  - [x] Cancelar partida también en `in_progress` (creador); confirmación con `CancelMatchModal` (web)
   - [x] Teléfonos visibles solo si eres participante confirmado
   - [x] Jugadores por nombre (texto) en crear/editar; nombres de equipo editables; creador como jugador 1 equipo A al crear.
   - [x] Plazas libres / cron / explore cuentan jugadores de texto (`016` + `freeTeamSlots` en cliente).
@@ -129,7 +130,7 @@
   - [x] Marcador directo por creador en partidas sin otros registrados (`record_match_result_direct`); botón solo con partida `in_progress` (`017`).
   - [x] FAB «Nueva partida» en pantalla Mis partidas (como Descubrir).
   - [x] Nombres de equipo por defecto desde plantilla (`matchTeamNames`: `Jugador1 - Jugador2`; orden alineado con lista de integrantes).
-  - [x] Crear partida: hora de inicio = ahora al abrir formulario; reset al entrar en pantalla (sin arrastrar última partida).
+  - [x] Crear partida: hora de inicio por defecto +10 min al abrir formulario; reset al entrar en pantalla
   - [x] Promoción a `in_progress` al crear/unirse si `start_at <= now` y plantilla completa (4 plazas).
   - [x] Cron/plantilla (`050`/`051`): join solo en `planned`; sin roster completo al llegar la hora → `cancelled`; explore filtra `start_at >= now`.
   - [x] Detalle partida: refetch al foco (`useMatch` + `useFocusEffect`) — etiqueta de estado coherente con Mis partidas en móvil.
@@ -389,7 +390,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Crear partida: título opcional (default «Partida»), ciudad opcional («Ciudad por definir»), lugar opcional (sin toggle «Lugar por definir»)
 - [x] Crear partida: fecha/hora por defecto +10 min; botón ✕ para cerrar pantalla
 - [x] `formatCityAndPlace`: ciudad vacía muestra «Ciudad por definir»
-- [ ] QA: crear partida con campos vacíos; marcador horizontal en build nativo; deshacer y cierre de 40 puntos
+- [x] Detalle partida: botón **Empezar partida** (creador, `planned`) junto a Editar y Cancelar
+- [ ] QA: crear partida con campos vacíos; empezar partida manual; marcador horizontal en build nativo
 
 ---
 

@@ -13,6 +13,7 @@ import {
   leaveMatch,
   listPublicMatchesPage,
   recordMatchResultDirect,
+  startMatch,
   updateMatch,
   updateMatchTeam,
 } from '@/services/matches.service'
@@ -270,6 +271,36 @@ export function useCancelMatch() {
         queryKey: [...matchQueryKey(updated.id), 'match_result'],
         exact: false,
       })
+      if (sessionUserId) {
+        queryClient.invalidateQueries({
+          queryKey: userMatchesQueryKey(sessionUserId),
+        })
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+      }
+      if (updated.tournament_id) {
+        invalidateTournamentQueries(queryClient, updated.tournament_id)
+      }
+      invalidatePublicExplore(queryClient)
+    },
+  })
+}
+
+export function useStartMatch() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: (id: string) => startMatch(id),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(matchQueryKey(updated.id), (prev: unknown) => {
+        if (!prev) return prev
+        return {
+          ...(prev as object),
+          status: updated.status,
+          start_at: updated.start_at,
+        }
+      })
+      queryClient.invalidateQueries({ queryKey: matchQueryKey(updated.id) })
       if (sessionUserId) {
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),

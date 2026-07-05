@@ -13,7 +13,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
 - **CI/CD (jun. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. Dependabot conservador (sin bumps Expo/RN). Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**. iOS: `ascAppId` `6775626292`.
 - **Legal / Play (may. 2026):** URLs públicas de privacidad y eliminación de cuenta vía **GitHub Pages** (`docs/` en `main`, carpeta `/docs`). Contacto de soporte: `japenago@gmail.com`. Package Android: `com.javiwacho.musapp`; slug EAS `musapp`.
-- **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web.
+- **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web. **Empezar partida (jul. 2026):** el creador puede pasar una partida `planned` a `in_progress` manualmente; se fija `start_at` al instante actual.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
 - **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI.
 - **Notificaciones en perfil (may. 2026):** preferencias **push** y por **evento** (unión, cambio de partida, resultado, recordatorios) en la pantalla de perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla.
@@ -126,14 +126,14 @@ Solo dos roles en el MVP:
 
 **Gestión (Fase 1)**
 
-- Solo el creador puede editar o cancelar una partida
+- Solo el creador puede editar, **empezar** (solo en `planned`) o cancelar una partida
 - Cualquier usuario registrado puede unirse a una partida pública o con enlace si hay plaza
 - Cualquier participante puede abandonar antes de que empiece
 - Cambio de equipo permitido solo si la partida está en estado `planned` y hay hueco
 
 **Estados de partida**
 
-- `planned` → `in_progress` (automático al llegar `start_at`, Fase 2)
+- `planned` → `in_progress` (automático al llegar `start_at` con plantilla completa, o **manual** por el creador con «Empezar partida»)
 - `in_progress` → recordatorio a las 5h si sigue en curso (Fase 2)
 - `in_progress` → `finished_no_result` a las 12h si no hay resultado registrado (Fase 2)
 - `in_progress` → `finished` cuando hay `MatchResult` confirmado sin disputas (Fase 2)
@@ -587,7 +587,7 @@ Supabase (PostgreSQL + Auth + Storage)
 
 **Partidas**
 
-- CA_MATCH1: Solo el creador puede editar o cancelar una partida
+- CA_MATCH1: Solo el creador puede editar, empezar (en `planned`) o cancelar una partida
 - CA_MATCH2: No es posible superar 2 jugadores confirmados por equipo (A o B)
 - CA_MATCH3: Una partida cancelada no admite nuevas inscripciones
 - CA_MATCH4: Las partidas `visibility: link` no aparecen en el listado general

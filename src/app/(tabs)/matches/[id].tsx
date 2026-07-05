@@ -38,6 +38,7 @@ import {
   useLeaveMatch,
   useMatch,
   useRecordMatchResultDirect,
+  useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
@@ -466,6 +467,7 @@ export default function MatchDetailScreen() {
   const grantAccess = useGrantMatchPasswordAccess()
   const leaveMatch = useLeaveMatch()
   const cancelMatch = useCancelMatch()
+  const startMatch = useStartMatch()
   const updateMatchTeam = useUpdateMatchTeam()
   const submitResultMut = useSubmitResult()
   const submitConfirmationMut = useSubmitConfirmation()
@@ -841,6 +843,14 @@ export default function MatchDetailScreen() {
     await cancelMatch.mutateAsync(id)
   }
 
+  const handleStartMatch = async () => {
+    try {
+      await startMatch.mutateAsync(id)
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo empezar la partida')
+    }
+  }
+
   return (
     <>
       <ScrollView
@@ -1048,6 +1058,15 @@ export default function MatchDetailScreen() {
               title="Editar partida"
               onPress={() => router.push(`/(tabs)/matches/edit/${id}`)}
               variant="secondary"
+              style={s.actionBtn}
+            />
+          ) : null}
+
+          {isCreator && isPlanned ? (
+            <Button
+              title="Empezar partida"
+              onPress={handleStartMatch}
+              loading={startMatch.isPending}
               style={s.actionBtn}
             />
           ) : null}

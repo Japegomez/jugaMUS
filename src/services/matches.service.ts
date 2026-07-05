@@ -590,6 +590,24 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
   return row as MatchRow
 }
 
+/** Creator starts a planned match now: sets `start_at` to the current instant and status to `in_progress`. */
+export async function startMatch(id: string): Promise<MatchRow> {
+  const nowIso = new Date().toISOString()
+  const { data: row, error } = await supabase
+    .from('matches')
+    .update({
+      start_at: nowIso,
+      status: MATCH_STATUS.IN_PROGRESS,
+    })
+    .eq('id', id)
+    .eq('status', MATCH_STATUS.PLANNED)
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+  return row as MatchRow
+}
+
 /** Set or replace the bcrypt password of a private match (creator only). */
 export async function setMatchPassword(matchId: string, password: string): Promise<void> {
   const { error } = await supabase.rpc('set_match_password', {
