@@ -80,6 +80,9 @@ function withPairPoints(
   nextPoints: number
 ): LiveScoreboardState {
   const clamped = Math.max(0, nextPoints)
+  const current = team === TEAM.A ? state.pointsA : state.pointsB
+  if (clamped === current) return state
+
   const updated: LiveScoreboardState =
     team === TEAM.A ? { ...state, pointsA: clamped } : { ...state, pointsB: clamped }
 
@@ -176,10 +179,14 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
   /** Toque sobre el contador central de ronda: suma 2 puntos. */
   const tapRound = useCallback(
     (round: MusRound) => {
-      commit((prev) => ({
-        ...prev,
-        rounds: { ...prev.rounds, [round]: prev.rounds[round] + MUS_ROUND_TAP_POINTS },
-      }))
+      commit((prev) => {
+        const nextValue = prev.rounds[round] + MUS_ROUND_TAP_POINTS
+        if (nextValue === prev.rounds[round]) return prev
+        return {
+          ...prev,
+          rounds: { ...prev.rounds, [round]: nextValue },
+        }
+      })
     },
     [commit]
   )
@@ -187,10 +194,14 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
   /** Ajuste manual del contador de ronda (+1, +5). */
   const adjustRound = useCallback(
     (round: MusRound, delta: number) => {
-      commit((prev) => ({
-        ...prev,
-        rounds: { ...prev.rounds, [round]: Math.max(0, prev.rounds[round] + delta) },
-      }))
+      commit((prev) => {
+        const nextValue = Math.max(0, prev.rounds[round] + delta)
+        if (nextValue === prev.rounds[round]) return prev
+        return {
+          ...prev,
+          rounds: { ...prev.rounds, [round]: nextValue },
+        }
+      })
     },
     [commit]
   )
