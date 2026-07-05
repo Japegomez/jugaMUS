@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
-import { ResetScoreboardModal } from '@/components/matches/ResetScoreboardModal'
 import { ScoreboardBoard } from '@/components/matches/ScoreboardBoard'
 import { Button } from '@/components/ui/Button'
 import { GUEST_SCOREBOARD_STORAGE_ID } from '@/constants/guestScoreboard'
@@ -50,12 +49,8 @@ export default function GuestScoreboardPlayScreen() {
     awardRound,
     adjustGames,
     undo,
-    reset,
     dismissGameOver,
   } = useLiveScoreboard(GUEST_SCOREBOARD_STORAGE_ID, durationTargetGames)
-
-  const [resetVisible, setResetVisible] = useState(false)
-  const [resetting, setResetting] = useState(false)
 
   const handleGameOverConfirm = useCallback(async () => {
     if (!gameOver) return
@@ -63,16 +58,6 @@ export default function GuestScoreboardPlayScreen() {
     await clearScoreboardState(GUEST_SCOREBOARD_STORAGE_ID)
     router.replace('/(auth)/login')
   }, [dismissGameOver, gameOver, router])
-
-  const handleResetConfirm = async () => {
-    setResetting(true)
-    try {
-      await reset()
-      setResetVisible(false)
-    } finally {
-      setResetting(false)
-    }
-  }
 
   if (!teamAName || !teamBName) {
     return (
@@ -122,15 +107,7 @@ export default function GuestScoreboardPlayScreen() {
         onAwardRound={awardRound}
         onAdjustGames={adjustGames}
         onUndo={undo}
-        onReset={() => setResetVisible(true)}
         onClose={() => router.replace('/(auth)/login')}
-      />
-
-      <ResetScoreboardModal
-        visible={resetVisible}
-        loading={resetting}
-        onClose={() => setResetVisible(false)}
-        onConfirm={handleResetConfirm}
       />
 
       <Modal
