@@ -602,9 +602,14 @@ export async function startMatch(id: string): Promise<MatchRow> {
     .eq('id', id)
     .eq('status', MATCH_STATUS.PLANNED)
     .select()
-    .single()
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
+  if (!row) {
+    throw new Error(
+      'La partida ya no está planificada. Puede que ya haya empezado o se haya cancelado.'
+    )
+  }
   return row as MatchRow
 }
 
