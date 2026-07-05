@@ -846,7 +846,12 @@ export default function MatchDetailScreen() {
   }
 
   const handleConfirmStartMatch = async () => {
-    await startMatch.mutateAsync(id)
+    try {
+      await startMatch.mutateAsync(id)
+    } catch (err) {
+      await refetchMatch()
+      throw err
+    }
   }
 
   return (
