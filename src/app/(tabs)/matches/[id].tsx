@@ -23,6 +23,7 @@ import {
 } from '@/components/matches/EditMatchTeamModal'
 import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
+import { StartMatchModal } from '@/components/matches/StartMatchModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
@@ -484,6 +485,7 @@ export default function MatchDetailScreen() {
   const [disputeResultVisible, setDisputeResultVisible] = useState(false)
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
+  const [startMatchVisible, setStartMatchVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
@@ -843,12 +845,8 @@ export default function MatchDetailScreen() {
     await cancelMatch.mutateAsync(id)
   }
 
-  const handleStartMatch = async () => {
-    try {
-      await startMatch.mutateAsync(id)
-    } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo empezar la partida')
-    }
+  const handleConfirmStartMatch = async () => {
+    await startMatch.mutateAsync(id)
   }
 
   return (
@@ -1065,8 +1063,7 @@ export default function MatchDetailScreen() {
           {isCreator && isPlanned ? (
             <Button
               title="Empezar partida"
-              onPress={handleStartMatch}
-              loading={startMatch.isPending}
+              onPress={() => setStartMatchVisible(true)}
               style={s.actionBtn}
             />
           ) : null}
@@ -1168,6 +1165,13 @@ export default function MatchDetailScreen() {
         inProgress={isInProgress}
         loading={cancelMatch.isPending}
         onConfirm={handleConfirmCancelMatch}
+      />
+
+      <StartMatchModal
+        visible={startMatchVisible}
+        onClose={() => setStartMatchVisible(false)}
+        loading={startMatch.isPending}
+        onConfirm={handleConfirmStartMatch}
       />
 
       <LeaveMatchModal
