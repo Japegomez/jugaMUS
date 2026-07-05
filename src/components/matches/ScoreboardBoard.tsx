@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 
 import { MUS_ROUNDS, MUS_ROUND_LABELS, TEAM } from '@/constants'
 import type { MusRound } from '@/constants'
@@ -18,7 +19,6 @@ type ScoreboardBoardProps = {
   onAwardRound: (round: MusRound, team: TeamId) => void
   onAdjustGames: (team: TeamId, delta: number) => void
   onUndo: () => void
-  onReset: () => void
   onClose: () => void
 }
 
@@ -46,43 +46,35 @@ function GamesStepper({
   team,
   games,
   teamName,
-  reversed,
   onAdjustGames,
 }: {
   team: TeamId
   games: number
   teamName: string
-  reversed?: boolean
   onAdjustGames: (team: TeamId, delta: number) => void
 }) {
-  const minus = (
-    <Pressable
-      key="minus"
-      onPress={() => onAdjustGames(team, -1)}
-      style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
-      accessibilityRole="button"
-      accessibilityLabel={`Restar juego a ${teamName}`}>
-      <Text style={s.gamesBtnText}>−</Text>
-    </Pressable>
-  )
-  const value = (
-    <View key="value" style={s.gamesValueBox}>
-      <Text style={s.gamesValue}>{games}</Text>
-      <Text style={s.gamesLabel}>juegos</Text>
+  return (
+    <View style={s.gamesRow}>
+      <Pressable
+        onPress={() => onAdjustGames(team, -1)}
+        style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`Restar juego a ${teamName}`}>
+        <Text style={s.gamesBtnText}>−</Text>
+      </Pressable>
+      <View style={s.gamesValueBox}>
+        <Text style={s.gamesValue}>{games}</Text>
+        <Text style={s.gamesLabel}>juegos</Text>
+      </View>
+      <Pressable
+        onPress={() => onAdjustGames(team, 1)}
+        style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`Sumar juego a ${teamName}`}>
+        <Text style={s.gamesBtnText}>+</Text>
+      </Pressable>
     </View>
   )
-  const plus = (
-    <Pressable
-      key="plus"
-      onPress={() => onAdjustGames(team, 1)}
-      style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
-      accessibilityRole="button"
-      accessibilityLabel={`Sumar juego a ${teamName}`}>
-      <Text style={s.gamesBtnText}>+</Text>
-    </Pressable>
-  )
-  const children = reversed ? [plus, value, minus] : [minus, value, plus]
-  return <View style={s.gamesRow}>{children}</View>
 }
 
 function PairColumn({
@@ -90,7 +82,6 @@ function PairColumn({
   teamName,
   points,
   games,
-  subtractOnRight,
   onTapPairPoint,
   onAdjustPairPoints,
   onAdjustGames,
@@ -99,7 +90,6 @@ function PairColumn({
   teamName: string
   points: number
   games: number
-  subtractOnRight?: boolean
   onTapPairPoint: (team: TeamId) => void
   onAdjustPairPoints: (team: TeamId, delta: number) => void
   onAdjustGames: (team: TeamId, delta: number) => void
@@ -128,9 +118,7 @@ function PairColumn({
       accessibilityLabel={`Sumar 5 puntos a ${teamName}`}
     />
   )
-  const pointButtons = subtractOnRight
-    ? [plusOneBtn, plusFiveBtn, minusBtn]
-    : [minusBtn, plusOneBtn, plusFiveBtn]
+  const pointButtons = [minusBtn, plusOneBtn, plusFiveBtn]
 
   return (
     <View style={s.pairColumn}>
@@ -150,13 +138,7 @@ function PairColumn({
 
       <View style={s.chipRow}>{pointButtons}</View>
 
-      <GamesStepper
-        team={team}
-        games={games}
-        teamName={teamName}
-        reversed={subtractOnRight}
-        onAdjustGames={onAdjustGames}
-      />
+      <GamesStepper team={team} games={games} teamName={teamName} onAdjustGames={onAdjustGames} />
     </View>
   )
 }
@@ -241,31 +223,10 @@ export function ScoreboardBoard({
   onAwardRound,
   onAdjustGames,
   onUndo,
-  onReset,
   onClose,
 }: ScoreboardBoardProps) {
   return (
     <View style={s.board}>
-      <View style={s.topBar}>
-        <Pressable
-          onPress={onClose}
-          hitSlop={12}
-          style={({ pressed }) => [s.topBtn, pressed && s.pressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Volver">
-          <Text style={s.topBtnText}>←</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={onReset}
-          hitSlop={12}
-          style={({ pressed }) => [s.topBtn, pressed && s.pressed]}
-          accessibilityRole="button"
-          accessibilityLabel="Reiniciar marcador">
-          <Text style={s.topBtnText}>↺</Text>
-        </Pressable>
-      </View>
-
       <View style={s.mainRow}>
         <PairColumn
           team={TEAM.A}
@@ -295,7 +256,6 @@ export function ScoreboardBoard({
           teamName={teamBName}
           points={state.pointsB}
           games={state.gamesB}
-          subtractOnRight
           onTapPairPoint={onTapPairPoint}
           onAdjustPairPoints={onAdjustPairPoints}
           onAdjustGames={onAdjustGames}
@@ -303,13 +263,22 @@ export function ScoreboardBoard({
       </View>
 
       <Pressable
+        onPress={onClose}
+        hitSlop={12}
+        style={({ pressed }) => [s.backBtn, pressed && s.pressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar">
+        <Text style={s.cornerBtnText}>✕</Text>
+      </Pressable>
+
+      <Pressable
         onPress={onUndo}
         disabled={!canUndo}
         hitSlop={12}
-        style={({ pressed }) => [s.undoBtn, pressed && s.pressed, !canUndo && s.topBtnDisabled]}
+        style={({ pressed }) => [s.undoBtn, pressed && s.pressed, !canUndo && s.cornerBtnDisabled]}
         accessibilityRole="button"
         accessibilityLabel="Deshacer último cambio">
-        <Text style={s.topBtnText}>↶</Text>
+        <Ionicons name="arrow-undo" size={22} color={Colors.white} />
       </Pressable>
     </View>
   )
@@ -319,32 +288,27 @@ const s = StyleSheet.create({
   board: {
     flex: 1,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 10,
-    paddingBottom: 8,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 2,
-  },
-  topBtn: {
+  backBtn: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
     width: 40,
     height: 34,
-    borderRadius: 8,
+    borderTopRightRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  topBtnDisabled: { opacity: 0.35 },
-  topBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
+  cornerBtnDisabled: { opacity: 0.35 },
+  cornerBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
   undoBtn: {
     position: 'absolute',
-    right: 10,
-    bottom: 8,
+    right: 0,
+    bottom: 0,
     width: 40,
     height: 34,
-    borderRadius: 8,
+    borderTopLeftRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -354,33 +318,43 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 8,
+    paddingHorizontal: 10,
   },
 
   pairColumn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   teamName: {
     color: Colors.white,
-    fontSize: 18,
+    fontSize: 24,
     fontFamily: Fonts.bold,
-    marginBottom: 4,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+    textAlign: 'center',
   },
   pointsSquare: {
-    flex: 1,
-    alignSelf: 'stretch',
+    alignSelf: 'center',
+    height: '44%',
+    maxHeight: 180,
+    minHeight: 112,
+    aspectRatio: 0.82,
+    flexGrow: 0,
+    flexShrink: 1,
     backgroundColor: Colors.white,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   pointsSquarePressed: { backgroundColor: '#EDEDED' },
   pointsValue: {
-    fontSize: 96,
+    fontSize: 80,
     fontFamily: Fonts.bold,
     color: Colors.textPrimary,
   },
@@ -407,33 +381,34 @@ const s = StyleSheet.create({
     gap: 10,
   },
   gamesBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  gamesBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 22 },
-  gamesValueBox: { alignItems: 'center', minWidth: 44 },
-  gamesValue: { color: Colors.white, fontSize: 22, fontFamily: Fonts.bold, lineHeight: 24 },
-  gamesLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 10 },
+  gamesBtnText: { color: Colors.white, fontSize: 22, fontFamily: Fonts.bold, lineHeight: 24 },
+  gamesValueBox: { alignItems: 'center', minWidth: 52 },
+  gamesValue: { color: Colors.white, fontSize: 28, fontFamily: Fonts.bold, lineHeight: 30 },
+  gamesLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
 
   centerColumn: {
     flex: 1.15,
+    alignSelf: 'stretch',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
   roundRow: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 6,
   },
   roundHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 2,
+    marginBottom: 6,
   },
   roundAdjustGroup: {
     flexDirection: 'row',

@@ -2,11 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MUS_POINTS_PER_GAME, MUS_ROUNDS, MUS_ROUND_TAP_POINTS, TEAM } from '@/constants'
 import type { MusRound } from '@/constants'
-import {
-  clearScoreboardState,
-  loadScoreboardState,
-  saveScoreboardState,
-} from '@/lib/scoreboardStorage'
+import { loadScoreboardState, saveScoreboardState } from '@/lib/scoreboardStorage'
 
 export type TeamId = typeof TEAM.A | typeof TEAM.B
 
@@ -250,18 +246,6 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     setGameOver(checkGameOver(prevState, durationTargetGames))
   }, [durationTargetGames])
 
-  const reset = useCallback(async () => {
-    skipPersistRef.current = true
-    const fresh = createDefaultScoreboardState()
-    stateRef.current = fresh
-    historyRef.current = []
-    setCanUndo(false)
-    setState(fresh)
-    setGameOver(null)
-    await clearScoreboardState(matchId)
-    skipPersistRef.current = false
-  }, [matchId])
-
   const dismissGameOver = useCallback(() => {
     setGameOver(null)
   }, [])
@@ -278,7 +262,6 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     awardRound,
     adjustGames,
     undo,
-    reset,
     dismissGameOver,
   }
 }

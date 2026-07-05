@@ -1,10 +1,9 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
-import { ResetScoreboardModal } from '@/components/matches/ResetScoreboardModal'
 import { ScoreboardBoard } from '@/components/matches/ScoreboardBoard'
 import { Button } from '@/components/ui/Button'
 import { MATCH_STATUS, TEAM } from '@/constants'
@@ -39,12 +38,8 @@ export default function ScoreboardScreen() {
     awardRound,
     adjustGames,
     undo,
-    reset,
     dismissGameOver,
   } = useLiveScoreboard(id, durationTargetGames)
-
-  const [resetVisible, setResetVisible] = useState(false)
-  const [resetting, setResetting] = useState(false)
 
   const teamAName = match ? resolveTeamName(match, TEAM.A, match.participants) : ''
   const teamBName = match ? resolveTeamName(match, TEAM.B, match.participants) : ''
@@ -62,16 +57,6 @@ export default function ScoreboardScreen() {
       },
     } as Href)
   }, [dismissGameOver, gameOver, id, router])
-
-  const handleResetConfirm = async () => {
-    setResetting(true)
-    try {
-      await reset()
-      setResetVisible(false)
-    } finally {
-      setResetting(false)
-    }
-  }
 
   if (isLoading || !loaded) {
     return (
@@ -130,15 +115,7 @@ export default function ScoreboardScreen() {
         onAwardRound={awardRound}
         onAdjustGames={adjustGames}
         onUndo={undo}
-        onReset={() => setResetVisible(true)}
         onClose={() => router.back()}
-      />
-
-      <ResetScoreboardModal
-        visible={resetVisible}
-        loading={resetting}
-        onClose={() => setResetVisible(false)}
-        onConfirm={handleResetConfirm}
       />
 
       <Modal

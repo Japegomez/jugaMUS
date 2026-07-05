@@ -360,8 +360,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Constantes de mus (`MUS_POINTS_PER_GAME`, `MUS_ROUNDS`, etiquetas) en `src/constants/index.ts`
 - [x] Persistencia cross-platform (`src/lib/scoreboardStorage.ts`: AsyncStorage / `localStorage`)
 - [x] Hook `useLiveScoreboard`: puntos, juegos, contadores de ronda (GRANDE, PEQUEÑA, PARES, JUEGO), historial deshacer, fin de partida
-- [x] Componente horizontal `ScoreboardBoard` + `ResetScoreboardModal`; bloqueo landscape con `expo-screen-orientation` (`useOrientationLock`)
-- [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador solo horizontal; reinicio (↺ arriba derecha) y deshacer (↶ abajo derecha)
+- [x] Componente horizontal `ScoreboardBoard`; bloqueo landscape con `expo-screen-orientation` (`useOrientationLock`)
+- [x] Pantalla `/(tabs)/matches/scoreboard/[id]`: marcador solo horizontal; cerrar (✕ abajo izquierda) y deshacer (icono `arrow-undo` abajo derecha)
 - [x] A 40 puntos suma 1 juego y resetea puntos/rondas; juego manual también resetea puntos
 - [x] Detalle partida: botones «Marcador» y «Registrar resultado» (partida `in_progress`)
 - [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
@@ -385,13 +385,23 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ## UX — Marcador horizontal y crear partida (sesión 05/07)
 
 - [x] Marcador horizontal: contadores de pareja (toque +1, botones −1/+1/+5), rondas centrales (toque +2, flechas asignan puntos), juegos manuales
-- [x] Deshacer último cambio (historial en memoria); reiniciar marcador con confirmación
+- [x] Deshacer último cambio (historial en memoria)
 - [x] `expo-screen-orientation`: landscape en marcador; portrait global en resto de app (`app.json` `orientation: default`)
 - [x] Crear partida: título opcional (default «Partida»), ciudad opcional («Ciudad por definir»), lugar opcional (sin toggle «Lugar por definir»)
 - [x] Crear partida: fecha/hora por defecto +10 min; botón ✕ para cerrar pantalla
 - [x] `formatCityAndPlace`: ciudad vacía muestra «Ciudad por definir»
 - [x] Detalle partida: botón **Empezar partida** (creador, `planned`) junto a Editar y Cancelar
 - [ ] QA: crear partida con campos vacíos; empezar partida manual; marcador horizontal en build nativo
+
+### Ajustes marcador (v1.1.1)
+
+- [x] Eliminada la función de **reiniciar marcador** (botón, modal `ResetScoreboardModal` y `reset` de `useLiveScoreboard`)
+- [x] Botones reubicados a esquinas inferiores: cerrar (✕) abajo izquierda, deshacer (`arrow-undo`) abajo derecha
+- [x] Rondas centrales repartidas de arriba a abajo (más espacio entre ellas)
+- [x] Contadores de puntos rectangulares (más altos que anchos) y nombre de pareja mayor con separación superior
+- [x] Contador de juegos más grande; orden de botones idéntico en ambas parejas (−1 izquierda, +1/+5 derecha)
+- [x] `useOrientationLock`: restauración de portrait diferida y cancelable → giro vertical→horizontal fluido y sin parpadeo al abrir el marcador
+- [x] Versión app → **1.1.1** (`app.json`, `package.json`)
 
 ---
 
