@@ -13,14 +13,32 @@ const ALLOWED_ORIGINS = new Set([
   'https://www.jugamus.app',
 ])
 
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allowOrigin =
-    origin && ALLOWED_ORIGINS.has(origin) ? origin : 'null'
+function isAllowedOrigin(origin: string | null): origin is string {
+  if (!origin) return false
+  if (ALLOWED_ORIGINS.has(origin)) return true
 
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  // Expo web / local Metro (any port on loopback)
+  try {
+    const url = new URL(origin)
+    const isLoopback = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+    return isLoopback && (url.protocol === 'http:' || url.protocol === 'https:')
+  } catch {
+    return false
   }
+}
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
+
+  if (isAllowedOrigin(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin
+  }
+
+  return headers
 }
 
 Deno.serve(async (req) => {

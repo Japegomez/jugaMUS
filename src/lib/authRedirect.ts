@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking'
 
-import { APP_OAUTH_CALLBACK_PATH, APP_SCHEME } from '@/constants/app'
+import { APP_OAUTH_CALLBACK_PATH, APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@/constants/app'
 
 /**
  * URL de retorno OAuth (debe coincidir con "Redirect URLs" en Supabase Auth).
@@ -11,9 +11,15 @@ import { APP_OAUTH_CALLBACK_PATH, APP_SCHEME } from '@/constants/app'
  * En Supabase → Auth → URL Configuration → Redirect URLs añade:
  *   exp://**                         (wildcard para Expo Go)
  *   jugamus://auth/callback          (para builds de producción/desarrollo nativo)
+ *   jugamus://auth/update-password   (recuperación de contraseña)
  */
 export function getOAuthRedirectUrl(): string {
   return Linking.createURL(APP_OAUTH_CALLBACK_PATH)
+}
+
+/** Redirect tras el email de recuperación (pantalla de nueva contraseña). */
+export function getPasswordResetRedirectUrl(): string {
+  return Linking.createURL(APP_PASSWORD_UPDATE_PATH)
 }
 
 /** Ejemplo de redirect nativa (documentación / mensajes de error). */

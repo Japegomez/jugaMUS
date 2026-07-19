@@ -4,11 +4,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 import { APP_SCHEME, APP_OAUTH_CALLBACK_PATH } from '@/constants/app'
+import { useAuthStore } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 
 function firstParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
+}
+
+function postAuthDestination(): '/auth/update-password' | '/(tabs)/matches' {
+  return useAuthStore.getState().passwordRecoveryPending
+    ? '/auth/update-password'
+    : '/(tabs)/matches'
 }
 
 export default function AuthCallbackScreen() {
@@ -29,10 +36,15 @@ export default function AuthCallbackScreen() {
         return
       }
 
+      const type = firstParam(params.type)
+      if (type === 'recovery') {
+        useAuthStore.getState().setPasswordRecoveryPending(true)
+      }
+
       // When login starts from the app, oauth.ts exchanges the code in WebBrowser.
       // The deep link also opens this screen; wait so we do not exchange twice (PKCE error).
       if (await waitForAuthSession()) {
-        if (!cancelled) router.replace('/(tabs)/matches')
+        if (!cancelled) router.replace(postAuthDestination())
         return
       }
 
@@ -48,14 +60,18 @@ export default function AuthCallbackScreen() {
         const callbackUrl = `${APP_SCHEME}://${APP_OAUTH_CALLBACK_PATH}?${query.toString()}`
         const { error } = await completeOAuthSessionFromCallbackUrl(callbackUrl)
         if (!error) {
-          if (!cancelled) router.replace('/(tabs)/matches')
+          if (!cancelled) router.replace(postAuthDestination())
           return
         }
       }
 
       const { data } = await supabase.auth.getSession()
       if (!cancelled) {
-        router.replace(data.session ? '/(tabs)/matches' : '/(auth)/login')
+        if (data.session) {
+          router.replace(postAuthDestination())
+        } else {
+          router.replace('/(auth)/login')
+        }
       }
     }
 
@@ -69,7 +85,7 @@ export default function AuthCallbackScreen() {
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#1A5F4A" />
-      <Text style={styles.text}>Completando inicio de sesión con Google...</Text>
+      <Text style={styles.text}>Completando inicio de sesión...</Text>
     </View>
   )
 }

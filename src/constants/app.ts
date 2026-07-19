@@ -6,6 +6,9 @@ export const APP_SCHEME = 'jugamus'
 
 export const APP_OAUTH_CALLBACK_PATH = 'auth/callback'
 
+/** Deep link path after password-recovery email (must be in Supabase Redirect URLs). */
+export const APP_PASSWORD_UPDATE_PATH = 'auth/update-password'
+
 export function appDeepLink(path: string): string {
   return `${APP_SCHEME}://${path}`
 }

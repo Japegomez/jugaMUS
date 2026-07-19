@@ -4,7 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 
 import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
-import { getOAuthRedirectUrl } from '@/lib/authRedirect'
+import { getOAuthRedirectUrl, getPasswordResetRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
 import { supabase } from '@/lib/supabase'
@@ -12,11 +12,21 @@ import { supabase } from '@/lib/supabase'
 let authSubscription: { unsubscribe: () => void } | null = null
 
 /** Supabase Auth devuelve 429 si hay demasiados signUp / emails / login desde la misma IP. */
-function userFacingAuthError(error: { message: string; status?: number }): Error {
+function userFacingAuthError(error: { message: string; status?: number; code?: string }): Error {
   const msg = error.message ?? ''
+  const code = error.code ?? ''
   const st = typeof error.status === 'number' ? error.status : undefined
   if (/invalid login credentials|invalid_credentials/i.test(msg)) {
     return new Error('Email o contraseña incorrectos')
+  }
+  if (code === 'same_password' || /same_password|different from the old password/i.test(msg)) {
+    return new Error('La nueva contraseña debe ser distinta de la actual')
+  }
+  if (code === 'weak_password' || /weak_password|password.*strength|at least/i.test(msg)) {
+    return new Error('La contraseña no cumple los requisitos de seguridad')
+  }
+  if (code === 'reauthentication_needed' || /reauthentication_needed|reauthenticate/i.test(msg)) {
+    return new Error('Debes volver a verificar tu identidad para cambiar la contraseña')
   }
   if (st === 429 || /429|rate limit|too many requests|too_many|over_email_send/i.test(msg)) {
     return new Error(
@@ -52,9 +62,12 @@ export interface SignUpParams {
 export interface AuthState {
   session: Session | null
   initialized: boolean
+  /** True while the user must set a new password after a recovery email link. */
+  passwordRecoveryPending: boolean
   lastAuthMessage: string | null
   setSession: (session: Session | null) => void
   setInitialized: (initialized: boolean) => void
+  setPasswordRecoveryPending: (pending: boolean) => void
   clearLastAuthMessage: () => void
   initializeAuth: () => void
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
@@ -62,6 +75,7 @@ export interface AuthState {
   signOut: () => Promise<void>
   deleteAccount: () => Promise<{ error: Error | null }>
   resetPassword: (email: string) => Promise<{ error: Error | null }>
+  updatePassword: (password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signInWithApple: () => Promise<{ error: Error | null }>
 }
@@ -69,10 +83,12 @@ export interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   initialized: false,
+  passwordRecoveryPending: false,
   lastAuthMessage: null,
 
   setSession: (session) => set({ session }),
   setInitialized: (initialized) => set({ initialized }),
+  setPasswordRecoveryPending: (pending) => set({ passwordRecoveryPending: pending }),
   clearLastAuthMessage: () => set({ lastAuthMessage: null }),
 
   initializeAuth: () => {
@@ -83,7 +99,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
         if (suspendedMsg) {
           await supabase.auth.signOut()
-          set({ session: null, initialized: true, lastAuthMessage: suspendedMsg })
+          set({
+            session: null,
+            initialized: true,
+            passwordRecoveryPending: false,
+            lastAuthMessage: suspendedMsg,
+          })
           return
         }
       }
@@ -98,8 +119,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ initialized: true })
       }
 
+      if (event === 'PASSWORD_RECOVERY') {
+        set({ passwordRecoveryPending: true })
+      }
+
       if (event === 'SIGNED_IN') {
         void clearSessionBackgroundMarker()
+      }
+
+      if (event === 'SIGNED_OUT') {
+        set({ passwordRecoveryPending: false })
       }
 
       if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
@@ -107,7 +136,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
           if (suspendedMsg) {
             await supabase.auth.signOut()
-            set({ session: null, lastAuthMessage: suspendedMsg })
+            set({
+              session: null,
+              passwordRecoveryPending: false,
+              lastAuthMessage: suspendedMsg,
+            })
           }
         })()
       }
@@ -121,6 +154,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) {
       return { error: userFacingAuthError(error) }
     }
+    // Clear sticky recovery gate so a normal login is not forced back to update-password.
+    set({ passwordRecoveryPending: false })
     if (data.user) {
       const suspendedMsg = await getProfileSuspendedMessage(data.user.id)
       if (suspendedMsg) {
@@ -152,7 +187,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     await clearSessionBackgroundMarker()
     await supabase.auth.signOut()
-    set({ session: null })
+    set({ session: null, passwordRecoveryPending: false })
   },
 
   deleteAccount: async () => {
@@ -173,11 +208,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email) => {
-    const redirectTo = getOAuthRedirectUrl()
+    const redirectTo = getPasswordResetRedirectUrl()
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
     if (error) {
       return { error: userFacingAuthError(error) }
     }
+    return { error: null }
+  },
+
+  updatePassword: async (password) => {
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      return {
+        error: userFacingAuthError({
+          message: error.message,
+          status: error.status,
+          code: error.code,
+        }),
+      }
+    }
+    await clearSessionBackgroundMarker()
+    await supabase.auth.signOut()
+    set({ session: null, passwordRecoveryPending: false })
     return { error: null }
   },
 
