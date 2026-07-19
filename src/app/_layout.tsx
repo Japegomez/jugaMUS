@@ -33,7 +33,7 @@ const queryClient = new QueryClient({
 })
 
 function RootLayout() {
-  const { session, initialized } = useAuthStore()
+  const { session, initialized, passwordRecoveryPending } = useAuthStore()
   const segments = useSegments()
   const router = useRouter()
   const navigationState = useRootNavigationState()
@@ -59,10 +59,17 @@ function RootLayout() {
     const routePath = segments.join('/')
     const inAuthGroup = routePath.startsWith('(auth)')
     const inOAuthCallback = routePath === 'auth/callback'
+    const inPasswordUpdate = routePath === 'auth/update-password'
     const inAuthLegal = routePath === '(auth)/terms' || routePath === '(auth)/privacy'
 
     const timeoutId = setTimeout(() => {
-      if (inOAuthCallback) return
+      if (inOAuthCallback || inPasswordUpdate) return
+
+      if (session && passwordRecoveryPending) {
+        router.replace('/auth/update-password')
+        return
+      }
+
       if (!session && !inAuthGroup) {
         router.replace('/(auth)/login')
       } else if (session && inAuthGroup && !inAuthLegal) {
@@ -71,7 +78,7 @@ function RootLayout() {
     }, 0)
 
     return () => clearTimeout(timeoutId)
-  }, [session, initialized, segments, navigationState?.key, router])
+  }, [session, initialized, passwordRecoveryPending, segments, navigationState?.key, router])
 
   useEffect(() => {
     if (fontsLoaded) {

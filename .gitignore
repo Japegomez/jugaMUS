@@ -59,6 +59,9 @@ supabase/.temp
 *.njsproj
 *.sln
 
+# Graphify
+/graphify-out
+
 # Logs
 *.log
 
