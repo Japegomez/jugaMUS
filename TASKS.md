@@ -1,22 +1,22 @@
 # Tareas - jugaMUS
 
-> Actualizado: 05/07/2026 (marcador horizontal, crear partida, empezar partida manual)
+> Actualizado: 21/07/2026 (invites WhatsApp HTTPS, release 1.2.0)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                                            |
-| ------------------- | ---------- | ---------------------------------------------------------------------- |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                      |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                   |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                      |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                    |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama   |
-| UI — Ultra Limpio   | Completada | Rediseño visual                                                        |
-| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión             |
-| UX — Jul. 2026      | En curso   | Marcador horizontal, crear partida con defaults, orientación landscape |
+| Fase                | Estado     | Descripción                                                          |
+| ------------------- | ---------- | -------------------------------------------------------------------- |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                    |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                 |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                    |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
+| UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
+| UX — Jul. 2026      | Completada | Marcador, recovery password, WhatsApp invites HTTPS, v1.2.0          |
 
 ---
 
@@ -60,6 +60,10 @@
   - Textos estáticos en `src/app/(auth)/terms.tsx` y `privacy.tsx` con disclaimer jurídico; revisión legal pendiente antes de release.
   - En Supabase está **desactivada la confirmación por email** (dev / pruebas); **reactivar en producción** (proveedor Email + plantillas + URLs).
 - [x] Pantalla de recuperación de contraseña
+  - Email → redirect `jugamus://auth/update-password` (`getPasswordResetRedirectUrl`).
+  - Pantalla `src/app/auth/update-password.tsx`: nueva contraseña, errores inline (web; `Alert` no fiable), ✕ → login, éxito → CTA «Ir al login».
+  - Tras guardar: `updateUser` + `signOut`; gate `passwordRecoveryPending` se limpia en login normal (evita redirigir otra vez a update-password).
+  - Supabase Redirect URLs: añadir `jugamus://auth/update-password` (además de `auth/callback`).
 - [x] Login con Google (OAuth via Supabase)
   - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
   - Redirects típicos: `exp://**` (Expo Go), `jugamus://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
@@ -77,6 +81,7 @@
 - [x] Confirmación modal al cerrar sesión (`SignOutModal`: Confirmar / Cancelar)
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
   - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
+  - CORS: allowlist producción + loopback `localhost`/`127.0.0.1` (cualquier puerto) para Expo web local.
   - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
   - UI: `DeleteAccountModal` + botón en perfil; `deleteAccount()` en `useAuth`.
   - PR #21 mergeado en `develop`.
@@ -402,6 +407,22 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Contador de juegos más grande; orden de botones idéntico en ambas parejas (−1 izquierda, +1/+5 derecha)
 - [x] `useOrientationLock`: restauración de portrait diferida y cancelable → giro vertical→horizontal fluido y sin parpadeo al abrir el marcador
 - [x] Versión app → **1.1.1** (`app.json`, `package.json`)
+
+### Auth recovery + release (v1.1.2)
+
+- [x] Flujo completo recovery → `auth/update-password` → éxito → login (PR #112)
+- [x] CORS `delete-account` para localhost / Expo web
+- [x] `expo` → `~54.0.36` (`expo-doctor`)
+- [x] Versión app → **1.1.2** (`app.json`, `package.json`); PR #113 → `main`
+
+### WhatsApp HTTPS invites + release (v1.2.0)
+
+- [x] Enlaces HTTPS `musapp-731e1.web.app/m|t/{id}` + Firebase Hosting (AASA / assetlinks)
+- [x] Botón «Compartir por WhatsApp» en ficha de partida y torneo (tras unlock si privada)
+- [x] Deep links `/m`, `/t`, `tournaments/[id]` + return-to tras login
+- [x] App Links / Universal Links en `app.config.js`; EAS `EXPO_PUBLIC_INVITE_HOST`
+- [x] `npm audit --audit-level=high` OK (override `brace-expansion@5`)
+- [x] Versión app → **1.2.0** (`app.json`, `package.json`); PR #116 → `develop`, PR #117 → `main`
 
 ---
 

@@ -1,6 +1,10 @@
 import * as Linking from 'expo-linking'
 
-/** Deep link that opens the match detail screen (`src/app/matches/[id].tsx` redirects to tabs). */
+import { buildMatchHttpsInviteUrl } from '@/lib/inviteLinks'
+
+/** Custom-scheme deep link (`jugamus://matches/{id}`). Prefer HTTPS invites for WhatsApp. */
 export function buildMatchInviteUrl(matchId: string): string {
   return Linking.createURL(`matches/${matchId}`)
 }
+
+export { buildMatchHttpsInviteUrl }

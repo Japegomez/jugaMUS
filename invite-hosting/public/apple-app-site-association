@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "BUT9B76X33.com.javiwacho.musapp",
+        "paths": ["/m/*", "/t/*"]
+      }
+    ]
+  }
+}

@@ -11,11 +11,12 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 ### Decisiones clave
 
 - **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
-- **CI/CD (jun. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. Dependabot conservador (sin bumps Expo/RN). Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**. iOS: `ascAppId` `6775626292`.
+- **CI/CD (jun. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. Dependabot conservador (sin bumps Expo/RN). Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
 - **Legal / Play (may. 2026):** URLs públicas de privacidad y eliminación de cuenta vía **GitHub Pages** (`docs/` en `main`, carpeta `/docs`). Contacto de soporte: `japenago@gmail.com`. Package Android: `com.javiwacho.musapp`; slug EAS `musapp`.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web. **Empezar partida (jul. 2026):** el creador puede pasar una partida `planned` a `in_progress` manualmente; se fija `start_at` al instante actual.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
-- **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI.
+- **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI. CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
+- **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422).
 - **Notificaciones en perfil (may. 2026):** preferencias **push** y por **evento** (unión, cambio de partida, resultado, recordatorios) en la pantalla de perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla.
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand. Pendiente commit/PR desde rama `feature/ui-redesign`.
@@ -29,10 +30,11 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Perfil ajeno (jun. 2026):** avatar o iniciales en `profile/[userId]` (`photo_url` vía RPC `063`).
 - **Torneos — parejas y 3º puesto (jun. 2026):** cualquier miembro de la pareja puede editarla en inscripción (`062`); eliminar sigue siendo solo organizador. Al editar, **no se pueden quitar** jugadores de texto (solo renombrar; `069`). Opción **3º y 4º puesto** al crear torneo: partido entre perdedores de semifinales (`064`); torneo no finaliza hasta cerrar final y dicho partido si aplica.
 - **Partidas y torneos privados (jun. 2026):** visibilidad `private` con contraseña del organizador/creador. Aparecen en Descubrir (filtro Privadas). La contraseña **desbloquea la vista** (plantel/cuadro); unirse sigue con el flujo normal (partida) o parejas (torneo). Migraciones `066`–`068`.
+- **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`. Versión app **1.2.0**.
 - **Crear partida — UX (jul. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ para cerrar el formulario. Edición de partida conserva validación anterior.
 - **Apple Sign In (jun. 2026):** nombre de perfil legible con `fullName` de Apple y backfill para relay emails (`060`–`061`).
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
-- **Audiencia**: híbrida — partidas públicas (cualquiera puede unirse) y partidas privadas por enlace (para peñas y amigos)
+- **Audiencia**: híbrida — partidas/torneos públicos y privados con contraseña (aparecen en Descubrir; privadas desbloquean con password)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
 - **Idioma MVP**: Español. Preparado para i18n en fases posteriores.
@@ -58,9 +60,8 @@ El desarrollo se organiza en tres fases para que sea viable para un único desar
 - Geolocalización GPS
 - Modo offline
 - Reputación y valoraciones
-- Integración con redes sociales
+- Integración con redes sociales (salvo invitación WhatsApp HTTPS ya en producto)
 - Verificación de teléfono por SMS
-- Compartir partida en redes sociales
 
 ---
 
@@ -87,7 +88,7 @@ Solo dos roles en el MVP:
 - Login con Apple ID (obligatorio por requisitos de App Store)
 - Login con email y contraseña
 - Registro con aceptación de términos y política de privacidad
-- Recuperación de contraseña para usuarios de email
+- Recuperación de contraseña para usuarios de email (pantalla `auth/update-password` tras el enlace; login con la nueva contraseña)
 - Gestión de sesiones con JWT y refresh tokens (gestionado por Supabase Auth)
 - Estado de sesión persistente entre cierres de la app
 - Eliminación de cuenta (RGPD): borrado de identidad + anonimización del historial en partidas/resultados
@@ -433,6 +434,9 @@ src/
 │   │   ├── login.tsx
 │   │   ├── register.tsx
 │   │   └── forgot-password.tsx
+│   ├── auth/               # Deep links OAuth / recovery
+│   │   ├── callback.tsx
+│   │   └── update-password.tsx
 │   ├── (tabs)/             # Navegación con tabs (requiere autenticación)
 │   │   ├── matches/        # Listado, detalle y creación de partidas
 │   │   │   ├── index.tsx   # Listado y filtros
@@ -573,7 +577,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH1: Un usuario puede registrarse con email/contraseña y recibe email de confirmación
 - CA_AUTH2: Un usuario puede autenticarse con Google
 - CA_AUTH3: Un usuario puede autenticarse con Apple ID
-- CA_AUTH4: Un usuario puede recuperar su contraseña por email
+- CA_AUTH4: Un usuario puede recuperar su contraseña por email, fijar una nueva en `auth/update-password` e iniciar sesión después
 - CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
 - CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas/resultados (perfil sentinel «Usuario eliminado»)
@@ -667,7 +671,7 @@ Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para 
 | Integración con redes sociales          | No crítico para el MVP                                                                                                                                          |
 | Modo offline/sincronización             | Alta complejidad de sincronización; conexión asumida                                                                                                            |
 | Verificación de teléfono por SMS        | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2                                                                                                    |
-| Compartir partida en redes sociales     | Útil para crecimiento orgánico; valorar en Fase 2 o 3                                                                                                           |
+| Compartir en otras redes (no WhatsApp)  | WhatsApp HTTPS invites en producto (jul. 2026); otras redes fuera de alcance                                                                                    |
 
 ---
 
