@@ -79,6 +79,10 @@ asc-api-key.p8
 google-play-service-account-key.json
 *.serviceaccount.json
 *firebase*.json
+!invite-hosting/firebase.json
 
 # Jest
 coverage/
+
+# Firebase Hosting deploy cache
+invite-hosting/.firebase/

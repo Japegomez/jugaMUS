@@ -2,7 +2,7 @@
 import { Sentry } from '@/lib/sentry'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Stack, useRootNavigationState, useRouter, useSegments } from 'expo-router'
+import { Stack, useRootNavigationState, useRouter, useSegments, type Href } from 'expo-router'
 import { PostHogProvider } from 'posthog-react-native'
 import {
   DMSans_400Regular,
@@ -19,6 +19,7 @@ import { AppRatingPromptHost } from '@/components/AppRatingPromptHost'
 import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
 import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync'
 import { useNotifications } from '@/hooks/useNotifications'
+import { inviteHrefFromSegments } from '@/lib/inviteDeepLink'
 import { posthog } from '@/lib/posthog'
 
 SplashScreen.preventAutoHideAsync()
@@ -71,9 +72,19 @@ function RootLayout() {
       }
 
       if (!session && !inAuthGroup) {
+        const inviteHref = inviteHrefFromSegments(segments)
+        if (inviteHref) {
+          useAuthStore.getState().setPendingInviteHref(inviteHref)
+        }
         router.replace('/(auth)/login')
       } else if (session && inAuthGroup && !inAuthLegal) {
-        router.replace('/(tabs)/matches')
+        const pending = useAuthStore.getState().pendingInviteHref
+        if (pending) {
+          useAuthStore.getState().setPendingInviteHref(null)
+          router.replace(pending as Href)
+        } else {
+          router.replace('/(tabs)/matches')
+        }
       }
     }, 0)
 

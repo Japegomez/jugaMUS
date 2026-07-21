@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.javiwacho.musapp",
+      "sha256_cert_fingerprints": [
+        "38:C1:A6:7B:B1:33:A2:4B:D9:B2:18:1E:8F:83:EE:93:08:4C:C7:26:00:C1:62:12:8A:06:61:20:E7:B0:DB:CD"
+      ]
+    }
+  }
+]

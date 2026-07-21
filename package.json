@@ -77,6 +77,9 @@
     "typescript": "~5.9.2"
   },
   "private": true,
+  "overrides": {
+    "brace-expansion@5": "5.0.7"
+  },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
       "eslint --fix",

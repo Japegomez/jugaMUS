@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 import { APP_SCHEME, APP_OAUTH_CALLBACK_PATH } from '@/constants/app'
@@ -12,10 +12,16 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null
 }
 
-function postAuthDestination(): '/auth/update-password' | '/(tabs)/matches' {
-  return useAuthStore.getState().passwordRecoveryPending
-    ? '/auth/update-password'
-    : '/(tabs)/matches'
+function postAuthDestination(): Href {
+  if (useAuthStore.getState().passwordRecoveryPending) {
+    return '/auth/update-password'
+  }
+  const pending = useAuthStore.getState().pendingInviteHref
+  if (pending) {
+    useAuthStore.getState().setPendingInviteHref(null)
+    return pending as Href
+  }
+  return '/(tabs)/matches'
 }
 
 export default function AuthCallbackScreen() {
