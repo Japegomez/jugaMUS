@@ -31,6 +31,7 @@ import { RecordResultModal } from '@/components/matches/RecordResultModal'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
 import { ReportModal } from '@/components/ui/ReportModal'
+import { ShareInviteButton } from '@/components/ShareInviteButton'
 import { useAuthStore } from '@/hooks/useAuth'
 import {
   useCancelMatch,
@@ -914,6 +915,16 @@ export default function MatchDetailScreen() {
             }
           />
         </View>
+
+        {!needsPrivateAccess ? (
+          <ShareInviteButton
+            kind="match"
+            id={id}
+            title={match.title}
+            meta={`${match.city} · ${formatDate(match.start_at)}`}
+            style={s.actionBtn}
+          />
+        ) : null}
 
         {/* Description */}
         {match.description ? (

@@ -64,10 +64,13 @@ export interface AuthState {
   initialized: boolean
   /** True while the user must set a new password after a recovery email link. */
   passwordRecoveryPending: boolean
+  /** Deep-link destination to restore after login (match/tournament invite). */
+  pendingInviteHref: string | null
   lastAuthMessage: string | null
   setSession: (session: Session | null) => void
   setInitialized: (initialized: boolean) => void
   setPasswordRecoveryPending: (pending: boolean) => void
+  setPendingInviteHref: (href: string | null) => void
   clearLastAuthMessage: () => void
   initializeAuth: () => void
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
@@ -84,11 +87,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   initialized: false,
   passwordRecoveryPending: false,
+  pendingInviteHref: null,
   lastAuthMessage: null,
 
   setSession: (session) => set({ session }),
   setInitialized: (initialized) => set({ initialized }),
   setPasswordRecoveryPending: (pending) => set({ passwordRecoveryPending: pending }),
+  setPendingInviteHref: (href) => set({ pendingInviteHref: href }),
   clearLastAuthMessage: () => set({ lastAuthMessage: null }),
 
   initializeAuth: () => {
@@ -187,7 +192,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     await clearSessionBackgroundMarker()
     await supabase.auth.signOut()
-    set({ session: null, passwordRecoveryPending: false })
+    set({ session: null, passwordRecoveryPending: false, pendingInviteHref: null })
   },
 
   deleteAccount: async () => {

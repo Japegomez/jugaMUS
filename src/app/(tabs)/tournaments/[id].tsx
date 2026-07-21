@@ -18,6 +18,7 @@ import { BracketCanvas } from '@/components/tournaments/BracketCanvas'
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
+import { ShareInviteButton } from '@/components/ShareInviteButton'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
@@ -299,6 +300,15 @@ export default function TournamentDetailScreen() {
             <Text style={s.organizer}>Organizado por {tournament.organizer_display_name}</Text>
           ) : null}
         </View>
+        {!needsPassword ? (
+          <ShareInviteButton
+            kind="tournament"
+            id={id}
+            title={tournament.title}
+            meta={`${formatCityAndPlace(tournament.city, tournament.place_defined, tournament.place_text)} · ${formatDisplay(tournament.start_at)}`}
+            style={s.shareBtn}
+          />
+        ) : null}
         {tournament.description ? <Text style={s.desc}>{tournament.description}</Text> : null}
 
         {needsPassword ? (
@@ -490,6 +500,7 @@ const s = StyleSheet.create({
   },
   statusText: { fontSize: 12, fontFamily: Fonts.semiBold },
   infoBlock: { marginTop: 4, marginBottom: 12 },
+  shareBtn: { marginBottom: 12 },
   meta: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   organizer: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
   desc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 12 },

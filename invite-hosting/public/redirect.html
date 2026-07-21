@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>jugaMUS</title>
+    <script>
+      (function () {
+        var ua = navigator.userAgent || ''
+        var isIOS = /iPhone|iPad|iPod/i.test(ua)
+        var play =
+          'https://play.google.com/store/apps/details?id=com.javiwacho.musapp'
+        var appStore = 'https://apps.apple.com/app/id6775626292'
+        location.replace(isIOS ? appStore : play)
+      })()
+    </script>
+  </head>
+  <body></body>
+</html>
