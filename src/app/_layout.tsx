@@ -47,7 +47,7 @@ function RootLayout() {
 
   useNotifications()
   useBackgroundSessionTimeout()
-  useOrientationLock(ScreenOrientation.OrientationLock.PORTRAIT_UP)
+  useOrientationLock(ScreenOrientation.OrientationLock.PORTRAIT_UP, 'root')
 
   useEffect(() => {
     useAuthStore.getState().initializeAuth()

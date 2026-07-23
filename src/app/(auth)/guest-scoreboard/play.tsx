@@ -29,7 +29,7 @@ export default function GuestScoreboardPlayScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ teamA?: string; teamB?: string; games?: string }>()
 
-  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
+  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE, 'scoreboard')
 
   const teamAName = useMemo(() => parseNameParam(params.teamA), [params.teamA])
   const teamBName = useMemo(() => parseNameParam(params.teamB), [params.teamB])
