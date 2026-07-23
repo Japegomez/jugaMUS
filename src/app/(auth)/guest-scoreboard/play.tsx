@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
 import { ScoreboardBoard } from '@/components/matches/ScoreboardBoard'
@@ -28,10 +27,9 @@ function parseNameParam(value: string | string[] | undefined): string {
 
 export default function GuestScoreboardPlayScreen() {
   const router = useRouter()
-  const insets = useSafeAreaInsets()
   const params = useLocalSearchParams<{ teamA?: string; teamB?: string; games?: string }>()
 
-  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
+  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE, 'scoreboard')
 
   const teamAName = useMemo(() => parseNameParam(params.teamA), [params.teamA])
   const teamBName = useMemo(() => parseNameParam(params.teamB), [params.teamB])
@@ -85,16 +83,7 @@ export default function GuestScoreboardPlayScreen() {
     gameOver != null ? `${teamAName} ${gameOver.gamesA} – ${gameOver.gamesB} ${teamBName}` : ''
 
   return (
-    <View
-      style={[
-        s.root,
-        {
-          paddingTop: insets.top,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-          paddingBottom: insets.bottom,
-        },
-      ]}>
+    <View style={s.root}>
       <ScoreboardBoard
         teamAName={teamAName}
         teamBName={teamBName}

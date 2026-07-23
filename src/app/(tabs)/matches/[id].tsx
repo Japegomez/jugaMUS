@@ -58,10 +58,12 @@ import { collectTeamRosterEntries } from '@/utils/matchTeamNames'
 import type { ReportTargetType } from '@/services/reports.service'
 import { MATCH_STATUS, MATCH_VISIBILITY, RESULT_STATUS, TEAM } from '@/constants'
 import { clearScoreboardState } from '@/lib/scoreboardStorage'
+import { prefetchOrientationLock } from '@/lib/orientationLock'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 import { matchStatusDisplay } from '@/utils/matchDisplay'
+import * as ScreenOrientation from 'expo-screen-orientation'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1113,7 +1115,10 @@ export default function MatchDetailScreen() {
             <Button
               title="Marcador"
               variant="secondary"
-              onPress={() => router.push(`/(tabs)/matches/scoreboard/${id}` as Href)}
+              onPress={() => {
+                prefetchOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
+                router.push(`/(tabs)/matches/scoreboard/${id}` as Href)
+              }}
               style={s.actionBtn}
             />
           ) : null}

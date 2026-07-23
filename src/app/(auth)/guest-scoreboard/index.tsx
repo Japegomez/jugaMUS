@@ -15,10 +15,12 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { GUEST_SCOREBOARD_STORAGE_ID } from '@/constants/guestScoreboard'
+import { prefetchOrientationLock } from '@/lib/orientationLock'
 import { clearScoreboardState } from '@/lib/scoreboardStorage'
 import { Colors } from '@/theme/colors'
 import { Layout } from '@/theme/layout'
 import { Fonts } from '@/theme/typography'
+import * as ScreenOrientation from 'expo-screen-orientation'
 
 const setupSchema = z.object({
   teamAName: z
@@ -78,6 +80,7 @@ export default function GuestScoreboardSetupScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     await clearScoreboardState(GUEST_SCOREBOARD_STORAGE_ID)
+    prefetchOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
     const qs = new URLSearchParams({
       teamA: values.teamAName,
       teamB: values.teamBName,
