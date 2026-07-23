@@ -1,4 +1,5 @@
 import { mapResultRpcError } from '@/services/results.service'
+import { trackMatchCompletedOnce, trackMatchCreated, trackMatchJoined } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
@@ -417,7 +418,8 @@ export async function createMatch(
   }
 
   try {
-    const participant = await joinMatch(row.id, userId, TEAM.A)
+    const participant = await joinMatch(row.id, userId, TEAM.A, { trackJoin: false })
+    trackMatchCreated(row.id, data.visibility ?? MATCH_VISIBILITY.PUBLIC)
     return promoteToInProgressIfReady(row as MatchRow, [participantRowToWithProfile(participant)])
   } catch (joinErr) {
     throw joinErr instanceof Error
@@ -684,7 +686,8 @@ function throwJoinMatchError(error: { message?: string; code?: string }, team: s
 export async function joinMatch(
   matchId: string,
   userId: string,
-  team: string
+  team: string,
+  options?: { trackJoin?: boolean }
 ): Promise<ParticipantRow> {
   const { data: matchMeta, error: matchError } = await supabase
     .from('matches')
@@ -724,6 +727,9 @@ export async function joinMatch(
       .single()
 
     if (error) throwJoinMatchError(error, team)
+    if (options?.trackJoin !== false) {
+      trackMatchJoined(matchId, team)
+    }
     return data as ParticipantRow
   }
 
@@ -734,6 +740,9 @@ export async function joinMatch(
     .single()
 
   if (error) throwJoinMatchError(error, team)
+  if (options?.trackJoin !== false) {
+    trackMatchJoined(matchId, team)
+  }
   return data as ParticipantRow
 }
 
@@ -1203,6 +1212,9 @@ export async function recordMatchResultDirect(
   })
 
   if (error) throw new Error(mapResultRpcError(error.message))
+  void trackMatchCompletedOnce(matchId).catch(() => {
+    /* analytics must not block match close */
+  })
 }
 
 /**

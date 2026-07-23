@@ -30,8 +30,12 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Perfil ajeno (jun. 2026):** avatar o iniciales en `profile/[userId]` (`photo_url` vía RPC `063`).
 - **Torneos — parejas y 3º puesto (jun. 2026):** cualquier miembro de la pareja puede editarla en inscripción (`062`); eliminar sigue siendo solo organizador. Al editar, **no se pueden quitar** jugadores de texto (solo renombrar; `069`). Opción **3º y 4º puesto** al crear torneo: partido entre perdedores de semifinales (`064`); torneo no finaliza hasta cerrar final y dicho partido si aplica.
 - **Partidas y torneos privados (jun. 2026):** visibilidad `private` con contraseña del organizador/creador. Aparecen en Descubrir (filtro Privadas). La contraseña **desbloquea la vista** (plantel/cuadro); unirse sigue con el flujo normal (partida) o parejas (torneo). Migraciones `066`–`068`.
-- **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`. Versión app **1.2.0**.
-- **Crear partida — UX (jul. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ para cerrar el formulario. Edición de partida conserva validación anterior.
+- **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`.
+- **Sesión Auth (jul. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo sigue vigente.
+- **Torneos — auto-cancel sin cuadro (jul. 2026):** en `registration` pasado `start_at` sin `bracket_generated_at` → `cancelled` (+ notificación al organizador). Crear/editar: título/ciudad/lugar opcionales (defaults «Torneo» / «Ciudad por definir»). Aviso al guardar. Migraciones `070`/`071`.
+- **PostHog producto (jul. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
+- **Versión app (jul. 2026):** **1.2.1** (`app.json`, `package.json`).
+- **Crear partida — UX (jul. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ para cerrar el formulario. Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`).
 - **Apple Sign In (jun. 2026):** nombre de perfil legible con `fullName` de Apple y backfill para relay emails (`060`–`061`).
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
 - **Audiencia**: híbrida — partidas/torneos públicos y privados con contraseña (aparecen en Descubrir; privadas desbloquean con password)
@@ -201,7 +205,7 @@ Solo dos roles en el MVP:
 
 **Analytics de comportamiento (Fase 1)**
 
-- PostHog integrado desde el inicio (sin panel custom)
+- **PostHog integrado desde el inicio (sin panel custom en la app)**; eventos de producto y funnels configurables en PostHog Cloud EU
 - Captura eventos de usuario: registro, login, creación de partida, unirse, etc.
 
 **Panel de métricas admin (Fase 3)**

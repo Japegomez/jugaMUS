@@ -1,3 +1,5 @@
+import { trackMatchCompletedIfFinished } from '@/lib/analytics'
+import { RESULT_STATUS } from '@/constants'
 import { supabase } from '@/lib/supabase'
 import type { Tables } from '@/types/database.types'
 
@@ -80,18 +82,24 @@ export async function submitResult(input: SubmitResultInput): Promise<MatchResul
 
   if (error) throw new Error(mapResultRpcError(error.message))
   if (!data) throw new Error('No se pudo registrar el resultado')
-  return data as MatchResultRow
+  const row = data as MatchResultRow
+  // Some paths confirm immediately; only count completion when the match is finished.
+  if (row.status === RESULT_STATUS.CONFIRMED) {
+    void trackMatchCompletedIfFinished(input.matchId).catch(() => {
+      /* analytics must not block result submit */
+    })
+  }
+  return row
 }
 
 export async function submitConfirmation({
-  matchId: _matchId,
+  matchId,
   matchResultId,
   userId,
   team,
   decision,
   comment,
 }: SubmitConfirmationInput): Promise<void> {
-  void _matchId
   const { error } = await supabase.from('result_confirmations').insert({
     match_result_id: matchResultId,
     user_id: userId,
@@ -105,5 +113,11 @@ export async function submitConfirmation({
       throw new Error('Ya has respondido a este resultado.')
     }
     throw new Error(error.message)
+  }
+
+  if (decision === 'approve') {
+    void trackMatchCompletedIfFinished(matchId).catch(() => {
+      /* analytics must not block confirmation */
+    })
   }
 }
