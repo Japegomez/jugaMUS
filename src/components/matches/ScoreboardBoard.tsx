@@ -10,6 +10,7 @@ import {
 import { MUS_ROUNDS, MUS_ROUND_LABELS, TEAM } from '@/constants'
 import type { MusRound } from '@/constants'
 import type { LiveScoreboardState, TeamId } from '@/hooks/useLiveScoreboard'
+import { useHiddenStatusBar } from '@/hooks/useHiddenStatusBar'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -272,6 +273,7 @@ export function ScoreboardBoard({
   onUndo,
   onClose,
 }: ScoreboardBoardProps) {
+  useHiddenStatusBar()
   const [tutorialVisible, setTutorialVisible] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
 
