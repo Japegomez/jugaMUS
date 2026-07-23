@@ -1,5 +1,5 @@
 import { mapResultRpcError } from '@/services/results.service'
-import { trackMatchCompleted, trackMatchCreated, trackMatchJoined } from '@/lib/analytics'
+import { trackMatchCompletedOnce, trackMatchCreated, trackMatchJoined } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 import { resolveTeamName, type ResolveTeamNameMatch } from '@/utils/matchTeamNames'
 import {
@@ -1212,7 +1212,9 @@ export async function recordMatchResultDirect(
   })
 
   if (error) throw new Error(mapResultRpcError(error.message))
-  trackMatchCompleted(matchId)
+  void trackMatchCompletedOnce(matchId).catch(() => {
+    /* analytics must not block match close */
+  })
 }
 
 /**

@@ -85,7 +85,9 @@ export async function submitResult(input: SubmitResultInput): Promise<MatchResul
   const row = data as MatchResultRow
   // Some paths confirm immediately; only count completion when the match is finished.
   if (row.status === RESULT_STATUS.CONFIRMED) {
-    await trackMatchCompletedIfFinished(input.matchId)
+    void trackMatchCompletedIfFinished(input.matchId).catch(() => {
+      /* analytics must not block result submit */
+    })
   }
   return row
 }
@@ -114,6 +116,8 @@ export async function submitConfirmation({
   }
 
   if (decision === 'approve') {
-    await trackMatchCompletedIfFinished(matchId)
+    void trackMatchCompletedIfFinished(matchId).catch(() => {
+      /* analytics must not block confirmation */
+    })
   }
 }
