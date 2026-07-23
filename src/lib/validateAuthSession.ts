@@ -1,4 +1,5 @@
 import type { AuthError, Session } from '@supabase/supabase-js'
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 
 import { supabase } from '@/lib/supabase'
 
@@ -7,7 +8,7 @@ export const SESSION_EXPIRED_MESSAGE = 'Tu sesión ha caducado. Inicia sesión d
 function isTransientNetworkError(error: AuthError): boolean {
   const msg = (error.message ?? '').toLowerCase()
   return (
-    error.name === 'AuthRetryableFetchError' ||
+    isAuthRetryableFetchError(error) ||
     /network|fetch|offline|timeout|failed to fetch|network request failed|socket|econnreset|enotfound/i.test(
       msg
     )

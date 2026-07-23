@@ -13,9 +13,11 @@ import { SESSION_EXPIRED_MESSAGE } from '@/lib/validateAuthSession'
  * Signs the user out if:
  * - the app stayed in background longer than the configured timeout, or
  * - the persisted Auth session is no longer valid (refresh/JWT expired).
+ *
+ * Only runs on AppState transition to `active` (after background/inactive),
+ * not on every session reference change (e.g. token refresh).
  */
 export function useBackgroundSessionTimeout() {
-  const session = useAuthStore((s) => s.session)
   const initialized = useAuthStore((s) => s.initialized)
 
   useEffect(() => {
@@ -41,10 +43,6 @@ export function useBackgroundSessionTimeout() {
       }
     }
 
-    if (session) {
-      void expireIfNeeded()
-    }
-
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'background' || nextState === 'inactive') {
         if (useAuthStore.getState().session) {
@@ -59,5 +57,5 @@ export function useBackgroundSessionTimeout() {
     })
 
     return () => subscription.remove()
-  }, [initialized, session])
+  }, [initialized])
 }

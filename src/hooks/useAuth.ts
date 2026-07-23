@@ -102,40 +102,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: () => {
     if (authSubscription) return
 
-    void supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const { session: validSession, expired } = await validateAuthSession(session)
-      if (expired) {
-        await clearSessionBackgroundMarker()
-        set({
-          session: null,
-          initialized: true,
-          passwordRecoveryPending: false,
-          pendingInviteHref: null,
-          lastAuthMessage: SESSION_EXPIRED_MESSAGE,
-        })
-        return
-      }
-
-      if (validSession?.user) {
-        const suspendedMsg = await getProfileSuspendedMessage(validSession.user.id)
-        if (suspendedMsg) {
-          await supabase.auth.signOut()
-          set({
-            session: null,
-            initialized: true,
-            passwordRecoveryPending: false,
-            lastAuthMessage: suspendedMsg,
-          })
-          return
-        }
-      }
-      set({ session: validSession, initialized: true })
-    })
-
+    // Single bootstrap path: INITIAL_SESSION owns validate + suspended checks.
+    // Avoid racing getSession().then with onAuthStateChange INITIAL_SESSION.
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       void (async () => {
-        // Persisted JWTs can be stale after days away; validate before treating as logged in.
-        if (event === 'INITIAL_SESSION' && session) {
+        if (event === 'INITIAL_SESSION') {
+          if (!session) {
+            set({ session: null, initialized: true })
+            return
+          }
+
           const { session: validSession, expired } = await validateAuthSession(session)
           if (expired) {
             await clearSessionBackgroundMarker()
@@ -148,13 +124,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             })
             return
           }
-          set({ session: validSession })
-        } else {
-          // Set session immediately so root navigation does not treat the user as logged out
-          // while we await the profile check (fixes OAuth returning to login).
-          set({ session })
+
+          if (validSession?.user) {
+            const suspendedMsg = await getProfileSuspendedMessage(validSession.user.id)
+            if (suspendedMsg) {
+              await supabase.auth.signOut()
+              set({
+                session: null,
+                initialized: true,
+                passwordRecoveryPending: false,
+                lastAuthMessage: suspendedMsg,
+              })
+              return
+            }
+          }
+
+          set({ session: validSession, initialized: true })
+          return
         }
 
+        // Set session immediately so root navigation does not treat the user as logged out
+        // while we await the profile check (fixes OAuth returning to login).
+        set({ session })
         if (!get().initialized) {
           set({ initialized: true })
         }
