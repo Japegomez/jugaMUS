@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
   SCOREBOARD_TUTORIAL_STEPS,
@@ -272,6 +273,7 @@ export function ScoreboardBoard({
   onUndo,
   onClose,
 }: ScoreboardBoardProps) {
+  const insets = useSafeAreaInsets()
   const [tutorialVisible, setTutorialVisible] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
 
@@ -284,19 +286,23 @@ export function ScoreboardBoard({
   }, [])
 
   const handleNext = useCallback(() => {
-    setStepIndex((current) => {
-      if (current >= SCOREBOARD_TUTORIAL_STEPS.length - 1) {
-        finishTutorial()
-        return current
-      }
-      return current + 1
-    })
-  }, [finishTutorial])
+    if (stepIndex >= SCOREBOARD_TUTORIAL_STEPS.length - 1) {
+      finishTutorial()
+      return
+    }
+    setStepIndex((current) => current + 1)
+  }, [finishTutorial, stepIndex])
 
   const highlight: ScoreboardTutorialHighlight = tutorialVisible
     ? (SCOREBOARD_TUTORIAL_STEPS[stepIndex]?.highlight ?? 'none')
     : 'none'
   const highlightUndo = highlight === 'undo'
+
+  const cornerOffset = {
+    bottom: insets.bottom + 10,
+    left: insets.left + 10,
+    right: insets.right + 10,
+  }
 
   return (
     <View style={s.board}>
@@ -346,7 +352,12 @@ export function ScoreboardBoard({
       <Pressable
         onPress={onClose}
         hitSlop={12}
-        style={({ pressed }) => [s.backBtn, pressed && s.pressed, tutorialVisible && s.dimmed]}
+        style={({ pressed }) => [
+          s.backBtn,
+          { left: cornerOffset.left, bottom: cornerOffset.bottom },
+          pressed && s.pressed,
+          tutorialVisible && s.dimmed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Cerrar">
         <Text style={s.cornerBtnText}>✕</Text>
@@ -358,6 +369,7 @@ export function ScoreboardBoard({
         hitSlop={12}
         style={({ pressed }) => [
           s.undoBtn,
+          { right: cornerOffset.right, bottom: cornerOffset.bottom },
           pressed && s.pressed,
           !canUndo && !highlightUndo && s.cornerBtnDisabled,
           tutorialVisible && !highlightUndo && s.dimmed,
@@ -411,8 +423,6 @@ const s = StyleSheet.create({
   },
   backBtn: {
     position: 'absolute',
-    left: 10,
-    bottom: 10,
     width: 40,
     height: 34,
     borderRadius: 8,
@@ -425,8 +435,6 @@ const s = StyleSheet.create({
   cornerBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
   undoBtn: {
     position: 'absolute',
-    right: 10,
-    bottom: 10,
     width: 40,
     height: 34,
     borderRadius: 8,
