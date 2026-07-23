@@ -1,3 +1,4 @@
+import { trackMatchCompleted } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 import { mapResultRpcError } from '@/services/results.service'
 import {
@@ -491,6 +492,7 @@ export async function recordTournamentMatchAsReferee(
     p_team_b_games: teamBGames,
   })
   if (error) throw new Error(mapResultRpcError(error.message))
+  trackMatchCompleted(matchId)
 }
 
 export function isTournamentPairComplete(pair: TournamentPairRow): boolean {

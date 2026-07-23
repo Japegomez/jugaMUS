@@ -4,6 +4,12 @@ import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 
 import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
+import {
+  identifyUser,
+  isLikelyNewAuthUser,
+  resetAnalytics,
+  trackUserSignedUp,
+} from '@/lib/analytics'
 import { getOAuthRedirectUrl, getPasswordResetRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
@@ -160,10 +166,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (event === 'SIGNED_OUT') {
           set({ passwordRecoveryPending: false })
+          resetAnalytics()
         }
 
         const activeSession = get().session
         if (activeSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          if (event === 'SIGNED_IN') {
+            identifyUser(activeSession.user.id)
+            const provider = activeSession.user.app_metadata?.provider
+            if (
+              (provider === 'google' || provider === 'apple') &&
+              isLikelyNewAuthUser(activeSession.user)
+            ) {
+              trackUserSignedUp(provider)
+            }
+          }
           const suspendedMsg = await getProfileSuspendedMessage(activeSession.user.id)
           if (suspendedMsg) {
             await supabase.auth.signOut()
@@ -193,12 +210,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await supabase.auth.signOut()
         return { error: new Error(suspendedMsg) }
       }
+      identifyUser(data.user.id)
     }
     return { error: null }
   },
 
   signUp: async ({ email, password, displayName }) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -212,12 +230,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) {
       return { error: userFacingAuthError(error) }
     }
+    trackUserSignedUp('email')
+    const userId = data.user?.id ?? data.session?.user?.id
+    if (userId) {
+      identifyUser(userId)
+    }
     return { error: null }
   },
 
   signOut: async () => {
     await clearSessionBackgroundMarker()
     await supabase.auth.signOut()
+    resetAnalytics()
     set({ session: null, passwordRecoveryPending: false, pendingInviteHref: null })
   },
 
@@ -234,6 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     await supabase.auth.signOut()
+    resetAnalytics()
     set({ session: null })
     return { error: null }
   },
