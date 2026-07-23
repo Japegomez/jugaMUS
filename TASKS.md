@@ -18,6 +18,7 @@
 | UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
 | UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
 | UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                  |
+| Hotfix marcador        | Completada | Orientación sin parpadeo; ocultar status bar Android; v1.3.1                   |
 
 ---
 
@@ -451,6 +452,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Rondas centrales ligeramente más compactas
 - [x] Versión app → **1.3.0** (`app.json`, `package.json`)
 - [x] Commit + PR `feature/scoreboard-tutorial` → `develop` (revisor/asignado Japegomez)
+
+### Hotfix marcador (v1.3.1) — 24/07/2026
+
+- [x] Coordinador de orientación: un solo giro al abrir el marcador (sin H→V→H)
+- [x] Ocultar barra de estado del sistema en el marcador (Android: evita cortar la última ronda)
+- [x] Versión app → **1.3.1** (`app.json`, `package.json`); push directo a `develop`
 
 ---
 
