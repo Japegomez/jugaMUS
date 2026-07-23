@@ -922,7 +922,7 @@ export default function MatchDetailScreen() {
             id={id}
             title={match.title}
             meta={`${match.city} · ${formatDate(match.start_at)}`}
-            style={s.actionBtn}
+            style={s.shareBtn}
           />
         ) : null}
 
@@ -1385,6 +1385,7 @@ const s = StyleSheet.create({
   privateGateBtn: { alignSelf: 'flex-start' },
   actions: { gap: 10 },
   actionBtn: {},
+  shareBtn: { marginBottom: 20 },
   reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   reportMatchLink: {
     fontSize: 14,

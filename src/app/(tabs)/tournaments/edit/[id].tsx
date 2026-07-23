@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -12,24 +12,28 @@ import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useTournament, useUpdateTournament } from '@/hooks/useTournaments'
-import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+import { acknowledgeAlert } from '@/utils/alert'
+import {
+  AUTO_CANCEL_NO_BRACKET_ALERT,
+  DEFAULT_TOURNAMENT_CITY,
+  DEFAULT_TOURNAMENT_TITLE,
+  tournamentPlacePayload,
+} from '@/utils/tournamentForm'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
-const schema = z
-  .object({
-    title: z.string().trim().min(3).max(80),
-    description: z.string().trim().max(300).optional().or(z.literal('')),
-    start_at: z.string().min(1),
-    city: z.string().trim().min(1),
-    ...placeFormFields,
-    duration_target_games: z.number().int().min(1).max(6),
-    visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
-    password: z.string().max(100).optional().or(z.literal('')),
-    notes: z.string().trim().max(300).optional().or(z.literal('')),
-  })
-  .superRefine(refinePlaceRequired)
+const schema = z.object({
+  title: z.string().trim().max(80).optional().or(z.literal('')),
+  description: z.string().trim().max(300).optional().or(z.literal('')),
+  start_at: z.string().min(1),
+  city: z.string().trim().max(120).optional().or(z.literal('')),
+  place_text: z.string().trim().max(150).optional().or(z.literal('')),
+  duration_target_games: z.number().int().min(1).max(6),
+  visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
+  password: z.string().max(100).optional().or(z.literal('')),
+  notes: z.string().trim().max(300).optional().or(z.literal('')),
+})
 
 type FormValues = z.infer<typeof schema>
 
@@ -54,8 +58,7 @@ export default function EditTournamentScreen() {
           description: tournament.description ?? '',
           start_at: tournament.start_at,
           city: tournament.city,
-          place_defined: tournament.place_defined,
-          place_text: tournament.place_text ?? '',
+          place_text: tournament.place_defined ? (tournament.place_text ?? '') : '',
           duration_target_games: tournament.duration_target_games,
           visibility: tournament.visibility as
             | typeof MATCH_VISIBILITY.PUBLIC
@@ -67,7 +70,6 @@ export default function EditTournamentScreen() {
       : undefined,
   })
 
-  const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
 
@@ -129,17 +131,21 @@ export default function EditTournamentScreen() {
       await updateTournament.mutateAsync({
         id,
         data: {
-          title: values.title,
+          title: values.title?.trim() || DEFAULT_TOURNAMENT_TITLE,
           description: values.description || null,
           notes: values.notes || null,
           start_at: values.start_at,
-          city: values.city,
-          ...placePayload(values),
+          city: values.city?.trim() || DEFAULT_TOURNAMENT_CITY,
+          ...tournamentPlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
+      await acknowledgeAlert(
+        AUTO_CANCEL_NO_BRACKET_ALERT.title,
+        AUTO_CANCEL_NO_BRACKET_ALERT.message
+      )
       closeToTournament()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar')
@@ -166,8 +172,9 @@ export default function EditTournamentScreen() {
         name="title"
         render={({ field }) => (
           <Input
-            label="Título *"
-            value={field.value}
+            label="Título"
+            placeholder="Torneo"
+            value={field.value ?? ''}
             onChangeText={field.onChange}
             error={errors.title?.message}
             autoCapitalize="sentences"
@@ -206,47 +213,28 @@ export default function EditTournamentScreen() {
         name="city"
         render={({ field }) => (
           <MunicipalityPicker
-            label="Ciudad *"
-            value={field.value}
+            label="Ciudad o pueblo"
+            value={field.value ?? ''}
             onChangeText={field.onChange}
             error={errors.city?.message}
+            placeholder="Ciudad por definir"
           />
         )}
       />
-      {placeDefined ? (
-        <Controller
-          control={control}
-          name="place_text"
-          render={({ field }) => (
-            <Input
-              label="Lugar *"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.place_text?.message}
-              autoCapitalize="sentences"
-            />
-          )}
-        />
-      ) : null}
-      <View style={s.row}>
-        <View style={s.rowText}>
-          <Text style={s.rowLabel}>Lugar por definir</Text>
-          <Text style={s.rowHint}>Activa si aún no sabes dónde será</Text>
-        </View>
-        <Controller
-          control={control}
-          name="place_defined"
-          render={({ field }) => (
-            <Switch
-              value={!field.value}
-              onValueChange={(v) => {
-                field.onChange(!v)
-                if (v) setValue('place_text', '', { shouldValidate: true })
-              }}
-            />
-          )}
-        />
-      </View>
+      <Controller
+        control={control}
+        name="place_text"
+        render={({ field }) => (
+          <Input
+            label="Lugar"
+            placeholder="Lugar por definir"
+            value={field.value ?? ''}
+            onChangeText={field.onChange}
+            error={errors.place_text?.message}
+            autoCapitalize="sentences"
+          />
+        )}
+      />
       <View style={s.fieldWrap}>
         <Text style={s.label}>Duración (juegos)</Text>
         <View style={s.chips}>
@@ -330,18 +318,6 @@ const s = StyleSheet.create({
   closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   error: { color: Colors.textSecondary, textAlign: 'center' },
   heading: { fontSize: 22, fontFamily: Fonts.bold, marginBottom: 16 },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-  },
-  rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 15, fontFamily: Fonts.medium },
-  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   fieldWrap: { marginBottom: 16 },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8 },
   chips: { flexDirection: 'row', gap: 8 },

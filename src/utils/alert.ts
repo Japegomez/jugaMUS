@@ -38,3 +38,21 @@ export function showAlert(title: string, message: string): void {
   }
   Alert.alert(title, message)
 }
+
+/** Blocking info alert; resolves when the user dismisses (OK / Entendido). */
+export function acknowledgeAlert(
+  title: string,
+  message: string,
+  buttonText = 'Entendido'
+): Promise<void> {
+  if (Platform.OS === 'web') {
+    window.alert(`${title}\n\n${message}`)
+    return Promise.resolve()
+  }
+
+  return new Promise((resolve) => {
+    Alert.alert(title, message, [{ text: buttonText, onPress: () => resolve() }], {
+      cancelable: false,
+    })
+  })
+}

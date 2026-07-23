@@ -7,6 +7,7 @@ import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
 import { getOAuthRedirectUrl, getPasswordResetRedirectUrl } from '@/lib/authRedirect'
 import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
+import { SESSION_EXPIRED_MESSAGE, validateAuthSession } from '@/lib/validateAuthSession'
 import { supabase } from '@/lib/supabase'
 
 let authSubscription: { unsubscribe: () => void } | null = null
@@ -81,6 +82,8 @@ export interface AuthState {
   updatePassword: (password: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signInWithApple: () => Promise<{ error: Error | null }>
+  /** Revalidates the persisted session with Auth; signs out locally if it is stale. */
+  ensureSessionValid: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -99,46 +102,69 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: () => {
     if (authSubscription) return
 
-    void supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
-        if (suspendedMsg) {
-          await supabase.auth.signOut()
-          set({
-            session: null,
-            initialized: true,
-            passwordRecoveryPending: false,
-            lastAuthMessage: suspendedMsg,
-          })
+    // Single bootstrap path: INITIAL_SESSION owns validate + suspended checks.
+    // Avoid racing getSession().then with onAuthStateChange INITIAL_SESSION.
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      void (async () => {
+        if (event === 'INITIAL_SESSION') {
+          if (!session) {
+            set({ session: null, initialized: true })
+            return
+          }
+
+          const { session: validSession, expired } = await validateAuthSession(session)
+          if (expired) {
+            await clearSessionBackgroundMarker()
+            set({
+              session: null,
+              initialized: true,
+              passwordRecoveryPending: false,
+              pendingInviteHref: null,
+              lastAuthMessage: SESSION_EXPIRED_MESSAGE,
+            })
+            return
+          }
+
+          if (validSession?.user) {
+            const suspendedMsg = await getProfileSuspendedMessage(validSession.user.id)
+            if (suspendedMsg) {
+              await supabase.auth.signOut()
+              set({
+                session: null,
+                initialized: true,
+                passwordRecoveryPending: false,
+                lastAuthMessage: suspendedMsg,
+              })
+              return
+            }
+          }
+
+          set({ session: validSession, initialized: true })
           return
         }
-      }
-      set({ session, initialized: true })
-    })
 
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      // Set session in the store immediately so root navigation does not treat the user as
-      // logged out while we await the profile check (fixes OAuth returning to login).
-      set({ session })
-      if (!get().initialized) {
-        set({ initialized: true })
-      }
+        // Set session immediately so root navigation does not treat the user as logged out
+        // while we await the profile check (fixes OAuth returning to login).
+        set({ session })
+        if (!get().initialized) {
+          set({ initialized: true })
+        }
 
-      if (event === 'PASSWORD_RECOVERY') {
-        set({ passwordRecoveryPending: true })
-      }
+        if (event === 'PASSWORD_RECOVERY') {
+          set({ passwordRecoveryPending: true })
+        }
 
-      if (event === 'SIGNED_IN') {
-        void clearSessionBackgroundMarker()
-      }
+        if (event === 'SIGNED_IN') {
+          void clearSessionBackgroundMarker()
+        }
 
-      if (event === 'SIGNED_OUT') {
-        set({ passwordRecoveryPending: false })
-      }
+        if (event === 'SIGNED_OUT') {
+          set({ passwordRecoveryPending: false })
+        }
 
-      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        void (async () => {
-          const suspendedMsg = await getProfileSuspendedMessage(session.user.id)
+        const activeSession = get().session
+        if (activeSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+          const suspendedMsg = await getProfileSuspendedMessage(activeSession.user.id)
           if (suspendedMsg) {
             await supabase.auth.signOut()
             set({
@@ -147,8 +173,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               lastAuthMessage: suspendedMsg,
             })
           }
-        })()
-      }
+        }
+      })()
     })
 
     authSubscription = data.subscription
@@ -300,6 +326,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const message = e instanceof Error ? e.message : 'Error en Sign in with Apple'
       return { error: new Error(message) }
     }
+  },
+
+  ensureSessionValid: async () => {
+    const current = get().session
+    if (!current) return
+
+    const { expired } = await validateAuthSession(current)
+    if (!expired) return
+
+    await clearSessionBackgroundMarker()
+    set({
+      session: null,
+      passwordRecoveryPending: false,
+      pendingInviteHref: null,
+      lastAuthMessage: SESSION_EXPIRED_MESSAGE,
+    })
   },
 }))
 

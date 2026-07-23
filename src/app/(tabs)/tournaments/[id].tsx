@@ -434,6 +434,7 @@ export default function TournamentDetailScreen() {
                       title="Organizar cuadro"
                       onPress={() => void handleGenerate()}
                       loading={generateBracket.isPending}
+                      disabled={completePairs.length < 2}
                       style={s.actionGap}
                     />
                   ) : null}
@@ -500,7 +501,7 @@ const s = StyleSheet.create({
   },
   statusText: { fontSize: 12, fontFamily: Fonts.semiBold },
   infoBlock: { marginTop: 4, marginBottom: 12 },
-  shareBtn: { marginBottom: 12 },
+  shareBtn: { marginBottom: 20 },
   meta: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   organizer: { fontSize: 14, color: Colors.textSecondary, marginTop: 6 },
   desc: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 12 },

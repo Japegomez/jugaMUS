@@ -12,6 +12,12 @@ export const PAST_DATE_INCOMPLETE_ROSTER_ALERT = {
     'Al faltar jugadores, la partida debe programarse en una fecha y hora futuras. Actualiza la fecha para poder crearla o añade jugadores.',
 } as const
 
+export const AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT = {
+  title: 'Plantilla incompleta',
+  message:
+    'Si llega la hora de inicio y faltan jugadores, la partida se cancelará automáticamente.',
+} as const
+
 /** Past relative to submit time; same minute as "now" counts as current (picker uses minute precision). */
 export function isMatchStartAtPast(iso: string, now: Date = new Date()): boolean {
   const start = parseIsoToDate(iso)

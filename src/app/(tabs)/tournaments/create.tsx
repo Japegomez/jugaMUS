@@ -25,27 +25,41 @@ import {
   useUpdateTournamentPair,
 } from '@/hooks/useTournaments'
 import { isTournamentPairComplete, type TournamentPairRow } from '@/services/tournaments.service'
-import { confirmAlert, showAlert } from '@/utils/alert'
+import { acknowledgeAlert, confirmAlert, showAlert } from '@/utils/alert'
 import { showFormFieldsMissingAlert } from '@/utils/formValidation'
-import { placeFormFields, refinePlaceRequired, placePayload } from '@/utils/placeForm'
+import {
+  AUTO_CANCEL_NO_BRACKET_ALERT,
+  DEFAULT_TOURNAMENT_CITY,
+  DEFAULT_TOURNAMENT_TITLE,
+  tournamentPlacePayload,
+} from '@/utils/tournamentForm'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
 const schema = z
   .object({
-    title: z.string().trim().min(3, 'Mínimo 3 caracteres').max(80),
+    title: z.string().trim().max(80, 'El título es demasiado largo').optional().or(z.literal('')),
     description: z.string().trim().max(300).optional().or(z.literal('')),
     start_at: z.string().min(1, 'Selecciona fecha y hora'),
-    city: z.string().trim().min(1, 'Selecciona ciudad'),
-    ...placeFormFields,
+    city: z
+      .string()
+      .trim()
+      .max(120, 'Nombre de ciudad demasiado largo')
+      .optional()
+      .or(z.literal('')),
+    place_text: z
+      .string()
+      .trim()
+      .max(150, 'Texto de lugar demasiado largo')
+      .optional()
+      .or(z.literal('')),
     duration_target_games: z.number().int().min(1).max(6),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
     password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
     include_third_place: z.boolean(),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
-  .superRefine(refinePlaceRequired)
   .superRefine((data, ctx) => {
     if (data.visibility === MATCH_VISIBILITY.PRIVATE && !data.password?.trim()) {
       ctx.addIssue({
@@ -64,7 +78,6 @@ function createDefaultFormValues(): FormValues {
     description: '',
     start_at: defaultStartAt(),
     city: '',
-    place_defined: true,
     place_text: '',
     duration_target_games: 3,
     visibility: MATCH_VISIBILITY.PUBLIC,
@@ -149,7 +162,6 @@ export default function CreateTournamentScreen() {
     }, [reset])
   )
 
-  const placeDefined = watch('place_defined')
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
 
@@ -157,12 +169,12 @@ export default function CreateTournamentScreen() {
     try {
       const row = await createTournament.mutateAsync({
         data: {
-          title: values.title,
+          title: values.title?.trim() || DEFAULT_TOURNAMENT_TITLE,
           description: values.description || null,
           notes: values.notes || null,
           start_at: values.start_at,
-          city: values.city,
-          ...placePayload(values),
+          city: values.city?.trim() || DEFAULT_TOURNAMENT_CITY,
+          ...tournamentPlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
@@ -252,8 +264,9 @@ export default function CreateTournamentScreen() {
     }
   }
 
-  const finish = () => {
+  const finish = async () => {
     if (!tournamentId) return
+    await acknowledgeAlert(AUTO_CANCEL_NO_BRACKET_ALERT.title, AUTO_CANCEL_NO_BRACKET_ALERT.message)
     router.replace(`/(tabs)/tournaments/${tournamentId}` as Href)
   }
 
@@ -270,9 +283,9 @@ export default function CreateTournamentScreen() {
           name="title"
           render={({ field }) => (
             <Input
-              label="Título *"
-              placeholder="Ej. Torneo de primavera"
-              value={field.value}
+              label="Título"
+              placeholder="Torneo"
+              value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.title?.message}
               autoCapitalize="sentences"
@@ -313,50 +326,28 @@ export default function CreateTournamentScreen() {
           name="city"
           render={({ field }) => (
             <MunicipalityPicker
-              label="Ciudad o pueblo *"
-              value={field.value}
+              label="Ciudad o pueblo"
+              value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.city?.message}
+              placeholder="Ciudad por definir"
             />
           )}
         />
-        {placeDefined ? (
-          <Controller
-            control={control}
-            name="place_text"
-            render={({ field }) => (
-              <Input
-                label="Lugar *"
-                placeholder="Ej. Bar El Rincón"
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                error={errors.place_text?.message}
-                autoCapitalize="sentences"
-              />
-            )}
-          />
-        ) : null}
-        <View style={s.row}>
-          <View style={s.rowText}>
-            <Text style={s.rowLabel}>Lugar por definir</Text>
-            <Text style={s.rowHint}>Activa si aún no sabes dónde será</Text>
-          </View>
-          <Controller
-            control={control}
-            name="place_defined"
-            render={({ field }) => (
-              <Switch
-                value={!field.value}
-                onValueChange={(v) => {
-                  field.onChange(!v)
-                  if (v) setValue('place_text', '', { shouldValidate: true })
-                }}
-                trackColor={{ true: Colors.primary, false: Colors.border }}
-                thumbColor={Colors.white}
-              />
-            )}
-          />
-        </View>
+        <Controller
+          control={control}
+          name="place_text"
+          render={({ field }) => (
+            <Input
+              label="Lugar"
+              placeholder="Lugar por definir"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.place_text?.message}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
         <View style={s.fieldWrap}>
           <Text style={s.label}>Duración (juegos) *</Text>
           <View style={s.durationRow}>
@@ -449,7 +440,7 @@ export default function CreateTournamentScreen() {
           )}
         />
         <Button
-          title="Añadir parejas"
+          title="Siguiente paso"
           onPress={handleSubmit(onStep1, showFormFieldsMissingAlert)}
           loading={createTournament.isPending}
           style={s.submitBtn}
@@ -489,7 +480,7 @@ export default function CreateTournamentScreen() {
         onPress={() => setPairModalOpen(true)}
         style={s.actionBtn}
       />
-      <Button title="Guardar torneo" onPress={finish} style={s.submitBtn} />
+      <Button title="Guardar torneo" onPress={() => void finish()} style={s.submitBtn} />
 
       <AddPairModal
         visible={pairModalOpen}
@@ -544,21 +535,6 @@ const s = StyleSheet.create({
   label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
   durationRow: { flexDirection: 'row', marginHorizontal: -4 },
   visRow: { flexDirection: 'row', marginHorizontal: -4 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 16,
-  },
-  rowText: { flex: 1, marginRight: 12 },
-  rowLabel: { fontSize: 16, color: Colors.textPrimary, fontFamily: Fonts.medium },
-  rowHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   actionBtn: { marginBottom: 10 },
   submitBtn: { marginTop: 8 },
 })
