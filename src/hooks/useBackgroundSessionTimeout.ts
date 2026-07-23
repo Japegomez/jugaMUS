@@ -17,25 +17,28 @@ import { SESSION_EXPIRED_MESSAGE } from '@/lib/validateAuthSession'
 export function useBackgroundSessionTimeout() {
   const session = useAuthStore((s) => s.session)
   const initialized = useAuthStore((s) => s.initialized)
-  const signOut = useAuthStore((s) => s.signOut)
-  const ensureSessionValid = useAuthStore((s) => s.ensureSessionValid)
 
   useEffect(() => {
     if (!initialized) return
 
     const expireIfNeeded = async () => {
-      if (!useAuthStore.getState().session) return
+      const store = useAuthStore.getState()
+      if (!store.session) return
 
       const expired = await isSessionExpiredAfterBackground()
       await clearSessionBackgroundMarker()
 
       if (expired) {
-        await signOut()
+        await store.signOut()
         useAuthStore.setState({ lastAuthMessage: SESSION_EXPIRED_MESSAGE })
         return
       }
 
-      await ensureSessionValid()
+      // Read from getState() so Fast Refresh / HMR cannot call a stale undefined selector.
+      const ensure = useAuthStore.getState().ensureSessionValid
+      if (typeof ensure === 'function') {
+        await ensure()
+      }
     }
 
     if (session) {
@@ -56,5 +59,5 @@ export function useBackgroundSessionTimeout() {
     })
 
     return () => subscription.remove()
-  }, [initialized, session, signOut, ensureSessionValid])
+  }, [initialized, session])
 }
