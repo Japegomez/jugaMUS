@@ -412,7 +412,7 @@ const s = StyleSheet.create({
   backBtn: {
     position: 'absolute',
     left: 10,
-    bottom: 10,
+    top: 10,
     width: 40,
     height: 34,
     borderRadius: 8,
@@ -425,7 +425,7 @@ const s = StyleSheet.create({
   cornerBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
   undoBtn: {
     position: 'absolute',
-    right: 10,
+    left: 10,
     bottom: 10,
     width: 40,
     height: 34,
