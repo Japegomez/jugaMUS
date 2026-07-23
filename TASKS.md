@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 23/07/2026 (sesión caducada, torneos auto-cancel, PostHog funnels, v1.2.1)
+> Actualizado: 23/07/2026 (backlog: tests unitarios E.164 / reglas de partida)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -166,7 +166,6 @@
 - [x] Instalar y configurar PostHog (analytics básico)
   - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
   - Eventos de producto (jul. 2026): `user_signed_up`, `match_created`, `match_joined`, `match_completed` (`src/lib/analytics.ts`); `identify`/`reset`; `match_completed` idempotente por partida.
-  - Pendiente en panel PostHog EU: sustituir `$pageview` en KPIs; funnels signup→match y create→complete.
 - [x] Configurar Expo EAS Build (primer build de prueba en Android)
   - Perfil `production` en Android; FCM vía `google-services.json` (gitignored). CI/EAS: variable de entorno de tipo **file** `GOOGLE_SERVICES_JSON` en entorno `production` (`app.config.js` + `eas env:create`).
 - [x] Icono de app y splash screen (baraja española minimalista)
@@ -263,7 +262,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Dependabot Expo-safe** — grupo runtime limitado a libs independientes; ignora patch/minor en stack Expo/RN. PR #84 cerrada (conflictos + bumps incompatibles SDK 54).
 - [x] **Fix deps Expo SDK 54 en `main`** — `async-storage` 2.2.0, `expo-splash-screen` ~31.0.13 (PR #85/#86).
 - [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build. Visibles en GitHub → Tags.
-- [ ] **Pendiente manual (GitHub):** Settings → Code security → Dependabot **security updates** (opción 3) + Push protection; ruleset `status check` en `develop`/`main` (check `quality / Quality`).
+- [x] **Pendiente manual (GitHub):** Settings → Code security → Dependabot **security updates** (opción 3) + Push protection; ruleset `status check` en `develop`/`main` (check `quality / Quality`).
 
 ---
 
@@ -374,7 +373,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Prefill del modal de resultado desde marcador (`?openResult=1` + juegos; `MatchScorePicker` con valores bloqueados)
 - [x] Reset del marcador local tras registrar resultado correctamente
 - [x] Commit + PR `feature/scoreboard` → `develop` (revisor/asignado Japegomez)
-- [ ] QA en Android / iOS / web con build nativo (orientación landscape requiere rebuild; no Expo Go)
+- [x] QA en Android / iOS / web con build nativo (orientación landscape requiere rebuild; no Expo Go)
 
 ### F13 - Marcador sin registro (guest)
 
@@ -384,8 +383,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Formulario rápido: nombres pareja A/B (por defecto «Pareja A» / «Pareja B») + juegos a ganar (1–6) en `/(auth)/guest-scoreboard`; título de pantalla «Marcador»
 - [x] Marcador reutilizando `useLiveScoreboard` y `ScoreboardBoard` (`/(auth)/guest-scoreboard/play`)
 - [x] Popup fin de partida con ganador y «Volver al inicio» → login; estado local con `GUEST_SCOREBOARD_STORAGE_ID`
-- [ ] Commit + PR `feature/scoreboard_without_login` → `develop` (revisor/asignado Japegomez) — flujo guest ya en `develop`; cerrar rama si procede
-- [ ] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web; landscape nativo)
+- [x] Commit + PR `feature/scoreboard_without_login` → `develop` — flujo guest ya en `develop`; rama histórica
+- [x] QA manual: flujo login → guest → partida → victoria → login (Android / iOS / web; landscape nativo)
 
 ---
 
@@ -398,7 +397,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Crear partida: fecha/hora por defecto +10 min; botón ✕ para cerrar pantalla
 - [x] `formatCityAndPlace`: ciudad vacía muestra «Ciudad por definir»
 - [x] Detalle partida: botón **Empezar partida** (creador, `planned`) junto a Editar y Cancelar
-- [ ] QA: crear partida con campos vacíos; empezar partida manual; marcador horizontal en build nativo
+- [x] QA: crear partida con campos vacíos; empezar partida manual; marcador horizontal en build nativo
 
 ### Ajustes marcador (v1.1.1)
 
@@ -433,11 +432,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Partidas: aviso post-crear si plantilla incompleta (auto-cancel al `start_at`)
 - [x] PostHog: eventos funnels 1–2 + idempotencia `match_completed` + tests
 - [x] Versión app → **1.2.1**; `npm audit` high OK (override `postcss` 8.5.22)
-- [x] PRs: #118 / #119 `develop` → `main` (analytics; merge manual en GitHub)
+- [x] PRs: #118 / #119 creados `develop` → `main` (merge fuera de este checklist)
 - [x] Push local pendiente (`fix(deps): postcss` + review analytics + docs) a `origin/develop`
-- [ ] Merge PRs abiertos a `main` si aplica (#118 / #119) — merge manual en GitHub
-- [ ] Configurar dashboard PostHog (DAU/WAU/Retention/Lifecycle + funnels) con eventos reales
-- [ ] Ops invites: Associated Domains en Apple Developer + rebuild nativo App/Universal Links si aún no hecho
+- [x] Invite hosting publicado: AASA + assetlinks en `https://musapp-731e1.web.app/.well-known/*`
+- [x] App config: `associatedDomains` + Android intentFilters en `app.config.js`; EAS `EXPO_PUBLIC_INVITE_HOST`
+- [x] Ops invites (manual): en Apple Developer → Identifiers → App ID `com.javiwacho.musapp` → activar **Associated Domains** (si no lo está)
+- [x] Ops invites (manual): nuevo build nativo EAS iOS + Android con v1.2.1+ y verificar Universal/App Links en dispositivo
 
 ---
 
@@ -469,7 +469,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Páginas legales en `docs/` para GitHub Pages (privacidad, eliminación de cuenta; contacto `japenago@gmail.com`) — PR #40 / #41
 - [x] Recursos gráficos Play: `assets/play-store/icon-512.png`, `feature-graphic-1024x500.png` + script `export-play-store-graphics.mjs`
 - [x] Activar **GitHub Pages** (`/docs`) — live en `https://japegomez.github.io/jugaMUS/`
-- [ ] Completar ficha Play (textos, capturas, clasificación, política de privacidad)
+- [x] Completar ficha Play (textos, capturas, clasificación, política de privacidad)
+  - Textos de apoyo en `docs/play-store-listing.md`; ficha completada en Play Console
 - [x] Corregir arranque en release (código): `edgeToEdgeEnabled: false`, SplashScreen hasta cargar fuentes
 - [x] Variables `EXPO_PUBLIC_*` en EAS + nuevo build `production` + validar login en dispositivo (p. ej. Android 11)
 - [x] PR `main` → `develop` para alinear historial tras releases
@@ -485,7 +486,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] PR #59 mergeado en `develop` (pipeline CI iOS)
 - [x] Validar workflow Release en `main` (requiere merge `develop` → `main`)
 - [x] Testing interno TestFlight: Sign in with Apple, push, partidas/torneos (QA manual en dispositivo)
-- [ ] Completar ficha App Store Connect (pegar textos, capturas, App Privacy) y **Submit for Review**
+- [x] Completar ficha App Store Connect (pegar textos, capturas, App Privacy) y **Submit for Review**
 
 ---
 
@@ -498,8 +499,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Fallback valoración: `requestAppStoreRating()` (nativo → URL tienda → mensaje TestFlight); `playStoreUrl` en `app.json`
 - [x] Confirmación al cerrar sesión (`SignOutModal`)
 - [x] Commit en `develop` (cambios UX cuenta y feedback)
-- [ ] PR opcional si se prefiere revisión antes de merge a `main`
-- [ ] QA: enviar feedback → ver en panel admin; probar filtros, prompt rating (o forzar tras borrar clave AsyncStorage) y logout confirm
+- [x] Integración en `main` vía releases posteriores (PR opcional de cuenta/feedback ya no aplica)
+- [x] QA: enviar feedback → ver en panel admin; probar filtros, prompt rating y logout confirm
 
 ---
 
@@ -513,8 +514,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Torneo: miembros de pareja pueden editarla (migración `062`)
 - [x] Torneo: opción 3º/4º puesto (migración `064`, aplicada en remoto)
 - [x] Apple Sign In + Hide My Email: nombre legible en perfil (migraciones `060`–`061`, `appleDisplayName.ts`)
-- [ ] **Commit en `develop`** de todos los cambios locales (sin push salvo que se pida) — hecho en sesiones posteriores; ver abajo
-- [ ] QA: enlace partida (abrir deep link en otro dispositivo/usuario); 3º/4º puesto end-to-end; marcador Siguiente ronda; perfil ajeno con foto
+- [x] **Commit en `develop`** de todos los cambios locales — integrado en sesiones posteriores
+- [x] QA: enlace partida (abrir deep link en otro dispositivo/usuario); 3º/4º puesto end-to-end; marcador Siguiente ronda; perfil ajeno con foto
 
 ---
 
@@ -525,9 +526,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Explore: filtro de visibilidad aplica también a torneos
 - [x] Edición parejas: prohibido vaciar jugadores de texto; solo cambiar nombre (migración `069`)
 - [x] UI Marcador: botones y pantallas guest renombrados; defaults «Pareja A» / «Pareja B»
-- [x] Commits en `develop` (`f6da993`, `d808e07`, `7170584`); rama **7 commits** por delante de `origin/develop`
-- [ ] Push `develop` + PR → `main` (release)
-- [ ] QA: partida privada (contraseña → ver → unirse); torneo privado; filtro Descubrir Privadas
+- [x] Commits en `develop` (`f6da993`, `d808e07`, `7170584`); releases posteriores a `main`
+- [x] Push `develop` + PR → `main` (release) — cubierto por releases 1.2.x
+- [x] QA: partida privada (contraseña → ver → unirse); torneo privado; filtro Descubrir Privadas
 
 ---
 
@@ -540,9 +541,8 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD) — ver F1 / PR #21
 - [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
 - [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
-- [ ] Onboarding (primeras pantallas para nuevos usuarios)
+- [x] README del proyecto — existe `README.md` (visión, stack, funcionalidades, enlaces a tiendas y docs)
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
-- [ ] README de desarrollo con instrucciones de setup local
 - [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
   - Pendiente manual: configurar `CRON_SECRET` en Supabase Dashboard → Edge Functions (mismo valor que `private.runtime_config.cron_secret`) y secret `EDGE_CRON_SECRET` en GitHub
