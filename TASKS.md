@@ -1,22 +1,22 @@
 # Tareas - jugaMUS
 
-> Actualizado: 21/07/2026 (invites WhatsApp HTTPS, release 1.2.0)
+> Actualizado: 23/07/2026 (sesión caducada, torneos auto-cancel, PostHog funnels, v1.2.1)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                                          |
-| ------------------- | ---------- | -------------------------------------------------------------------- |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                    |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                 |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                    |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                  |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama |
-| UI — Ultra Limpio   | Completada | Rediseño visual                                                      |
-| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión           |
-| UX — Jul. 2026      | Completada | Marcador, recovery password, WhatsApp invites HTTPS, v1.2.0          |
+| Fase                | Estado     | Descripción                                                                    |
+| ------------------- | ---------- | ------------------------------------------------------------------------------ |
+| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                              |
+| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                           |
+| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                              |
+| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                            |
+| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama           |
+| UI — Ultra Limpio   | Completada | Rediseño visual                                                                |
+| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
+| UX — Jul. 2026      | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
 
 ---
 
@@ -165,6 +165,8 @@
   - `src/lib/sentry.ts`, plugin en `app.json` (UE `de.sentry.io`), `Sentry.wrap` en `_layout.tsx`; botón de prueba en perfil solo `__DEV__`.
 - [x] Instalar y configurar PostHog (analytics básico)
   - `src/lib/posthog.ts` + `PostHogProvider` en layout; host EU; cliente desactivado si falta API key.
+  - Eventos de producto (jul. 2026): `user_signed_up`, `match_created`, `match_joined`, `match_completed` (`src/lib/analytics.ts`); `identify`/`reset`; `match_completed` idempotente por partida.
+  - Pendiente en panel PostHog EU: sustituir `$pageview` en KPIs; funnels signup→match y create→complete.
 - [x] Configurar Expo EAS Build (primer build de prueba en Android)
   - Perfil `production` en Android; FCM vía `google-services.json` (gitignored). CI/EAS: variable de entorno de tipo **file** `GOOGLE_SERVICES_JSON` en entorno `production` (`app.config.js` + `eas env:create`).
 - [x] Icono de app y splash screen (baraja española minimalista)
@@ -423,6 +425,19 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] App Links / Universal Links en `app.config.js`; EAS `EXPO_PUBLIC_INVITE_HOST`
 - [x] `npm audit --audit-level=high` OK (override `brace-expansion@5`)
 - [x] Versión app → **1.2.0** (`app.json`, `package.json`); PR #116 → `develop`, PR #117 → `main`
+
+### Sesión, torneos, analytics y hotfix (v1.2.1) — 23/07/2026
+
+- [x] Sesión caducada tras días sin abrir: `validateAuthSession` + `ensureSessionValid`; logout automático y mensaje en login; harden HMR
+- [x] Torneos: auto-cancel en `start_at` sin cuadro organizado (migraciones `070`/`071`); título/ciudad/lugar opcionales; aviso al guardar; «Organizar cuadro» deshabilitado con menos de 2 parejas completas
+- [x] Partidas: aviso post-crear si plantilla incompleta (auto-cancel al `start_at`)
+- [x] PostHog: eventos funnels 1–2 + idempotencia `match_completed` + tests
+- [x] Versión app → **1.2.1**; `npm audit` high OK (override `postcss` 8.5.22)
+- [x] PRs: #118 / #119 `develop` → `main` (analytics; merge manual en GitHub)
+- [x] Push local pendiente (`fix(deps): postcss` + review analytics + docs) a `origin/develop`
+- [ ] Merge PRs abiertos a `main` si aplica (#118 / #119) — merge manual en GitHub
+- [ ] Configurar dashboard PostHog (DAU/WAU/Retention/Lifecycle + funnels) con eventos reales
+- [ ] Ops invites: Associated Domains en Apple Developer + rebuild nativo App/Universal Links si aún no hecho
 
 ---
 
