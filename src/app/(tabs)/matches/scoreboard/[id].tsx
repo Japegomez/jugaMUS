@@ -19,7 +19,7 @@ export default function ScoreboardScreen() {
   const router = useRouter()
   const userId = useAuthStore((state) => state.session?.user.id)
 
-  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
+  useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE, 'scoreboard')
 
   const { data: match, isLoading, isError } = useMatch(id)
 

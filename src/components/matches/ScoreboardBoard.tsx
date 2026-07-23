@@ -284,14 +284,12 @@ export function ScoreboardBoard({
   }, [])
 
   const handleNext = useCallback(() => {
-    setStepIndex((current) => {
-      if (current >= SCOREBOARD_TUTORIAL_STEPS.length - 1) {
-        finishTutorial()
-        return current
-      }
-      return current + 1
-    })
-  }, [finishTutorial])
+    if (stepIndex >= SCOREBOARD_TUTORIAL_STEPS.length - 1) {
+      finishTutorial()
+      return
+    }
+    setStepIndex((current) => current + 1)
+  }, [finishTutorial, stepIndex])
 
   const highlight: ScoreboardTutorialHighlight = tutorialVisible
     ? (SCOREBOARD_TUTORIAL_STEPS[stepIndex]?.highlight ?? 'none')
