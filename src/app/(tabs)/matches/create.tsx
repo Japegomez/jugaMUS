@@ -18,8 +18,9 @@ import { MATCH_VISIBILITY } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
-import { showAlert } from '@/utils/alert'
+import { acknowledgeAlert, showAlert } from '@/utils/alert'
 import {
+  AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT,
   PAST_DATE_INCOMPLETE_ROSTER_ALERT,
   requiresFutureStartAtForIncompleteRoster,
 } from '@/utils/matchCreateForm'
@@ -191,6 +192,10 @@ export default function CreateMatchScreen() {
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
+      await acknowledgeAlert(
+        AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.title,
+        AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.message
+      )
       router.replace(`/(tabs)/matches/${match.id}`)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la partida')
