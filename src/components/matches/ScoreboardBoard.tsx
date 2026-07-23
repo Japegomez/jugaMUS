@@ -1,6 +1,12 @@
+import { useCallback, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
+import {
+  SCOREBOARD_TUTORIAL_STEPS,
+  ScoreboardTutorial,
+  type ScoreboardTutorialHighlight,
+} from '@/components/matches/ScoreboardTutorial'
 import { MUS_ROUNDS, MUS_ROUND_LABELS, TEAM } from '@/constants'
 import type { MusRound } from '@/constants'
 import type { LiveScoreboardState, TeamId } from '@/hooks/useLiveScoreboard'
@@ -46,15 +52,17 @@ function GamesStepper({
   team,
   games,
   teamName,
+  dimmed,
   onAdjustGames,
 }: {
   team: TeamId
   games: number
   teamName: string
+  dimmed: boolean
   onAdjustGames: (team: TeamId, delta: number) => void
 }) {
   return (
-    <View style={s.gamesRow}>
+    <View style={[s.gamesRow, dimmed && s.dimmed]}>
       <Pressable
         onPress={() => onAdjustGames(team, -1)}
         style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
@@ -82,6 +90,8 @@ function PairColumn({
   teamName,
   points,
   games,
+  tutorialActive,
+  highlight,
   onTapPairPoint,
   onAdjustPairPoints,
   onAdjustGames,
@@ -90,10 +100,14 @@ function PairColumn({
   teamName: string
   points: number
   games: number
+  tutorialActive: boolean
+  highlight: ScoreboardTutorialHighlight
   onTapPairPoint: (team: TeamId) => void
   onAdjustPairPoints: (team: TeamId, delta: number) => void
   onAdjustGames: (team: TeamId, delta: number) => void
 }) {
+  const highlightPoints = highlight === 'pairPoints' || highlight === 'arrowsAndPairPoints'
+
   const minusBtn = (
     <ChipButton
       key="m1"
@@ -122,13 +136,18 @@ function PairColumn({
 
   return (
     <View style={s.pairColumn}>
-      <Text style={s.teamName} numberOfLines={1}>
+      <Text style={[s.teamName, tutorialActive && s.dimmed]} numberOfLines={1}>
         {teamName}
       </Text>
 
       <Pressable
         onPress={() => onTapPairPoint(team)}
-        style={({ pressed }) => [s.pointsSquare, pressed && s.pointsSquarePressed]}
+        style={({ pressed }) => [
+          s.pointsSquare,
+          pressed && s.pointsSquarePressed,
+          tutorialActive && !highlightPoints && s.dimmed,
+          highlightPoints && s.spotlight,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={`Sumar 1 punto a ${teamName}`}>
         <Text style={s.pointsValue} adjustsFontSizeToFit numberOfLines={1}>
@@ -136,9 +155,15 @@ function PairColumn({
         </Text>
       </Pressable>
 
-      <View style={s.chipRow}>{pointButtons}</View>
+      <View style={[s.chipRow, tutorialActive && s.dimmed]}>{pointButtons}</View>
 
-      <GamesStepper team={team} games={games} teamName={teamName} onAdjustGames={onAdjustGames} />
+      <GamesStepper
+        team={team}
+        games={games}
+        teamName={teamName}
+        dimmed={tutorialActive}
+        onAdjustGames={onAdjustGames}
+      />
     </View>
   )
 }
@@ -146,20 +171,27 @@ function PairColumn({
 function RoundRow({
   round,
   value,
+  tutorialActive,
+  highlight,
   onTapRound,
   onAdjustRound,
   onAwardRound,
 }: {
   round: MusRound
   value: number
+  tutorialActive: boolean
+  highlight: ScoreboardTutorialHighlight
   onTapRound: (round: MusRound) => void
   onAdjustRound: (round: MusRound, delta: number) => void
   onAwardRound: (round: MusRound, team: TeamId) => void
 }) {
   const label = MUS_ROUND_LABELS[round]
+  const highlightCenters = highlight === 'roundCenters'
+  const highlightArrows = highlight === 'arrowsAndPairPoints'
+
   return (
     <View style={s.roundRow}>
-      <View style={s.roundHeader}>
+      <View style={[s.roundHeader, tutorialActive && s.dimmed]}>
         <View style={s.roundAdjustGroup}>
           <ChipButton
             label="−1"
@@ -184,7 +216,12 @@ function RoundRow({
         <Pressable
           onPress={() => onAwardRound(round, TEAM.A)}
           hitSlop={8}
-          style={({ pressed }) => [s.arrowBtn, pressed && s.pressed]}
+          style={({ pressed }) => [
+            s.arrowBtn,
+            pressed && s.pressed,
+            tutorialActive && !highlightArrows && s.dimmed,
+            highlightArrows && s.spotlightSoft,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={`Sumar ${label} a la pareja de la izquierda`}>
           <Text style={s.arrowText}>←</Text>
@@ -192,7 +229,12 @@ function RoundRow({
 
         <Pressable
           onPress={() => onTapRound(round)}
-          style={({ pressed }) => [s.roundValueBox, pressed && s.pressed]}
+          style={({ pressed }) => [
+            s.roundValueBox,
+            pressed && s.pressed,
+            tutorialActive && !highlightCenters && s.dimmed,
+            highlightCenters && s.spotlight,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={`Sumar 2 a ${label}`}>
           <Text style={s.roundValue}>{value}</Text>
@@ -201,7 +243,12 @@ function RoundRow({
         <Pressable
           onPress={() => onAwardRound(round, TEAM.B)}
           hitSlop={8}
-          style={({ pressed }) => [s.arrowBtn, pressed && s.pressed]}
+          style={({ pressed }) => [
+            s.arrowBtn,
+            pressed && s.pressed,
+            tutorialActive && !highlightArrows && s.dimmed,
+            highlightArrows && s.spotlightSoft,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={`Sumar ${label} a la pareja de la derecha`}>
           <Text style={s.arrowText}>→</Text>
@@ -225,14 +272,44 @@ export function ScoreboardBoard({
   onUndo,
   onClose,
 }: ScoreboardBoardProps) {
+  const [tutorialVisible, setTutorialVisible] = useState(true)
+  const [stepIndex, setStepIndex] = useState(0)
+
+  const finishTutorial = useCallback(() => {
+    setTutorialVisible(false)
+  }, [])
+
+  const handleBack = useCallback(() => {
+    setStepIndex((current) => Math.max(0, current - 1))
+  }, [])
+
+  const handleNext = useCallback(() => {
+    setStepIndex((current) => {
+      if (current >= SCOREBOARD_TUTORIAL_STEPS.length - 1) {
+        finishTutorial()
+        return current
+      }
+      return current + 1
+    })
+  }, [finishTutorial])
+
+  const highlight: ScoreboardTutorialHighlight = tutorialVisible
+    ? (SCOREBOARD_TUTORIAL_STEPS[stepIndex]?.highlight ?? 'none')
+    : 'none'
+  const highlightUndo = highlight === 'undo'
+
   return (
     <View style={s.board}>
+      {tutorialVisible ? <View style={s.screenDim} pointerEvents="none" /> : null}
+
       <View style={s.mainRow}>
         <PairColumn
           team={TEAM.A}
           teamName={teamAName}
           points={state.pointsA}
           games={state.gamesA}
+          tutorialActive={tutorialVisible}
+          highlight={highlight}
           onTapPairPoint={onTapPairPoint}
           onAdjustPairPoints={onAdjustPairPoints}
           onAdjustGames={onAdjustGames}
@@ -244,6 +321,8 @@ export function ScoreboardBoard({
               key={round}
               round={round}
               value={state.rounds[round]}
+              tutorialActive={tutorialVisible}
+              highlight={highlight}
               onTapRound={onTapRound}
               onAdjustRound={onAdjustRound}
               onAwardRound={onAwardRound}
@@ -256,6 +335,8 @@ export function ScoreboardBoard({
           teamName={teamBName}
           points={state.pointsB}
           games={state.gamesB}
+          tutorialActive={tutorialVisible}
+          highlight={highlight}
           onTapPairPoint={onTapPairPoint}
           onAdjustPairPoints={onAdjustPairPoints}
           onAdjustGames={onAdjustGames}
@@ -265,7 +346,7 @@ export function ScoreboardBoard({
       <Pressable
         onPress={onClose}
         hitSlop={12}
-        style={({ pressed }) => [s.backBtn, pressed && s.pressed]}
+        style={({ pressed }) => [s.backBtn, pressed && s.pressed, tutorialVisible && s.dimmed]}
         accessibilityRole="button"
         accessibilityLabel="Cerrar">
         <Text style={s.cornerBtnText}>✕</Text>
@@ -275,11 +356,26 @@ export function ScoreboardBoard({
         onPress={onUndo}
         disabled={!canUndo}
         hitSlop={12}
-        style={({ pressed }) => [s.undoBtn, pressed && s.pressed, !canUndo && s.cornerBtnDisabled]}
+        style={({ pressed }) => [
+          s.undoBtn,
+          pressed && s.pressed,
+          !canUndo && !highlightUndo && s.cornerBtnDisabled,
+          tutorialVisible && !highlightUndo && s.dimmed,
+          highlightUndo && [s.spotlightSoft, s.undoBtnRaised],
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Deshacer último cambio">
         <Ionicons name="arrow-undo" size={22} color={Colors.white} />
       </Pressable>
+
+      {tutorialVisible ? (
+        <ScoreboardTutorial
+          stepIndex={stepIndex}
+          onBack={handleBack}
+          onNext={handleNext}
+          onSkip={finishTutorial}
+        />
+      ) : null}
     </View>
   )
 }
@@ -289,29 +385,61 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.primary,
   },
+  screenDim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    zIndex: 1,
+  },
+  dimmed: {
+    opacity: 0.38,
+  },
+  spotlight: {
+    opacity: 1,
+    borderColor: '#F0D56A',
+    shadowColor: '#F0D56A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 2,
+  },
+  spotlightSoft: {
+    opacity: 1,
+    backgroundColor: 'rgba(240,213,106,0.28)',
+    borderColor: '#F0D56A',
+    zIndex: 2,
+  },
   backBtn: {
     position: 'absolute',
-    left: 0,
-    bottom: 0,
+    left: 10,
+    bottom: 10,
     width: 40,
     height: 34,
-    borderTopRightRadius: 8,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
+    zIndex: 2,
   },
   cornerBtnDisabled: { opacity: 0.35 },
   cornerBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
   undoBtn: {
     position: 'absolute',
-    right: 0,
-    bottom: 0,
+    right: 10,
+    bottom: 10,
     width: 40,
     height: 34,
-    borderTopLeftRadius: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
+    zIndex: 2,
+  },
+  undoBtnRaised: {
+    zIndex: 60,
+    elevation: 60,
   },
   mainRow: {
     flex: 1,
@@ -319,6 +447,7 @@ const s = StyleSheet.create({
     alignItems: 'stretch',
     gap: 8,
     paddingHorizontal: 10,
+    zIndex: 2,
   },
 
   pairColumn: {
@@ -346,6 +475,8 @@ const s = StyleSheet.create({
     flexShrink: 1,
     backgroundColor: Colors.white,
     borderRadius: 10,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -402,13 +533,13 @@ const s = StyleSheet.create({
   roundRow: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 3,
   },
   roundHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   roundAdjustGroup: {
     flexDirection: 'row',
@@ -429,6 +560,9 @@ const s = StyleSheet.create({
   arrowBtn: {
     width: 40,
     height: 40,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -439,6 +573,8 @@ const s = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: Colors.white,
     borderRadius: 8,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },

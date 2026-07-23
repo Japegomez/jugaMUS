@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
 import { ScoreboardBoard } from '@/components/matches/ScoreboardBoard'
@@ -18,7 +17,6 @@ import { Fonts } from '@/theme/typography'
 export default function ScoreboardScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
-  const insets = useSafeAreaInsets()
   const userId = useAuthStore((state) => state.session?.user.id)
 
   useOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
@@ -93,16 +91,7 @@ export default function ScoreboardScreen() {
     gameOver != null ? `${teamAName} ${gameOver.gamesA} – ${gameOver.gamesB} ${teamBName}` : ''
 
   return (
-    <View
-      style={[
-        s.root,
-        {
-          paddingTop: insets.top,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-          paddingBottom: insets.bottom,
-        },
-      ]}>
+    <View style={s.root}>
       <ScoreboardBoard
         teamAName={teamAName}
         teamBName={teamBName}

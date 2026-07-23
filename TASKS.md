@@ -7,16 +7,17 @@
 
 ## Estado del proyecto
 
-| Fase                | Estado     | Descripción                                                                    |
-| ------------------- | ---------- | ------------------------------------------------------------------------------ |
-| Fase 1 - Core       | Completada | Auth, Perfil, Partidas, Descubrir                                              |
-| Fase 2 - Resultados | Completada | Notificaciones, Resultados, Reportes                                           |
-| Fase 3 - Admin      | Completada | Panel admin, Analíticas, Disputas                                              |
-| Fase 4 - Torneos    | Completada | Cuadros, parejas, explore, UX móvil                                            |
-| Fase 5 - Marcador   | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama           |
-| UI — Ultra Limpio   | Completada | Rediseño visual                                                                |
-| UX — Cuenta         | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
-| UX — Jul. 2026      | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
+| Fase                   | Estado     | Descripción                                                                    |
+| ---------------------- | ---------- | ------------------------------------------------------------------------------ |
+| Fase 1 - Core          | Completada | Auth, Perfil, Partidas, Descubrir                                              |
+| Fase 2 - Resultados    | Completada | Notificaciones, Resultados, Reportes                                           |
+| Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                              |
+| Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                            |
+| Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama           |
+| UI — Ultra Limpio      | Completada | Rediseño visual                                                                |
+| UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
+| UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
+| UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                  |
 
 ---
 
@@ -438,6 +439,18 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] App config: `associatedDomains` + Android intentFilters en `app.config.js`; EAS `EXPO_PUBLIC_INVITE_HOST`
 - [x] Ops invites (manual): en Apple Developer → Identifiers → App ID `com.javiwacho.musapp` → activar **Associated Domains** (si no lo está)
 - [x] Ops invites (manual): nuevo build nativo EAS iOS + Android con v1.2.1+ y verificar Universal/App Links en dispositivo
+
+### Tutorial marcador + release (v1.3.0) — 23/07/2026
+
+> Rama de trabajo: `feature/scoreboard-tutorial` (desde `develop`).
+
+- [x] Tutorial onboarding al abrir el marcador (partida y guest): 5 pasos (envites, flechas, negadas, deshacer, suerte)
+- [x] Tooltip responsive (izquierda/arriba, abajo, centro); Omitir verde; avanzar/retroceder; ✕ en último paso
+- [x] Resaltado sin desplazar layout (borde transparente reservado); marcador usable durante el tutorial
+- [x] Pantalla a edge-to-edge (sin margen safe-area verde); botones cerrar/deshacer con padding
+- [x] Rondas centrales ligeramente más compactas
+- [x] Versión app → **1.3.0** (`app.json`, `package.json`)
+- [x] Commit + PR `feature/scoreboard-tutorial` → `develop` (revisor/asignado Japegomez)
 
 ---
 
