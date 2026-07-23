@@ -126,11 +126,11 @@ describe('analytics helpers', () => {
   })
 
   describe('trackMatchCompletedIfFinished', () => {
-    function mockMatchSelect(result) {
+    function mockMatchSelect(result: { data: { status: string } | null; error: unknown }) {
       const maybeSingle = jest.fn().mockResolvedValue(result)
       const eq = jest.fn().mockReturnValue({ maybeSingle })
       const select = jest.fn().mockReturnValue({ eq })
-      supabase.from.mockReturnValue({ select })
+      ;(supabase.from as jest.Mock).mockReturnValue({ select })
     }
 
     it('captures when status is finished', async () => {
