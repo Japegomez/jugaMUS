@@ -2,6 +2,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -27,10 +28,10 @@ export function IncompleteRosterStartModal({ visible, onClose }: IncompleteRoste
             <Text style={s.close}>✕</Text>
           </Pressable>
         </View>
-        <View style={s.body}>
+        <ScrollableModalBody>
           <Text style={s.message}>{INCOMPLETE_ROSTER_START_MESSAGE}</Text>
           <Button title="Entendido" onPress={onClose} style={s.btn} />
-        </View>
+        </ScrollableModalBody>
       </SafeAreaView>
     </Modal>
   )
@@ -49,7 +50,6 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
-  body: { padding: 20 },
   message: { fontSize: 15, color: Colors.textPrimary, marginBottom: 16, lineHeight: 22 },
   btn: { marginBottom: 12 },
 })

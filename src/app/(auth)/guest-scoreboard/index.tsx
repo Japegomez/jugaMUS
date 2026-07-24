@@ -18,7 +18,7 @@ import { GUEST_SCOREBOARD_STORAGE_ID } from '@/constants/guestScoreboard'
 import { prefetchOrientationLock } from '@/lib/orientationLock'
 import { clearScoreboardState } from '@/lib/scoreboardStorage'
 import { Colors } from '@/theme/colors'
-import { Layout } from '@/theme/layout'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
@@ -60,6 +60,7 @@ function DurationChip({
 
 export default function GuestScoreboardSetupScreen() {
   const router = useRouter()
+  const { authTopPadding, font } = useResponsiveLayout()
 
   const {
     control,
@@ -95,9 +96,9 @@ export default function GuestScoreboardSetupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: authTopPadding + 8 }]}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Marcador</Text>
+        <Text style={[styles.heading, { fontSize: font(26) }]}>Marcador</Text>
         <Text style={styles.sub}>
           Indica los nombres de las parejas y a cuántos juegos se juega la partida.
         </Text>
@@ -170,11 +171,9 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Layout.authScreenTopPadding + 8,
     paddingBottom: 32,
   },
   heading: {
-    fontSize: 26,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 8,

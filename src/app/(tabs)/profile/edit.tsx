@@ -16,6 +16,7 @@ import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile, useUploadAvatar } from '@/hooks/useProfile'
 import { phoneE164Schema } from '@/utils/validators'
 import { Colors } from '@/theme/colors'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 
@@ -30,6 +31,7 @@ type EditProfileValues = z.infer<typeof editProfileSchema>
 export default function EditProfileScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { font, space } = useResponsiveLayout()
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
   const { data: profile, isLoading } = useProfile(sessionUserId)
   const updateProfile = useUpdateProfile()
@@ -121,25 +123,37 @@ export default function EditProfileScreen() {
     .slice(0, 2)
     .map((w: string) => w[0]?.toUpperCase() ?? '')
     .join('')
+  const avatarSize = space(96)
+  const avatarRadius = avatarSize / 2
 
   return (
     <KeyboardAwareScrollView
       contentContainerStyle={[styles.scroll, { paddingTop: screenTopPadding(insets.top, 24) }]}
       showsVerticalScrollIndicator={false}>
-      <Text style={styles.heading}>Editar perfil</Text>
+      <Text style={[styles.heading, { fontSize: font(26) }]}>Editar perfil</Text>
 
       {/* Avatar picker */}
       <View style={styles.avatarSection}>
         <Pressable
           onPress={pickImage}
-          style={styles.avatarWrap}
+          style={[styles.avatarWrap, { width: avatarSize, height: avatarSize }]}
           accessibilityRole="button"
           accessibilityLabel="Cambiar foto de perfil">
           {currentAvatarUri ? (
-            <Image source={{ uri: currentAvatarUri }} style={styles.avatar} />
+            <Image
+              source={{ uri: currentAvatarUri }}
+              style={[
+                styles.avatar,
+                { width: avatarSize, height: avatarSize, borderRadius: avatarRadius },
+              ]}
+            />
           ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitials}>{initials || '?'}</Text>
+            <View
+              style={[
+                styles.avatarFallback,
+                { width: avatarSize, height: avatarSize, borderRadius: avatarRadius },
+              ]}>
+              <Text style={[styles.avatarInitials, { fontSize: font(36) }]}>{initials || '?'}</Text>
             </View>
           )}
           <View style={styles.avatarBadge}>
@@ -229,7 +243,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   heading: {
-    fontSize: 26,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 4,
@@ -240,25 +253,16 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     position: 'relative',
-    width: 96,
-    height: 96,
   },
   avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
     backgroundColor: Colors.border,
   },
   avatarFallback: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    fontSize: 36,
     fontFamily: Fonts.bold,
     color: Colors.white,
   },

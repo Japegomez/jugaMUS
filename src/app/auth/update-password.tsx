@@ -22,7 +22,7 @@ import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/c
 import { supabase } from '@/lib/supabase'
 import { updatePasswordSchema, type UpdatePasswordFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
-import { Layout } from '@/theme/layout'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 
 function firstParam(value: string | string[] | undefined): string | null {
@@ -32,6 +32,7 @@ function firstParam(value: string | string[] | undefined): string | null {
 
 export default function UpdatePasswordScreen() {
   const router = useRouter()
+  const { authTopPadding, font } = useResponsiveLayout()
   const params = useLocalSearchParams()
   const updatePassword = useAuthStore((s) => s.updatePassword)
   const signOut = useAuthStore((s) => s.signOut)
@@ -184,7 +185,9 @@ export default function UpdatePasswordScreen() {
         <View style={styles.successIconWrap}>
           <Ionicons name="checkmark-circle" size={56} color={Colors.primary} />
         </View>
-        <Text style={[styles.heading, styles.centeredText]}>Contraseña actualizada</Text>
+        <Text style={[styles.heading, styles.centeredText, { fontSize: font(26) }]}>
+          Contraseña actualizada
+        </Text>
         <Text style={[styles.sub, styles.centeredText]}>
           Tu contraseña se ha cambiado correctamente. Ya puedes iniciar sesión con las nuevas
           credenciales.
@@ -201,11 +204,13 @@ export default function UpdatePasswordScreen() {
           onPress={dismissToLogin}
           accessibilityRole="button"
           accessibilityLabel="Cerrar"
-          style={styles.closeAbsolute}
+          style={[styles.closeAbsolute, { top: authTopPadding }]}
           disabled={dismissing}>
           <Ionicons name="close" size={28} color={Colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.heading, styles.centeredText]}>Enlace no válido</Text>
+        <Text style={[styles.heading, styles.centeredText, { fontSize: font(26) }]}>
+          Enlace no válido
+        </Text>
         <Text style={[styles.sub, styles.centeredText]}>{bootstrapError}</Text>
         <Button title="Volver al inicio de sesión" onPress={dismissToLogin} loading={dismissing} />
       </View>
@@ -218,7 +223,7 @@ export default function UpdatePasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: authTopPadding }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.topBar}>
           <View style={styles.topBarSpacer} />
@@ -233,7 +238,7 @@ export default function UpdatePasswordScreen() {
           </Pressable>
         </View>
 
-        <Text style={styles.heading}>Nueva contraseña</Text>
+        <Text style={[styles.heading, { fontSize: font(26) }]}>Nueva contraseña</Text>
         <Text style={styles.sub}>Elige una contraseña nueva para tu cuenta.</Text>
 
         {formError ? (
@@ -309,7 +314,6 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Layout.authScreenTopPadding,
     paddingBottom: 32,
   },
   topBar: {
@@ -325,13 +329,11 @@ const styles = StyleSheet.create({
   },
   closeAbsolute: {
     position: 'absolute',
-    top: Layout.authScreenTopPadding,
     right: 24,
     zIndex: 1,
     padding: 4,
   },
   heading: {
-    fontSize: 26,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 8,

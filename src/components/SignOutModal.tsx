@@ -1,6 +1,7 @@
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -31,7 +32,7 @@ export function SignOutModal({ visible, onClose, loading, onConfirm }: SignOutMo
             <Text style={s.close}>✕</Text>
           </Pressable>
         </View>
-        <View style={s.body}>
+        <ScrollableModalBody>
           <Text style={s.message}>¿Seguro que quieres cerrar sesión?</Text>
           <Button
             title="Confirmar"
@@ -47,7 +48,7 @@ export function SignOutModal({ visible, onClose, loading, onConfirm }: SignOutMo
             disabled={loading}
             style={s.btn}
           />
-        </View>
+        </ScrollableModalBody>
       </SafeAreaView>
     </Modal>
   )
@@ -66,7 +67,6 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
-  body: { padding: 20 },
   message: { fontSize: 15, color: Colors.textPrimary, marginBottom: 20, lineHeight: 22 },
   btn: { marginBottom: 12 },
 })

@@ -11,6 +11,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useRouter, type Href } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { APP_DISPLAY_NAME } from '@/constants/app'
 import { Button } from '@/components/ui/Button'
@@ -19,11 +20,13 @@ import { useAuthStore } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { loginSchema, type LoginFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
-import { Layout } from '@/theme/layout'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 
 export default function LoginScreen() {
   const router = useRouter()
+  const { authTopPadding, font, space, isCompactHeight } = useResponsiveLayout()
+  const insets = useSafeAreaInsets()
   const signInWithPassword = useAuthStore((s) => s.signInWithPassword)
   const signInWithGoogle = useAuthStore((s) => s.signInWithGoogle)
   const signInWithApple = useAuthStore((s) => s.signInWithApple)
@@ -77,10 +80,16 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingTop: authTopPadding + 8,
+            paddingBottom: Math.max(insets.bottom, 24) + 8,
+          },
+        ]}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>{APP_DISPLAY_NAME}</Text>
-        <Text style={styles.infoText}>
+        <Text style={[styles.heading, { fontSize: font(28) }]}>{APP_DISPLAY_NAME}</Text>
+        <Text style={[styles.infoText, { fontSize: font(15), lineHeight: font(22) }]}>
           Si deseas llevar la cuenta de una partida sin registro, pulsa Marcador. Para crear o
           unirse a partidas y torneos, inicia sesión.
         </Text>
@@ -88,8 +97,8 @@ export default function LoginScreen() {
         <Button
           title="Marcador"
           onPress={() => router.push('/(auth)/guest-scoreboard' as Href)}
-          style={styles.scoreboardBtn}
-          textStyle={styles.scoreboardBtnLabel}
+          style={[styles.scoreboardBtn, isCompactHeight && { minHeight: space(48) }]}
+          textStyle={[styles.scoreboardBtnLabel, { fontSize: font(18) }]}
         />
 
         <View style={styles.divider}>
@@ -186,27 +195,22 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Layout.authScreenTopPadding + 8,
-    paddingBottom: 32,
   },
   heading: {
-    fontSize: 28,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 8,
   },
   infoText: {
-    fontSize: 15,
     color: Colors.textSecondary,
     marginBottom: 20,
-    lineHeight: 22,
   },
   scoreboardBtn: {
     minHeight: 56,
     marginBottom: 8,
   },
   scoreboardBtnLabel: {
-    fontSize: 18,
+    fontFamily: Fonts.semiBold,
   },
   formError: {
     backgroundColor: Colors.surface,

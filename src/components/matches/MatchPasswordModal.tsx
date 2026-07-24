@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 
 import { Button } from '@/components/ui/Button'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -93,7 +94,7 @@ export function MatchPasswordModal({
           </Pressable>
         </View>
 
-        <View style={styles.body}>
+        <ScrollableModalBody contentContainerStyle={styles.bodyContent}>
           <Text style={styles.lockIcon}>🔒</Text>
           <Text style={styles.hint}>{hint}</Text>
 
@@ -166,7 +167,7 @@ export function MatchPasswordModal({
           {!accessOnly && availableTeams.length === 0 ? (
             <Text style={styles.fullNote}>Ambos equipos están completos.</Text>
           ) : null}
-        </View>
+        </ScrollableModalBody>
       </KeyboardAvoidingView>
     </Modal>
   )
@@ -199,9 +200,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.textSecondary,
   },
-  body: {
-    flex: 1,
-    padding: 24,
+  bodyContent: {
+    paddingHorizontal: 24,
     gap: 8,
   },
   lockIcon: {

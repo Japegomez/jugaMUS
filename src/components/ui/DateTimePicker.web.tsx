@@ -123,6 +123,10 @@ const s = StyleSheet.create({
     borderRadius: 14,
     padding: 20,
     gap: 16,
+    maxHeight: '90%',
+    maxWidth: 480,
+    width: '100%',
+    alignSelf: 'center',
   },
   modalTitle: { fontSize: 18, fontFamily: Fonts.bold, color: Colors.textPrimary },
   webInput: {

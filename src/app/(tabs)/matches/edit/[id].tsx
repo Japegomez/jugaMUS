@@ -114,7 +114,9 @@ function Chip({ label, sublabel, selected, onPress }: ChipProps) {
 
 const chip = StyleSheet.create({
   base: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 48,
     marginHorizontal: 4,
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -610,8 +612,8 @@ const s = StyleSheet.create({
   },
   fieldWrap: { marginBottom: 20 },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
-  durationRow: { flexDirection: 'row', marginHorizontal: -4 },
-  visRow: { flexDirection: 'row', marginHorizontal: -4 },
+  durationRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  visRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

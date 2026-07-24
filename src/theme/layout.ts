@@ -3,7 +3,10 @@ import { Platform } from 'react-native'
 export const Layout = {
   /** Extra space below the safe area (or minimum inset). */
   screenTopExtra: 12,
-  /** Fixed top padding for auth screens without dynamic safe area handling. */
+  /**
+   * @deprecated Prefer `useResponsiveLayout().authTopPadding` (safe-area aware).
+   * Kept as fallback for screens not yet migrated.
+   */
   authScreenTopPadding: 52,
   /** Tab bar content height excluding bottom safe area (system nav / home indicator). */
   tabBarContentHeight: Platform.select({ ios: 54, android: 58, default: 58 }) ?? 58,

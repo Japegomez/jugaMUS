@@ -310,7 +310,7 @@ export default function CreateMatchScreen() {
 
       {/* Duración */}
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Duración (juegos) *</Text>
+        <Text style={s.label}>Duración (juegos)</Text>
         <View style={s.durationRow}>
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <Chip
@@ -328,7 +328,7 @@ export default function CreateMatchScreen() {
 
       {/* Visibilidad */}
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Visibilidad *</Text>
+        <Text style={s.label}>Visibilidad</Text>
         <View style={s.visRow}>
           <Chip
             label="Pública"
@@ -357,7 +357,7 @@ export default function CreateMatchScreen() {
           name="password"
           render={({ field }) => (
             <Input
-              label="Contraseña *"
+              label="Contraseña"
               placeholder="Elige una contraseña para acceder"
               value={field.value ?? ''}
               onChangeText={field.onChange}
@@ -504,7 +504,9 @@ function Chip({ label, sublabel, selected, onPress }: ChipProps) {
 
 const chip = StyleSheet.create({
   base: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 48,
     marginHorizontal: 4,
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -549,10 +551,12 @@ const s = StyleSheet.create({
   },
   durationRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: -4,
   },
   visRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: -4,
   },
   hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
