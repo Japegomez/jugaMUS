@@ -159,7 +159,6 @@ export function useMyMatchesDashboard() {
     queryKey: myMatchesDashboardQueryKey(sessionUserId ?? ''),
     queryFn: () => getMyMatchesDashboard(sessionUserId!),
     enabled: Boolean(sessionUserId),
-    placeholderData: (previousData) => previousData,
     ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }

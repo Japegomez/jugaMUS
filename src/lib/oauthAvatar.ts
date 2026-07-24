@@ -4,11 +4,7 @@
  * remote URLs must be downloaded and re-uploaded — never stored directly.
  */
 
-const ALLOWED_AVATAR_HOST_SUFFIXES = [
-  '.googleusercontent.com',
-  '.ggpht.com',
-  '.google.com',
-] as const
+const ALLOWED_AVATAR_HOST_SUFFIXES = ['.googleusercontent.com', '.ggpht.com'] as const
 
 const ALLOWED_AVATAR_HOSTS = new Set([
   'googleusercontent.com',

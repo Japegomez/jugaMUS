@@ -111,7 +111,7 @@ export async function signInWithOAuthProvider(
 
   try {
     if (__DEV__) {
-      console.log('[oauth] provider=', provider, 'redirectTo=', redirectTo)
+      console.warn('[oauth] provider=', provider, 'redirectTo=', redirectTo)
     }
 
     const result = await WebBrowser.openAuthSessionAsync(url, returnUrl)

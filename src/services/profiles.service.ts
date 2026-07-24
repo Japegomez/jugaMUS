@@ -106,12 +106,17 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
 /**
  * Compress and upload an avatar image to Supabase Storage.
  * Resizes to 400×400 and reduces JPEG quality until the encoded size is ≤500 KB.
+ *
+ * When `onlyIfEmpty` is true, persists `photo_url` only if it is still null/blank
+ * (atomic filter on the UPDATE). Returns `null` on conflict so callers can abort
+ * without overwriting a photo set after the initial empty check.
  */
 export async function uploadAvatar(
   userId: string,
   imageUri: string,
-  mimeType?: string | null
-): Promise<string> {
+  mimeType?: string | null,
+  options?: { onlyIfEmpty?: boolean }
+): Promise<string | null> {
   if (mimeType && !ALLOWED_AVATAR_MIME_TYPES.has(mimeType)) {
     throw new Error('Formato de imagen no permitido')
   }
@@ -152,6 +157,21 @@ export async function uploadAvatar(
 
   const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
   const photoUrl = `${data.publicUrl}?t=${Date.now()}`
+
+  if (options?.onlyIfEmpty) {
+    // Server-side filter: only win if photo_url is still null or blank.
+    const { data: updated, error: profileError } = await supabase
+      .from('profiles')
+      .update({ photo_url: photoUrl })
+      .eq('id', userId)
+      .or('photo_url.is.null,photo_url.eq.')
+      .select('id')
+      .maybeSingle()
+
+    if (profileError) throw new Error(profileError.message)
+    if (!updated) return null
+    return photoUrl
+  }
 
   const { error: profileError } = await supabase
     .from('profiles')

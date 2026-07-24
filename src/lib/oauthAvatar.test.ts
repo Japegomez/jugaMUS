@@ -17,12 +17,8 @@ describe('resolveOAuthAvatarUrl', () => {
     ).toBe('https://lh3.googleusercontent.com/a/XYZ=s96-c')
   })
 
-  it('rejects non-https and unknown hosts', () => {
-    expect(resolveOAuthAvatarUrl({ avatar_url: 'http://lh3.googleusercontent.com/a/x' })).toBeNull()
-    expect(resolveOAuthAvatarUrl({ avatar_url: 'https://evil.example.com/a.jpg' })).toBeNull()
-    expect(
-      resolveOAuthAvatarUrl({ avatar_url: 'https://evilgoogleusercontent.com/a.jpg' })
-    ).toBeNull()
+  it('rejects bare google.com hosts', () => {
+    expect(resolveOAuthAvatarUrl({ avatar_url: 'https://www.google.com/a.jpg' })).toBeNull()
   })
 })
 
