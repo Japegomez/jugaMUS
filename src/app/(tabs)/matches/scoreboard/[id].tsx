@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/hooks/useAuth'
 import { useMatch } from '@/hooks/useMatches'
 import { useLiveScoreboard } from '@/hooks/useLiveScoreboard'
 import { useOrientationLock } from '@/hooks/useOrientationLock'
+import { setPendingMatchResultFromScoreboard } from '@/lib/pendingMatchResultFromScoreboard'
 import { resolveTeamName } from '@/services/matches.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -36,7 +37,7 @@ export default function ScoreboardScreen() {
     awardRound,
     adjustGames,
     undo,
-    dismissGameOver,
+    resetBoard,
   } = useLiveScoreboard(id, durationTargetGames)
 
   const teamAName = match ? resolveTeamName(match, TEAM.A, match.participants) : ''
@@ -51,18 +52,25 @@ export default function ScoreboardScreen() {
   }, [id, router])
 
   const handleGameOverConfirm = useCallback(() => {
-    if (!gameOver) return
-    dismissGameOver()
+    if (!gameOver || !id) return
+    const { gamesA, gamesB } = gameOver
+    setPendingMatchResultFromScoreboard({
+      matchId: id,
+      teamAGames: gamesA,
+      teamBGames: gamesB,
+    })
+    void resetBoard()
+    // Query params as backup; in-memory intent survives orientation remounts.
     router.replace({
       pathname: '/(tabs)/matches/[id]',
       params: {
         id,
         openResult: '1',
-        gamesA: String(gameOver.gamesA),
-        gamesB: String(gameOver.gamesB),
+        gamesA: String(gamesA),
+        gamesB: String(gamesB),
       },
     } as Href)
-  }, [dismissGameOver, gameOver, id, router])
+  }, [gameOver, id, resetBoard, router])
 
   if (isLoading || !loaded) {
     return (
@@ -95,8 +103,7 @@ export default function ScoreboardScreen() {
   }
 
   const winnerName = gameOver?.team === TEAM.A ? teamAName : teamBName
-  const scoreLine =
-    gameOver != null ? `${teamAName} ${gameOver.gamesA} – ${gameOver.gamesB} ${teamBName}` : ''
+  const scoreLine = gameOver != null ? `${gameOver.gamesA} – ${gameOver.gamesB}` : ''
 
   return (
     <View style={s.root}>
@@ -115,21 +122,19 @@ export default function ScoreboardScreen() {
         onClose={closeToMatch}
       />
 
-      <Modal
-        visible={gameOver !== null}
-        animationType="fade"
-        transparent
-        onRequestClose={handleGameOverConfirm}>
-        <View style={s.overlay}>
+      {/* In-tree overlay (not RN Modal): avoids iOS UIApplicationInvalidInterfaceOrientation
+          when the screen is locked to landscape. */}
+      {gameOver ? (
+        <View style={s.overlay} pointerEvents="box-none">
           <View style={s.gameOverCard}>
             <Text style={s.gameOverTitle}>¡Partida terminada!</Text>
-            <Text style={s.gameOverMessage}>{winnerName} gana la partida</Text>
+            <Text style={s.gameOverMessage}>{winnerName} ganan la partida</Text>
             <Text style={s.gameOverScore}>{scoreLine}</Text>
             <Text style={s.gameOverHint}>Registra el resultado oficial de la partida.</Text>
             <Button title="Registrar resultado" onPress={handleGameOverConfirm} />
           </View>
         </View>
-      </Modal>
+      ) : null}
     </View>
   )
 }
@@ -145,11 +150,12 @@ const s = StyleSheet.create({
   },
   errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    zIndex: 20,
   },
   gameOverCard: {
     width: '100%',

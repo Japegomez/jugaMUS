@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
@@ -9,7 +9,6 @@ import { GUEST_SCOREBOARD_STORAGE_ID } from '@/constants/guestScoreboard'
 import { TEAM } from '@/constants'
 import { useLiveScoreboard } from '@/hooks/useLiveScoreboard'
 import { useOrientationLock } from '@/hooks/useOrientationLock'
-import { clearScoreboardState } from '@/lib/scoreboardStorage'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -47,15 +46,14 @@ export default function GuestScoreboardPlayScreen() {
     awardRound,
     adjustGames,
     undo,
-    dismissGameOver,
+    resetBoard,
   } = useLiveScoreboard(GUEST_SCOREBOARD_STORAGE_ID, durationTargetGames)
 
   const handleGameOverConfirm = useCallback(async () => {
     if (!gameOver) return
-    dismissGameOver()
-    await clearScoreboardState(GUEST_SCOREBOARD_STORAGE_ID)
+    await resetBoard()
     router.replace('/(auth)/login')
-  }, [dismissGameOver, gameOver, router])
+  }, [gameOver, resetBoard, router])
 
   if (!teamAName || !teamBName) {
     return (
@@ -79,8 +77,7 @@ export default function GuestScoreboardPlayScreen() {
   }
 
   const winnerName = gameOver?.team === TEAM.A ? teamAName : teamBName
-  const scoreLine =
-    gameOver != null ? `${teamAName} ${gameOver.gamesA} – ${gameOver.gamesB} ${teamBName}` : ''
+  const scoreLine = gameOver != null ? `${gameOver.gamesA} – ${gameOver.gamesB}` : ''
 
   return (
     <View style={s.root}>
@@ -99,20 +96,18 @@ export default function GuestScoreboardPlayScreen() {
         onClose={() => router.replace('/(auth)/login')}
       />
 
-      <Modal
-        visible={gameOver !== null}
-        animationType="fade"
-        transparent
-        onRequestClose={handleGameOverConfirm}>
-        <View style={s.overlay}>
+      {/* In-tree overlay (not RN Modal): avoids iOS UIApplicationInvalidInterfaceOrientation
+          when the screen is locked to landscape. */}
+      {gameOver ? (
+        <View style={s.overlay} pointerEvents="box-none">
           <View style={s.gameOverCard}>
             <Text style={s.gameOverTitle}>¡Partida terminada!</Text>
-            <Text style={s.gameOverMessage}>{winnerName} gana la partida</Text>
+            <Text style={s.gameOverMessage}>{winnerName} ganan la partida</Text>
             <Text style={s.gameOverScore}>{scoreLine}</Text>
-            <Button title="Volver al inicio" onPress={handleGameOverConfirm} />
+            <Button title="Volver al inicio" onPress={() => void handleGameOverConfirm()} />
           </View>
         </View>
-      </Modal>
+      ) : null}
     </View>
   )
 }
@@ -128,11 +123,12 @@ const s = StyleSheet.create({
   },
   errorText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+    zIndex: 20,
   },
   gameOverCard: {
     width: '100%',
