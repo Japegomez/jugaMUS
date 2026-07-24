@@ -263,8 +263,13 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     setState(fresh)
     setGameOver(null)
     setCanUndo(false)
-    await clearScoreboardState(matchId)
-    skipPersistRef.current = false
+    try {
+      await clearScoreboardState(matchId)
+    } catch {
+      // Best-effort local cleanup; in-memory reset already applied.
+    } finally {
+      skipPersistRef.current = false
+    }
   }, [matchId])
 
   return {

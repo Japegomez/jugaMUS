@@ -99,7 +99,7 @@ export default function GuestScoreboardPlayScreen() {
       {/* In-tree overlay (not RN Modal): avoids iOS UIApplicationInvalidInterfaceOrientation
           when the screen is locked to landscape. */}
       {gameOver ? (
-        <View style={s.overlay} pointerEvents="box-none">
+        <View style={s.overlay}>
           <View style={s.gameOverCard}>
             <Text style={s.gameOverTitle}>¡Partida terminada!</Text>
             <Text style={s.gameOverMessage}>{winnerName} ganan la partida</Text>

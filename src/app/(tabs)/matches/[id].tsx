@@ -543,7 +543,11 @@ export default function MatchDetailScreen() {
 
   const clearScoreboardAfterResult = async () => {
     clearPendingMatchResultFromScoreboard(id)
-    await clearScoreboardState(id)
+    try {
+      await clearScoreboardState(id)
+    } catch {
+      // Local storage cleanup must not fail a successful remote result.
+    }
   }
 
   const dismissScoreboardResultFlow = useCallback(() => {
@@ -552,7 +556,11 @@ export default function MatchDetailScreen() {
     setRecordResultVisible(false)
     setLockedScoreboardPrefill(null)
     clearPendingMatchResultFromScoreboard(id)
-    if (cameFromScoreboard) void clearScoreboardState(id)
+    if (cameFromScoreboard) {
+      void clearScoreboardState(id).catch(() => {
+        // Best-effort reset when cancelling result registration.
+      })
+    }
   }, [id, lockedScoreboardPrefill])
 
   useEffect(() => {

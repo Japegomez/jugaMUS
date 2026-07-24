@@ -1,14 +1,5 @@
 import { useState } from 'react'
-import {
-  Keyboard,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native'
+import { Modal, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useRouter, type Href } from 'expo-router'
 
@@ -30,12 +21,8 @@ export function CreateFab({ bottom, right = 20 }: CreateFabProps) {
   const bottomOffset = bottom ?? tabBarHeight + FAB_GAP_ABOVE_TAB_BAR
 
   const navigate = (href: Href) => {
-    Keyboard.dismiss()
     setOpen(false)
-    // Esperar a que el modal del menú cierre para que iOS no reasigne el foco a un TextInput.
-    setTimeout(() => {
-      router.push(href)
-    }, 50)
+    router.push(href)
   }
 
   return (

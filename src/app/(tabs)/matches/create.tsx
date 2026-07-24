@@ -156,13 +156,7 @@ export default function CreateMatchScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(createDefaultFormValues())
-      // Evita que el cierre del modal del FAB deje el teclado abierto en un input.
-      const frame = requestAnimationFrame(() => Keyboard.dismiss())
-      const timeout = setTimeout(() => Keyboard.dismiss(), 350)
-      return () => {
-        cancelAnimationFrame(frame)
-        clearTimeout(timeout)
-      }
+      Keyboard.dismiss()
     }, [reset])
   )
 
