@@ -324,6 +324,8 @@ export function useStartMatch() {
               inProgress: [nextRow, ...prev.inProgress.filter((m) => m.id !== updated.id)].sort(
                 (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
               ),
+              tournamentsUpcoming: prev.tournamentsUpcoming ?? [],
+              tournamentsInProgress: prev.tournamentsInProgress ?? [],
             }
           }
         )

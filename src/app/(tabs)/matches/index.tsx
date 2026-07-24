@@ -8,22 +8,30 @@ import {
   Text,
   View,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
+import { TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
-import type { UserMatchSummary } from '@/services/matches.service'
+import type { MyMatchesDashboard, UserMatchSummary } from '@/services/matches.service'
+import type { UserTournamentSummary } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 import { formatCityAndPlace } from '@/utils/location'
 
 function matchLocation(row: Pick<UserMatchSummary, 'city' | 'place_defined' | 'place_text'>) {
+  return formatCityAndPlace(row.city, row.place_defined ?? true, row.place_text)
+}
+
+function tournamentLocation(
+  row: Pick<UserTournamentSummary, 'city' | 'place_defined' | 'place_text'>
+) {
   return formatCityAndPlace(row.city, row.place_defined ?? true, row.place_text)
 }
 
@@ -34,6 +42,8 @@ function MatchListRow({
   tone,
   statusLabel,
   hint,
+  kindLabel,
+  accessibilityKind,
   onPress,
 }: {
   title: string
@@ -42,6 +52,8 @@ function MatchListRow({
   tone: StatusDotTone
   statusLabel: string
   hint?: string
+  kindLabel?: string
+  accessibilityKind: string
   onPress: () => void
 }) {
   return (
@@ -49,9 +61,10 @@ function MatchListRow({
       style={styles.row}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Partida: ${title}`}>
+      accessibilityLabel={`${accessibilityKind}: ${title}`}>
       <StatusDot tone={tone} />
       <View style={styles.rowBody}>
+        {kindLabel ? <Text style={styles.rowKind}>{kindLabel}</Text> : null}
         <Text style={styles.rowTitle} numberOfLines={2}>
           {title}
         </Text>
@@ -80,20 +93,28 @@ type MatchesListItem =
       tone: StatusDotTone
       statusLabel: string
       hint?: string
-      matchId: string
+      kindLabel?: string
+      href: string
+      accessibilityKind: string
     }
 
-function buildMatchesListItems(data: {
-  upcoming: UserMatchSummary[]
-  inProgress: UserMatchSummary[]
-  awaitingResultValidation: UserMatchSummary[]
-}): MatchesListItem[] {
+function tournamentStatusLabel(t: UserTournamentSummary): string {
+  if (t.status === TOURNAMENT_STATUS.IN_PROGRESS) return 'En curso'
+  if (t.bracket_generated_at) return 'Inscripción'
+  return 'Inscripción abierta'
+}
+
+function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
   const awaitingIds = new Set(data.awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = data.inProgress.filter((m) => !awaitingIds.has(m.id))
+  const tournamentsUpcoming = data.tournamentsUpcoming ?? []
+  const tournamentsInProgress = data.tournamentsInProgress ?? []
   const hasAny =
     data.upcoming.length > 0 ||
     inProgressDeduped.length > 0 ||
-    data.awaitingResultValidation.length > 0
+    data.awaitingResultValidation.length > 0 ||
+    tournamentsUpcoming.length > 0 ||
+    tournamentsInProgress.length > 0
 
   const items: MatchesListItem[] = []
   if (!hasAny) {
@@ -101,44 +122,89 @@ function buildMatchesListItems(data: {
     return items
   }
 
-  const pushSection = (
-    title: string,
-    matches: UserMatchSummary[],
-    mapRow: (
-      m: UserMatchSummary
-    ) => Omit<Extract<MatchesListItem, { kind: 'row' }>, 'key' | 'kind' | 'matchId'>
-  ) => {
-    if (matches.length === 0) return
+  const pushSection = (title: string, rows: MatchesListItem[]) => {
+    if (rows.length === 0) return
     items.push({ key: `section-${title}`, kind: 'section', title })
-    for (const m of matches) {
-      items.push({ key: m.id, kind: 'row', matchId: m.id, ...mapRow(m) })
-    }
+    items.push(...rows)
   }
 
-  pushSection('Pendiente: validar resultado', data.awaitingResultValidation, (m) => ({
-    title: m.title,
-    location: matchLocation(m),
-    startAt: m.start_at,
-    tone: 'pending',
-    statusLabel: 'Pendiente',
-    hint: 'Tienes que aprobar o disputar el marcador enviado por el rival.',
-  }))
+  pushSection(
+    'Pendiente: validar resultado',
+    data.awaitingResultValidation.map((m) => ({
+      key: `match-${m.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/matches/${m.id}`,
+      accessibilityKind: 'Partida',
+      title: m.title,
+      location: matchLocation(m),
+      startAt: m.start_at,
+      tone: 'pending' as const,
+      statusLabel: 'Pendiente',
+      hint: 'Tienes que aprobar o disputar el marcador enviado por el rival.',
+    }))
+  )
 
-  pushSection('En curso', inProgressDeduped, (m) => ({
-    title: m.title,
-    location: matchLocation(m),
-    startAt: m.start_at,
-    tone: 'active',
-    statusLabel: 'En curso',
-  }))
+  const inCourseRows: MatchesListItem[] = [
+    ...inProgressDeduped.map((m) => ({
+      key: `match-${m.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/matches/${m.id}`,
+      accessibilityKind: 'Partida',
+      title: m.title,
+      location: matchLocation(m),
+      startAt: m.start_at,
+      tone: 'active' as const,
+      statusLabel: 'En curso',
+    })),
+    ...tournamentsInProgress.map((t) => ({
+      key: `tournament-${t.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/tournaments/${t.id}`,
+      accessibilityKind: 'Torneo',
+      kindLabel: 'Torneo',
+      title: t.title,
+      location: tournamentLocation(t),
+      startAt: t.start_at,
+      tone: 'active' as const,
+      statusLabel: tournamentStatusLabel(t),
+      hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
+    })),
+  ].sort((a, b) => {
+    if (a.kind !== 'row' || b.kind !== 'row') return 0
+    return new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+  })
+  pushSection('En curso', inCourseRows)
 
-  pushSection('Próximas', data.upcoming, (m) => ({
-    title: m.title,
-    location: matchLocation(m),
-    startAt: m.start_at,
-    tone: 'upcoming',
-    statusLabel: 'Próxima',
-  }))
+  const upcomingRows: MatchesListItem[] = [
+    ...data.upcoming.map((m) => ({
+      key: `match-${m.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/matches/${m.id}`,
+      accessibilityKind: 'Partida',
+      title: m.title,
+      location: matchLocation(m),
+      startAt: m.start_at,
+      tone: 'upcoming' as const,
+      statusLabel: 'Próxima',
+    })),
+    ...tournamentsUpcoming.map((t) => ({
+      key: `tournament-${t.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/tournaments/${t.id}`,
+      accessibilityKind: 'Torneo',
+      kindLabel: 'Torneo',
+      title: t.title,
+      location: tournamentLocation(t),
+      startAt: t.start_at,
+      tone: 'upcoming' as const,
+      statusLabel: tournamentStatusLabel(t),
+      hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
+    })),
+  ].sort((a, b) => {
+    if (a.kind !== 'row' || b.kind !== 'row') return 0
+    return new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
+  })
+  pushSection('Próximas', upcomingRows)
 
   return items
 }
@@ -215,7 +281,7 @@ export default function MatchesScreen() {
           if (item.kind === 'empty') {
             return (
               <Text style={styles.emptyBlock}>
-                No tienes partidas activas aquí. Explora en Descubrir o crea una nueva.
+                No tienes partidas ni torneos activos aquí. Explora en Descubrir o crea uno nuevo.
               </Text>
             )
           }
@@ -230,7 +296,9 @@ export default function MatchesScreen() {
               tone={item.tone}
               statusLabel={item.statusLabel}
               hint={item.hint}
-              onPress={() => router.push(`/(tabs)/matches/${item.matchId}`)}
+              kindLabel={item.kindLabel}
+              accessibilityKind={item.accessibilityKind}
+              onPress={() => router.push(item.href as Href)}
             />
           )
         }}
@@ -278,6 +346,14 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   rowBody: { flex: 1, minWidth: 0 },
+  rowKind: {
+    fontSize: 11,
+    fontFamily: Fonts.semiBold,
+    color: Colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
   rowTitle: {
     fontSize: 15,
     fontFamily: Fonts.semiBold,
