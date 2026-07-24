@@ -4,6 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication'
 import { Platform } from 'react-native'
 
 import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
+import { syncOAuthProfilePhoto } from '@/lib/syncOAuthProfilePhoto'
 import {
   identifyUser,
   isLikelyNewAuthUser,
@@ -146,6 +147,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
 
           set({ session: validSession, initialized: true })
+          if (validSession?.user) {
+            void syncOAuthProfilePhoto(validSession.user)
+          }
           return
         }
 
@@ -180,6 +184,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ) {
               trackUserSignedUp(provider)
             }
+            void syncOAuthProfilePhoto(activeSession.user)
           }
           const suspendedMsg = await getProfileSuspendedMessage(activeSession.user.id)
           if (suspendedMsg) {
