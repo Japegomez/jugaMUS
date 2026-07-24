@@ -42,6 +42,14 @@ export default function ScoreboardScreen() {
   const teamAName = match ? resolveTeamName(match, TEAM.A, match.participants) : ''
   const teamBName = match ? resolveTeamName(match, TEAM.B, match.participants) : ''
 
+  const closeToMatch = useCallback(() => {
+    if (!id) {
+      router.back()
+      return
+    }
+    router.replace(`/(tabs)/matches/${id}` as Href)
+  }, [id, router])
+
   const handleGameOverConfirm = useCallback(() => {
     if (!gameOver) return
     dismissGameOver()
@@ -68,7 +76,7 @@ export default function ScoreboardScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No se pudo cargar la partida.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeToMatch} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -81,7 +89,7 @@ export default function ScoreboardScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No puedes llevar la cuenta de esta partida.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeToMatch} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -104,7 +112,7 @@ export default function ScoreboardScreen() {
         onAwardRound={awardRound}
         onAdjustGames={adjustGames}
         onUndo={undo}
-        onClose={() => router.back()}
+        onClose={closeToMatch}
       />
 
       <Modal

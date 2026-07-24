@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
 import { ActivityIndicator, Alert, StyleSheet, Switch, Text, View, Pressable } from 'react-native'
 import { z } from 'zod'
@@ -278,10 +278,18 @@ export default function EditMatchScreen() {
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
-      router.back()
+      closeToMatch()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la partida')
     }
+  }
+
+  const closeToMatch = () => {
+    if (!id) {
+      router.back()
+      return
+    }
+    router.replace(`/(tabs)/matches/${id}` as Href)
   }
 
   if (isLoading) {
@@ -297,7 +305,7 @@ export default function EditMatchScreen() {
       <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => router.back()}
+          onPress={closeToMatch}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">

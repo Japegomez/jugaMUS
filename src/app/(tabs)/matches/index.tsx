@@ -1,5 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -139,7 +147,7 @@ export default function MatchesScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const { data, isPending, isError, refetch } = useMyMatchesDashboard()
+  const { data, isPending, isError, refetch, isFetched } = useMyMatchesDashboard()
   const [isUserRefreshing, setIsUserRefreshing] = useState(false)
 
   const onUserRefresh = useCallback(async () => {
@@ -163,6 +171,7 @@ export default function MatchesScreen() {
     )
   }
 
+  // Only block the screen on the first load — never flash a loader over cached rows.
   if (isPending && !data) {
     return (
       <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
@@ -172,7 +181,7 @@ export default function MatchesScreen() {
     )
   }
 
-  if (isError || !data) {
+  if ((isError && !data) || (!data && isFetched)) {
     return (
       <View
         style={[
@@ -183,6 +192,15 @@ export default function MatchesScreen() {
         <Pressable onPress={() => refetch()} style={styles.retry}>
           <Text style={styles.retryText}>Reintentar</Text>
         </Pressable>
+        {createFab}
+      </View>
+    )
+  }
+
+  if (!data) {
+    return (
+      <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
         {createFab}
       </View>
     )
@@ -218,8 +236,14 @@ export default function MatchesScreen() {
         }}
         ListHeaderComponent={<ScreenHeader title="Mis partidas" />}
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 88 }]}
-        refreshing={isUserRefreshing}
-        onRefresh={() => void onUserRefresh()}
+        refreshControl={
+          <RefreshControl
+            refreshing={isUserRefreshing}
+            onRefresh={() => void onUserRefresh()}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
       />
       {createFab}
     </View>

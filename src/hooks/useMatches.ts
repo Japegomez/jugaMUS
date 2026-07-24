@@ -20,6 +20,7 @@ import {
 import type {
   MatchInsert,
   MatchUpdate,
+  MyMatchesDashboard,
   PublicMatchesListFilters,
   UpdateMatchTeamInput,
 } from '@/services/matches.service'
@@ -31,6 +32,7 @@ import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import {
   MATCH_PAGE_SIZE,
+  MATCH_STATUS,
   QUERY_STALE_TIME,
   TAB_SCREEN_QUERY_OPTIONS,
   TOURNAMENT_QUERY_STALE_TIME,
@@ -157,6 +159,7 @@ export function useMyMatchesDashboard() {
     queryKey: myMatchesDashboardQueryKey(sessionUserId ?? ''),
     queryFn: () => getMyMatchesDashboard(sessionUserId!),
     enabled: Boolean(sessionUserId),
+    placeholderData: (previousData) => previousData,
     ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }
@@ -302,10 +305,37 @@ export function useStartMatch() {
       })
       queryClient.invalidateQueries({ queryKey: matchQueryKey(updated.id) })
       if (sessionUserId) {
+        queryClient.setQueryData(
+          myMatchesDashboardQueryKey(sessionUserId),
+          (prev: MyMatchesDashboard | undefined) => {
+            if (!prev) return prev
+            const fromUpcoming = prev.upcoming.find((m) => m.id === updated.id)
+            const fromInProgress = prev.inProgress.find((m) => m.id === updated.id)
+            const row = fromUpcoming ?? fromInProgress
+            if (!row) return prev
+
+            const nextRow = {
+              ...row,
+              status: MATCH_STATUS.IN_PROGRESS,
+              start_at: updated.start_at,
+            }
+            return {
+              ...prev,
+              upcoming: prev.upcoming.filter((m) => m.id !== updated.id),
+              inProgress: [nextRow, ...prev.inProgress.filter((m) => m.id !== updated.id)].sort(
+                (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+              ),
+            }
+          }
+        )
         queryClient.invalidateQueries({
           queryKey: userMatchesQueryKey(sessionUserId),
         })
-        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+        // Mark stale; avoid an immediate refetch that flashes the Mis partidas loader.
+        void queryClient.invalidateQueries({
+          queryKey: myMatchesDashboardQueryKey(sessionUserId),
+          refetchType: 'none',
+        })
       }
       if (updated.tournament_id) {
         invalidateTournamentQueries(queryClient, updated.tournament_id)
