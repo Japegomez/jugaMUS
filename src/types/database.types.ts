@@ -424,8 +424,12 @@ export type Database = {
           display_name: string
           id: string
           notify_on_join: boolean
-          notify_on_match_change: boolean
-          notify_on_reminder: boolean
+          notify_on_match_cancel: boolean
+          notify_on_match_edit: boolean
+          notify_on_match_start: boolean
+          notify_on_reminder_24h: boolean
+          notify_on_reminder_2h: boolean
+          notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
           notify_push: boolean
           phone_e164: string
@@ -441,8 +445,12 @@ export type Database = {
           display_name: string
           id: string
           notify_on_join?: boolean
-          notify_on_match_change?: boolean
-          notify_on_reminder?: boolean
+          notify_on_match_cancel?: boolean
+          notify_on_match_edit?: boolean
+          notify_on_match_start?: boolean
+          notify_on_reminder_24h?: boolean
+          notify_on_reminder_2h?: boolean
+          notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
           notify_push?: boolean
           phone_e164: string
@@ -458,8 +466,12 @@ export type Database = {
           display_name?: string
           id?: string
           notify_on_join?: boolean
-          notify_on_match_change?: boolean
-          notify_on_reminder?: boolean
+          notify_on_match_cancel?: boolean
+          notify_on_match_edit?: boolean
+          notify_on_match_start?: boolean
+          notify_on_reminder_24h?: boolean
+          notify_on_reminder_2h?: boolean
+          notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
           notify_push?: boolean
           phone_e164?: string
@@ -637,38 +649,47 @@ export type Database = {
         Row: {
           created_at: string
           created_by_user_id: string
+          entry_fee_paid: boolean
           id: string
           is_eliminated: boolean
           name: string
+          name_is_custom: boolean
           player_a_text: string | null
           player_a_user_id: string | null
           player_b_text: string | null
           player_b_user_id: string | null
           tournament_id: string
+          updated_at: string
         }
         Insert: {
           created_at?: string
           created_by_user_id: string
+          entry_fee_paid?: boolean
           id?: string
           is_eliminated?: boolean
           name: string
+          name_is_custom?: boolean
           player_a_text?: string | null
           player_a_user_id?: string | null
           player_b_text?: string | null
           player_b_user_id?: string | null
           tournament_id: string
+          updated_at?: string
         }
         Update: {
           created_at?: string
           created_by_user_id?: string
+          entry_fee_paid?: boolean
           id?: string
           is_eliminated?: boolean
           name?: string
+          name_is_custom?: boolean
           player_a_text?: string | null
           player_a_user_id?: string | null
           player_b_text?: string | null
           player_b_user_id?: string | null
           tournament_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -731,7 +752,9 @@ export type Database = {
           creator_joins_as_player: boolean
           description: string | null
           duration_target_games: number
+          entry_fee: number | null
           id: string
+          include_third_place: boolean
           location_privacy: string
           notes: string | null
           password_hash: string | null
@@ -751,7 +774,9 @@ export type Database = {
           creator_joins_as_player?: boolean
           description?: string | null
           duration_target_games: number
+          entry_fee?: number | null
           id?: string
+          include_third_place?: boolean
           location_privacy?: string
           notes?: string | null
           place_defined?: boolean
@@ -770,7 +795,9 @@ export type Database = {
           creator_joins_as_player?: boolean
           description?: string | null
           duration_target_games?: number
+          entry_fee?: number | null
           id?: string
+          include_third_place?: boolean
           location_privacy?: string
           notes?: string | null
           place_defined?: boolean
@@ -825,6 +852,7 @@ export type Database = {
     Functions: {
       add_tournament_pair: {
         Args: {
+          p_entry_fee_paid?: boolean
           p_name: string
           p_player_a_text?: string
           p_player_a_user_id?: string
@@ -835,14 +863,17 @@ export type Database = {
         Returns: {
           created_at: string
           created_by_user_id: string
+          entry_fee_paid: boolean
           id: string
           is_eliminated: boolean
           name: string
+          name_is_custom: boolean
           player_a_text: string | null
           player_a_user_id: string | null
           player_b_text: string | null
           player_b_user_id: string | null
           tournament_id: string
+          updated_at: string
         }
         SetofOptions: {
           from: '*'
@@ -898,12 +929,45 @@ export type Database = {
         Args: { p_match_id: string }
         Returns: boolean
       }
+      cancel_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: {
+          bracket_generated_at: string | null
+          city: string
+          created_at: string
+          creator_id: string
+          creator_joins_as_player: boolean
+          description: string | null
+          duration_target_games: number
+          entry_fee: number | null
+          id: string
+          include_third_place: boolean
+          location_privacy: string
+          notes: string | null
+          password_hash: string | null
+          place_defined: boolean
+          place_text: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'tournaments'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_tournament: {
         Args: {
           p_city: string
           p_creator_joins_as_player?: boolean
           p_description?: string
           p_duration_target_games: number
+          p_entry_fee?: number | null
+          p_include_third_place?: boolean
           p_location_privacy?: string
           p_notes?: string
           p_place_defined?: boolean
@@ -920,7 +984,9 @@ export type Database = {
           creator_joins_as_player: boolean
           description: string | null
           duration_target_games: number
+          entry_fee: number | null
           id: string
+          include_third_place: boolean
           location_privacy: string
           notes: string | null
           password_hash: string | null
@@ -971,8 +1037,12 @@ export type Database = {
           display_name: string
           id: string
           notify_on_join: boolean
-          notify_on_match_change: boolean
-          notify_on_reminder: boolean
+          notify_on_match_cancel: boolean
+          notify_on_match_edit: boolean
+          notify_on_match_start: boolean
+          notify_on_reminder_24h: boolean
+          notify_on_reminder_2h: boolean
+          notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
           notify_push: boolean
           phone_e164: string
@@ -997,8 +1067,12 @@ export type Database = {
           display_name: string
           id: string
           notify_on_join: boolean
-          notify_on_match_change: boolean
-          notify_on_reminder: boolean
+          notify_on_match_cancel: boolean
+          notify_on_match_edit: boolean
+          notify_on_match_start: boolean
+          notify_on_reminder_24h: boolean
+          notify_on_reminder_2h: boolean
+          notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
           notify_push: boolean
           phone_e164: string
@@ -1114,6 +1188,7 @@ export type Database = {
       }
       update_tournament_pair: {
         Args: {
+          p_entry_fee_paid?: boolean
           p_name: string
           p_pair_id: string
           p_player_a_text: string
@@ -1122,6 +1197,7 @@ export type Database = {
         Returns: {
           created_at: string
           created_by_user_id: string
+          entry_fee_paid: boolean
           id: string
           is_eliminated: boolean
           name: string

@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import type { TournamentPairRow } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
@@ -22,6 +23,7 @@ export type EditPairFormValues = {
   name: string
   playerAText: string
   playerBText: string
+  entryFeePaid: boolean
 }
 
 type EditPairModalProps = {
@@ -40,6 +42,7 @@ function initialForm(pair: TournamentPairRow): EditPairFormValues {
     name: pair.name_is_custom ? (pair.name?.trim() ?? '') : '',
     playerAText: pair.player_a_text?.trim() ?? '',
     playerBText: pair.player_b_text?.trim() ?? '',
+    entryFeePaid: Boolean(pair.entry_fee_paid),
   }
 }
 
@@ -66,6 +69,7 @@ function EditPairForm({
   const [name, setName] = useState(initial.name)
   const [playerAText, setPlayerAText] = useState(initial.playerAText)
   const [playerBText, setPlayerBText] = useState(initial.playerBText)
+  const [entryFeePaid, setEntryFeePaid] = useState(initial.entryFeePaid)
 
   const playerALocked = Boolean(pair.player_a_user_id)
   const playerBLocked = Boolean(pair.player_b_user_id)
@@ -90,7 +94,7 @@ function EditPairForm({
       return
     }
     try {
-      await onSubmit({ name, playerAText, playerBText })
+      await onSubmit({ name, playerAText, playerBText, entryFeePaid })
     } catch {
       // El padre muestra el error; mantenemos el formulario.
     }
@@ -154,6 +158,8 @@ function EditPairForm({
               />
             )}
           </View>
+
+          <Checkbox label="Inscripción pagada" checked={entryFeePaid} onChange={setEntryFeePaid} />
 
           <Button
             title="Guardar cambios"

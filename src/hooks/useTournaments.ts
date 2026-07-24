@@ -6,6 +6,7 @@ import { invalidateMyMatchesDashboard, invalidatePublicExplore } from '@/hooks/u
 import { TOURNAMENT_QUERY_STALE_TIME } from '@/constants'
 import {
   addTournamentPair,
+  cancelTournament,
   createTournament,
   generateTournamentBracket,
   getTournament,
@@ -94,6 +95,21 @@ export function useUpdateTournament() {
   })
 }
 
+export function useCancelTournament() {
+  const queryClient = useQueryClient()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+
+  return useMutation({
+    mutationFn: (id: string) => cancelTournament(id),
+    onSuccess: (row) => {
+      invalidateTournamentQueries(queryClient, row.id)
+      invalidatePublicExplore(queryClient)
+      invalidateMyMatchesDashboard(queryClient, sessionUserId)
+      queryClient.invalidateQueries({ queryKey: ['match'], exact: false })
+    },
+  })
+}
+
 export function useGrantTournamentPasswordAccess() {
   const queryClient = useQueryClient()
 
@@ -154,6 +170,7 @@ export function useUpdateTournamentPair() {
         name: input.name,
         playerAText: input.playerAText,
         playerBText: input.playerBText,
+        entryFeePaid: input.entryFeePaid,
       }),
     onSuccess: (_pair, input) => {
       invalidateTournamentQueries(queryClient, input.tournamentId)

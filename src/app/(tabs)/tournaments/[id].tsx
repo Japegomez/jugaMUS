@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
 import { BracketCanvas } from '@/components/tournaments/BracketCanvas'
+import { CancelTournamentModal } from '@/components/tournaments/CancelTournamentModal'
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
 import { Button } from '@/components/ui/Button'
@@ -25,8 +26,10 @@ import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
+import { formatEntryFee } from '@/utils/tournamentForm'
 import {
   useAddTournamentPair,
+  useCancelTournament,
   useGenerateTournamentBracket,
   useGrantTournamentPasswordAccess,
   useJoinTournamentPair,
@@ -94,6 +97,7 @@ export default function TournamentDetailScreen() {
   const [pairModalOpen, setPairModalOpen] = useState(false)
   const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
+  const [cancelTournamentVisible, setCancelTournamentVisible] = useState(false)
 
   const needsPassword = Boolean(
     tournament &&
@@ -114,6 +118,7 @@ export default function TournamentDetailScreen() {
   const joinPair = useJoinTournamentPair()
   const updatePair = useUpdateTournamentPair()
   const removePair = useRemoveTournamentPair()
+  const cancelTournament = useCancelTournament()
 
   const refetchAll = useCallback(async () => {
     await Promise.all([refetchTournament(), ...(needsPassword ? [] : [refetchBracket()])])
@@ -152,6 +157,11 @@ export default function TournamentDetailScreen() {
 
   const isCreator = tournament.creator_id === userId
   const inRegistration = tournament.status === TOURNAMENT_STATUS.REGISTRATION
+  const inProgress = tournament.status === TOURNAMENT_STATUS.IN_PROGRESS
+  const canCancelTournament =
+    isCreator &&
+    (tournament.status === TOURNAMENT_STATUS.REGISTRATION ||
+      tournament.status === TOURNAMENT_STATUS.IN_PROGRESS)
   const canManagePairs = isCreator && inRegistration && !tournament.bracket_generated_at
   const bracketGenerated =
     Boolean(tournament.bracket_generated_at) || tournament.status !== TOURNAMENT_STATUS.REGISTRATION
@@ -210,6 +220,7 @@ export default function TournamentDetailScreen() {
         playerAText: values.playerAIsSelf ? null : values.playerAText.trim() || null,
         playerBUserId: values.playerBIsSelf ? userId : null,
         playerBText: values.playerBIsSelf ? null : values.playerBText.trim() || null,
+        entryFeePaid: values.entryFeePaid,
       })
       setPairModalOpen(false)
     } catch (err) {
@@ -236,6 +247,7 @@ export default function TournamentDetailScreen() {
         name: values.name.trim() || undefined,
         playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
         playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
+        entryFeePaid: values.entryFeePaid,
       })
       setEditingPair(null)
     } catch (err) {
@@ -263,6 +275,13 @@ export default function TournamentDetailScreen() {
       showAlert('Error', err instanceof Error ? err.message : 'No se pudo eliminar la pareja')
     }
   }
+
+  const handleConfirmCancelTournament = async () => {
+    await cancelTournament.mutateAsync(id)
+    router.replace('/(tabs)/matches' as Href)
+  }
+
+  const entryFeeLabel = formatEntryFee(tournament.entry_fee)
 
   return (
     <View style={[s.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
@@ -296,6 +315,7 @@ export default function TournamentDetailScreen() {
           <Text style={s.meta}>
             {formatCityAndPlace(tournament.city, tournament.place_defined, tournament.place_text)}
           </Text>
+          {entryFeeLabel ? <Text style={s.meta}>Inscripción: {entryFeeLabel}</Text> : null}
           {tournament.organizer_display_name ? (
             <Text style={s.organizer}>Organizado por {tournament.organizer_display_name}</Text>
           ) : null}
@@ -448,6 +468,14 @@ export default function TournamentDetailScreen() {
                   style={s.actionGap}
                 />
               ) : null}
+              {canCancelTournament ? (
+                <Button
+                  title="Cancelar torneo"
+                  variant="danger"
+                  onPress={() => setCancelTournamentVisible(true)}
+                  style={s.actionGap}
+                />
+              ) : null}
             </View>
           </>
         )}
@@ -478,6 +506,14 @@ export default function TournamentDetailScreen() {
         canDelete={canManagePairs}
         saveLoading={updatePair.isPending}
         deleteLoading={removePair.isPending}
+      />
+
+      <CancelTournamentModal
+        visible={cancelTournamentVisible}
+        onClose={() => setCancelTournamentVisible(false)}
+        hasBracketOrInProgress={bracketGenerated || inProgress}
+        loading={cancelTournament.isPending}
+        onConfirm={handleConfirmCancelTournament}
       />
     </View>
   )
@@ -536,7 +572,7 @@ const s = StyleSheet.create({
   tabOn: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
   tabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   tabTextOn: { color: Colors.primary },
-  bracketSection: { minHeight: 300, marginBottom: 8 },
+  bracketSection: { marginBottom: 8 },
   thirdPlaceSection: { marginTop: 16, gap: 8 },
   thirdPlaceTitle: {
     fontSize: 15,

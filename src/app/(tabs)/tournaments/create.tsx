@@ -31,6 +31,7 @@ import {
   AUTO_CANCEL_NO_BRACKET_ALERT,
   DEFAULT_TOURNAMENT_CITY,
   DEFAULT_TOURNAMENT_TITLE,
+  parseEntryFeeInput,
   tournamentPlacePayload,
 } from '@/utils/tournamentForm'
 import { Colors } from '@/theme/colors'
@@ -58,6 +59,15 @@ const schema = z
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
     password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
     include_third_place: z.boolean(),
+    entry_fee: z
+      .string()
+      .trim()
+      .optional()
+      .or(z.literal(''))
+      .refine(
+        (v) => !v || /^\d+([.,]\d{1,2})?$/.test(v.trim()),
+        'Introduce un importe válido (entero o con hasta 2 decimales)'
+      ),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .superRefine((data, ctx) => {
@@ -83,6 +93,7 @@ function createDefaultFormValues(): FormValues {
     visibility: MATCH_VISIBILITY.PUBLIC,
     password: '',
     include_third_place: false,
+    entry_fee: '0',
     notes: '',
   }
 }
@@ -167,6 +178,13 @@ export default function CreateTournamentScreen() {
 
   const onStep1 = async (values: FormValues) => {
     try {
+      let entryFee: number | null = null
+      try {
+        entryFee = parseEntryFeeInput(values.entry_fee)
+      } catch (err) {
+        Alert.alert('Inscripción', err instanceof Error ? err.message : 'Importe no válido')
+        return
+      }
       const row = await createTournament.mutateAsync({
         data: {
           title: values.title?.trim() || DEFAULT_TOURNAMENT_TITLE,
@@ -180,6 +198,7 @@ export default function CreateTournamentScreen() {
           location_privacy: 'participants_only',
           creator_joins_as_player: false,
           include_third_place: values.include_third_place,
+          entry_fee: entryFee,
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
@@ -215,6 +234,7 @@ export default function CreateTournamentScreen() {
         playerAText,
         playerBUserId,
         playerBText,
+        entryFeePaid: values.entryFeePaid,
       })
       setPairs((prev) => [...prev, row])
       setPairModalOpen(false)
@@ -233,6 +253,7 @@ export default function CreateTournamentScreen() {
         name: values.name.trim() || undefined,
         playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
         playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
+        entryFeePaid: values.entryFeePaid,
       })
       setPairs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
       setEditingPair(null)
@@ -270,11 +291,29 @@ export default function CreateTournamentScreen() {
     router.replace(`/(tabs)/tournaments/${tournamentId}` as Href)
   }
 
+  const closeToMyMatches = () => {
+    router.replace('/(tabs)/matches' as Href)
+  }
+
+  const closeBar = (
+    <View style={s.closeBar}>
+      <View style={{ flex: 1 }} />
+      <Pressable
+        onPress={closeToMyMatches}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar">
+        <Text style={s.closeX}>✕</Text>
+      </Pressable>
+    </View>
+  )
+
   if (step === 1) {
     return (
       <KeyboardAwareScrollView
         style={s.scroll}
-        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
+        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+        {closeBar}
         <Text style={s.heading}>Organizar torneo</Text>
         <Text style={s.step}>Paso 1 de 2 — Datos del torneo</Text>
 
@@ -313,7 +352,7 @@ export default function CreateTournamentScreen() {
           name="start_at"
           render={({ field }) => (
             <DateTimePicker
-              label="Fecha y hora *"
+              label="Fecha y hora"
               value={field.value}
               onChange={field.onChange}
               minDate={new Date()}
@@ -349,7 +388,7 @@ export default function CreateTournamentScreen() {
           )}
         />
         <View style={s.fieldWrap}>
-          <Text style={s.label}>Duración (juegos) *</Text>
+          <Text style={s.label}>Duración (juegos)</Text>
           <View style={s.durationRow}>
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <Chip
@@ -362,7 +401,7 @@ export default function CreateTournamentScreen() {
           </View>
         </View>
         <View style={s.fieldWrap}>
-          <Text style={s.label}>Visibilidad *</Text>
+          <Text style={s.label}>Visibilidad</Text>
           <View style={s.visRow}>
             <Chip
               label="Pública"
@@ -388,7 +427,7 @@ export default function CreateTournamentScreen() {
             name="password"
             render={({ field }) => (
               <Input
-                label="Contraseña *"
+                label="Contraseña"
                 placeholder="Elige una contraseña para acceder"
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
@@ -401,14 +440,11 @@ export default function CreateTournamentScreen() {
             )}
           />
         ) : null}
-        <View style={s.fieldWrap}>
+        <View style={s.thirdPlaceWrap}>
           <View style={s.switchRow}>
             <View style={s.switchTextWrap}>
               <Text style={s.label}>3º y 4º puesto</Text>
-              <Text style={s.hint}>
-                Crea un partido entre los perdedores de semifinales (requiere al menos 4 parejas en
-                el cuadro).
-              </Text>
+              <Text style={s.switchHint}>Crea un partido entre los perdedores de semifinales.</Text>
             </View>
             <Controller
               control={control}
@@ -417,7 +453,9 @@ export default function CreateTournamentScreen() {
                 <Switch
                   value={field.value}
                   onValueChange={field.onChange}
-                  trackColor={{ false: Colors.border, true: Colors.primary }}
+                  trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.switchTrackOff}
                 />
               )}
             />
@@ -425,11 +463,25 @@ export default function CreateTournamentScreen() {
         </View>
         <Controller
           control={control}
+          name="entry_fee"
+          render={({ field }) => (
+            <Input
+              label="Inscripción (€)"
+              placeholder="Ej. 10 o 10,50"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.entry_fee?.message}
+              keyboardType="decimal-pad"
+            />
+          )}
+        />
+        <Controller
+          control={control}
           name="notes"
           render={({ field }) => (
             <Input
               label="Notas opcionales"
-              placeholder="Información para participantes..."
+              placeholder="Premios, normas..."
               value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.notes?.message}
@@ -452,7 +504,8 @@ export default function CreateTournamentScreen() {
   return (
     <KeyboardAwareScrollView
       style={s.scroll}
-      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 20) }]}>
+      contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+      {closeBar}
       <Text style={s.heading}>Parejas inscritas</Text>
       <Text style={s.step}>Paso 2 de 2 — Añade las parejas participantes</Text>
       <Text style={s.hint}>
@@ -505,7 +558,9 @@ export default function CreateTournamentScreen() {
 
 const chip = StyleSheet.create({
   base: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 48,
     marginHorizontal: 4,
     paddingVertical: 10,
     paddingHorizontal: 8,
@@ -525,16 +580,25 @@ const chip = StyleSheet.create({
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
+  closeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    marginHorizontal: -4,
+  },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   heading: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 6 },
   step: { fontSize: 14, color: Colors.primary, fontFamily: Fonts.semiBold, marginBottom: 16 },
   hint: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
   empty: { fontSize: 15, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 16 },
   fieldWrap: { marginBottom: 20 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
+  thirdPlaceWrap: { marginBottom: 8 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  switchHint: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
   switchTextWrap: { flex: 1 },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
-  durationRow: { flexDirection: 'row', marginHorizontal: -4 },
-  visRow: { flexDirection: 'row', marginHorizontal: -4 },
+  durationRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
+  visRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   actionBtn: { marginBottom: 10 },
   submitBtn: { marginTop: 8 },
 })

@@ -13,6 +13,7 @@ import {
 } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -23,6 +24,7 @@ export type AddPairFormValues = {
   playerAText: string
   playerBIsSelf: boolean
   playerBText: string
+  entryFeePaid: boolean
 }
 
 type AddPairModalProps = {
@@ -51,6 +53,7 @@ export function AddPairModal({
   const [playerAText, setPlayerAText] = useState('')
   const [playerBIsSelf, setPlayerBIsSelf] = useState(defaultSelfSlot === 'b')
   const [playerBText, setPlayerBText] = useState('')
+  const [entryFeePaid, setEntryFeePaid] = useState(false)
 
   const reset = () => {
     setName('')
@@ -58,6 +61,7 @@ export function AddPairModal({
     setPlayerAText('')
     setPlayerBIsSelf(defaultSelfSlot === 'b')
     setPlayerBText('')
+    setEntryFeePaid(false)
   }
 
   const handleClose = () => {
@@ -73,6 +77,7 @@ export function AddPairModal({
         playerAText,
         playerBIsSelf,
         playerBText,
+        entryFeePaid,
       })
       // Solo limpiamos el formulario si el alta se ha completado con éxito.
       reset()
@@ -123,6 +128,9 @@ export function AddPairModal({
                     }
                   }}
                   disabled={defaultSelfSlot === 'a' || selfJoinDisabled}
+                  trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.switchTrackOff}
                 />
               </View>
               {!playerAIsSelf ? (
@@ -150,6 +158,9 @@ export function AddPairModal({
                     }
                   }}
                   disabled={defaultSelfSlot === 'b' || selfJoinDisabled}
+                  trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
+                  thumbColor={Colors.white}
+                  ios_backgroundColor={Colors.switchTrackOff}
                 />
               </View>
               {!playerBIsSelf ? (
@@ -162,6 +173,12 @@ export function AddPairModal({
                 />
               ) : null}
             </View>
+
+            <Checkbox
+              label="Inscripción pagada"
+              checked={entryFeePaid}
+              onChange={setEntryFeePaid}
+            />
 
             <Button title="Guardar pareja" onPress={() => void handleSubmit()} loading={loading} />
           </ScrollView>
