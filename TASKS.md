@@ -1,24 +1,25 @@
 # Tareas - jugaMUS
 
-> Actualizado: 24/07/2026 (hotfix marcador / crear partida v1.3.4)
+> Actualizado: 25/07/2026 (hotfix torneos / notificaciones / UI responsive v1.3.5)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                   | Estado     | Descripción                                                                    |
-| ---------------------- | ---------- | ------------------------------------------------------------------------------ |
-| Fase 1 - Core          | Completada | Auth, Perfil, Partidas, Descubrir                                              |
-| Fase 2 - Resultados    | Completada | Notificaciones, Resultados, Reportes                                           |
-| Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                              |
-| Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                            |
-| Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama           |
-| UI — Ultra Limpio      | Completada | Rediseño visual                                                                |
-| UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
-| UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
-| UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                  |
-| Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4           |
+| Fase                   | Estado     | Descripción                                                                     |
+| ---------------------- | ---------- | ------------------------------------------------------------------------------- |
+| Fase 1 - Core          | Completada | Auth, Perfil, Partidas, Descubrir                                               |
+| Fase 2 - Resultados    | Completada | Notificaciones, Resultados, Reportes                                            |
+| Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                               |
+| Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                             |
+| Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama            |
+| UI — Ultra Limpio      | Completada | Rediseño visual                                                                 |
+| UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                      |
+| UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1  |
+| UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                   |
+| Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4            |
+| Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5 |
 
 ---
 
@@ -96,7 +97,8 @@
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
 - [x] Preferencias de notificación (push; sin email, migración `057`)
 - [x] Preferencias granulares de notificación en pantalla de perfil (canal + por evento)
-  - Migración `022`: `notify_on_join`, `notify_on_match_change`, `notify_on_result`, `notify_on_reminder` en `profiles` (aplicada en remoto).
+  - Migración `022` (+ `078`/`079`): eventos de partida/torneo separados; recordatorios 24 h / 2 h / pendiente de enviar; master «Todas».
+  - `enqueue_notification` + `process-notifications` respetan `notify_on_*` (`077`–`079`, aplicadas en remoto).
   - Toggles editables en `profile/index.tsx` (grupos **Canal** y **Por evento**); guardado inmediato. Sin pantalla `settings` separada.
   - Enlaces a Términos y Política de privacidad en sección **Legal** del perfil (debajo del historial).
   - PR #19 mergeado en `develop`.
@@ -480,6 +482,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Al ir a registrar resultado (o cancelar el modal), el marcador local se reinicia; intent in-memory abre el modal tras remount por orientación
 - [x] Crear partida: ✕ → Mis partidas; sin autofocus/teclado al abrir; labels en negrita; sin «*» en fecha ni «(opcional)» en etiquetas
 - [x] Versión app → **1.3.4** (`app.json`, `package.json`); push a `develop`
+
+### Hotfix torneos / notificaciones / UI (v1.3.5) — 25/07/2026
+
+- [x] Torneos: `entry_fee`, `entry_fee_paid` por pareja, cancelar torneo (mig. `073`–`076`)
+- [x] Mis partidas: lista torneos (organizar o jugar); partidas de cuadro solo si el usuario participa
+- [x] Notificaciones: respetar prefs en servidor; split inicio/edición/cancelación; chips 24 h / 2 h; «resultado pendiente de enviar»
+- [x] UI: `useResponsiveLayout`, `ScrollableModalBody`, botón secondary sin tint
+- [x] Versión app → **1.3.5** (`app.json`, `package.json`)
 
 ---
 
