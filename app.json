@@ -3,7 +3,7 @@
     "name": "jugaMUS",
     "slug": "musapp",
     "scheme": "jugamus",
-    "version": "1.3.3",
+    "version": "1.3.4",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
