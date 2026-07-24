@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import {
@@ -23,7 +23,6 @@ import {
 } from '@/components/matches/EditMatchTeamModal'
 import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
-import { StartMatchModal } from '@/components/matches/StartMatchModal'
 import { IncompleteRosterStartModal } from '@/components/matches/IncompleteRosterStartModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
@@ -64,6 +63,11 @@ import { collectTeamRosterEntries } from '@/utils/matchTeamNames'
 import type { ReportTargetType } from '@/services/reports.service'
 import { MATCH_STATUS, MATCH_VISIBILITY, RESULT_STATUS, TEAM } from '@/constants'
 import { clearScoreboardState } from '@/lib/scoreboardStorage'
+import {
+  clearPendingMatchResultFromScoreboard,
+  getPendingMatchResultFromScoreboard,
+  setPendingMatchResultFromScoreboard,
+} from '@/lib/pendingMatchResultFromScoreboard'
 import { prefetchOrientationLock } from '@/lib/orientationLock'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -461,8 +465,9 @@ export default function MatchDetailScreen() {
   const userId = useAuthStore((s) => s.session?.user.id)
 
   const closeToMyMatches = useCallback(() => {
+    clearPendingMatchResultFromScoreboard(id)
     router.replace('/(tabs)/matches' as Href)
-  }, [router])
+  }, [router, id])
 
   const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)
   const {
@@ -498,7 +503,6 @@ export default function MatchDetailScreen() {
   const [disputeResultVisible, setDisputeResultVisible] = useState(false)
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
-  const [startMatchVisible, setStartMatchVisible] = useState(false)
   const [incompleteRosterStartVisible, setIncompleteRosterStartVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
@@ -519,9 +523,12 @@ export default function MatchDetailScreen() {
   } | null>(null)
 
   const scoreboardPrefill = useMemo(() => {
-    if (openResult !== '1' || !gamesA || !gamesB) return null
-    const parsedA = Number(gamesA)
-    const parsedB = Number(gamesB)
+    const openFlag = Array.isArray(openResult) ? openResult[0] : openResult
+    const rawA = Array.isArray(gamesA) ? gamesA[0] : gamesA
+    const rawB = Array.isArray(gamesB) ? gamesB[0] : gamesB
+    if (openFlag !== '1' || rawA == null || rawB == null) return null
+    const parsedA = Number(rawA)
+    const parsedB = Number(rawB)
     if (!Number.isFinite(parsedA) || !Number.isFinite(parsedB)) return null
     return { teamAGames: parsedA, teamBGames: parsedB, lockValues: true as const }
   }, [openResult, gamesA, gamesB])
@@ -532,34 +539,74 @@ export default function MatchDetailScreen() {
     lockValues: true
   } | null>(null)
 
-  const processedOpenResultRef = useRef<string | null>(null)
   const resultPrefill = lockedScoreboardPrefill ?? scoreboardPrefill
 
   const clearScoreboardAfterResult = async () => {
-    await clearScoreboardState(id)
+    clearPendingMatchResultFromScoreboard(id)
+    try {
+      await clearScoreboardState(id)
+    } catch {
+      // Local storage cleanup must not fail a successful remote result.
+    }
   }
 
+  const dismissScoreboardResultFlow = useCallback(() => {
+    const cameFromScoreboard = lockedScoreboardPrefill != null
+    setSubmitResultVisible(false)
+    setRecordResultVisible(false)
+    setLockedScoreboardPrefill(null)
+    clearPendingMatchResultFromScoreboard(id)
+    if (cameFromScoreboard) {
+      void clearScoreboardState(id).catch(() => {
+        // Best-effort reset when cancelling result registration.
+      })
+    }
+  }, [id, lockedScoreboardPrefill])
+
   useEffect(() => {
-    if (!match || !scoreboardPrefill) return
+    if (!match) return
+    if (submitResultVisible || recordResultVisible) return
 
-    const key = `${scoreboardPrefill.teamAGames}-${scoreboardPrefill.teamBGames}`
-    if (processedOpenResultRef.current === key) return
-    processedOpenResultRef.current = key
+    const matchId = Array.isArray(id) ? id[0] : id
+    if (!matchId) return
 
-    const activeParticipants = match.participants.filter((p) => p.left_at === null)
-    const myParticipation = activeParticipants.find((p) => p.user_id === userId)
-    const otherRegistered = activeParticipants.filter((p) => p.user_id !== userId)
+    const pending = getPendingMatchResultFromScoreboard(matchId)
+    const prefill = pending
+      ? {
+          teamAGames: pending.teamAGames,
+          teamBGames: pending.teamBGames,
+          lockValues: true as const,
+        }
+      : scoreboardPrefill
+
+    if (!prefill) return
+
+    // Persist intent across orientation remounts until the modal is dismissed/submitted.
+    if (!pending) {
+      setPendingMatchResultFromScoreboard({
+        matchId,
+        teamAGames: prefill.teamAGames,
+        teamBGames: prefill.teamBGames,
+      })
+    }
+
+    const active = match.participants.filter((p) => p.left_at === null)
+    const myParticipation = active.find((p) => p.user_id === userId)
+    const otherRegistered = active.filter((p) => p.user_id !== userId)
     const isPersonalMatch =
       !match.tournament_id && match.creator_id === userId && otherRegistered.length === 0
 
-    requestAnimationFrame(() => {
-      setLockedScoreboardPrefill(scoreboardPrefill)
+    const frame = requestAnimationFrame(() => {
+      setLockedScoreboardPrefill(prefill)
       if (isPersonalMatch) setRecordResultVisible(true)
       else if (myParticipation) setSubmitResultVisible(true)
+      if (scoreboardPrefill) {
+        router.setParams({ openResult: undefined, gamesA: undefined, gamesB: undefined } as never)
+      }
     })
 
-    router.setParams({ openResult: undefined, gamesA: undefined, gamesB: undefined } as never)
-  }, [match, scoreboardPrefill, userId, router])
+    return () => cancelAnimationFrame(frame)
+  }, [match, scoreboardPrefill, submitResultVisible, recordResultVisible, userId, id, router])
 
   if (isLoading) {
     return (
@@ -794,9 +841,9 @@ export default function MatchDetailScreen() {
         teamAGames: payload.teamAGames,
         teamBGames: payload.teamBGames,
       })
+      await clearScoreboardAfterResult()
       setSubmitResultVisible(false)
       setLockedScoreboardPrefill(null)
-      await clearScoreboardAfterResult()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
     }
@@ -810,9 +857,9 @@ export default function MatchDetailScreen() {
         teamAGames: payload.teamAGames,
         teamBGames: payload.teamBGames,
       })
+      await clearScoreboardAfterResult()
       setRecordResultVisible(false)
       setLockedScoreboardPrefill(null)
-      await clearScoreboardAfterResult()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el marcador')
     }
@@ -873,11 +920,15 @@ export default function MatchDetailScreen() {
   }
 
   const handleConfirmStartMatch = async () => {
+    if (!isRosterFull(match, match.participants)) {
+      setIncompleteRosterStartVisible(true)
+      return
+    }
     try {
       await startMatch.mutateAsync(id)
     } catch (err) {
       await refetchMatch()
-      throw err
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo empezar la partida')
     }
   }
 
@@ -1095,13 +1146,8 @@ export default function MatchDetailScreen() {
           {isCreator && isPlanned ? (
             <Button
               title="Empezar partida"
-              onPress={() => {
-                if (!isRosterFull(match, match.participants)) {
-                  setIncompleteRosterStartVisible(true)
-                  return
-                }
-                setStartMatchVisible(true)
-              }}
+              onPress={() => void handleConfirmStartMatch()}
+              loading={startMatch.isPending}
               style={s.actionBtn}
             />
           ) : null}
@@ -1216,13 +1262,6 @@ export default function MatchDetailScreen() {
         onConfirm={handleConfirmCancelMatch}
       />
 
-      <StartMatchModal
-        visible={startMatchVisible}
-        onClose={() => setStartMatchVisible(false)}
-        loading={startMatch.isPending}
-        onConfirm={handleConfirmStartMatch}
-      />
-
       <IncompleteRosterStartModal
         visible={incompleteRosterStartVisible}
         onClose={() => setIncompleteRosterStartVisible(false)}
@@ -1258,10 +1297,7 @@ export default function MatchDetailScreen() {
       {myParticipation ? (
         <SubmitResultModal
           visible={submitResultVisible}
-          onClose={() => {
-            setSubmitResultVisible(false)
-            setLockedScoreboardPrefill(null)
-          }}
+          onClose={dismissScoreboardResultFlow}
           viewerTeamLabel={resolveTeamName(match, myParticipation.team, match.participants)}
           teamAName={teamAName}
           teamBName={teamBName}
@@ -1277,10 +1313,7 @@ export default function MatchDetailScreen() {
 
       <RecordResultModal
         visible={recordResultVisible}
-        onClose={() => {
-          setRecordResultVisible(false)
-          setLockedScoreboardPrefill(null)
-        }}
+        onClose={dismissScoreboardResultFlow}
         teamAName={teamAName}
         teamBName={teamBName}
         durationTargetGames={match.duration_target_games}

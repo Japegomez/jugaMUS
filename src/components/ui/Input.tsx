@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: Fonts.medium,
+    fontFamily: Fonts.semiBold,
     marginBottom: 6,
     color: Colors.textPrimary,
   },

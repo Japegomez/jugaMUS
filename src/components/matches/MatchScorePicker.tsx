@@ -109,7 +109,7 @@ function MatchScorePickerFields({
       {hint ? <Text style={s.hint}>{hint}</Text> : null}
       <Text style={s.sub}>
         {lockValues
-          ? `Partida a ${durationTargetGames} juego${durationTargetGames > 1 ? 's' : ''}. Confirma el marcador del scoreboard.`
+          ? `Partida a ${durationTargetGames} juego${durationTargetGames > 1 ? 's' : ''}. Confirma el marcador.`
           : `Partida a ${durationTargetGames} juego${durationTargetGames > 1 ? 's' : ''}. Elige el marcador (sin empates).`}
       </Text>
 

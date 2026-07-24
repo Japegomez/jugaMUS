@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useFocusEffect } from '@react-navigation/native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -156,6 +156,7 @@ export default function CreateMatchScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(createDefaultFormValues())
+      Keyboard.dismiss()
     }, [reset])
   )
 
@@ -218,7 +219,7 @@ export default function CreateMatchScreen() {
       <View style={s.closeBar}>
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)/matches' as Href)}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">
@@ -268,7 +269,7 @@ export default function CreateMatchScreen() {
         name="start_at"
         render={({ field }) => (
           <DateTimePicker
-            label="Fecha y hora *"
+            label="Fecha y hora"
             value={field.value ?? ''}
             onChange={field.onChange}
             error={errors.start_at?.message}
@@ -372,7 +373,7 @@ export default function CreateMatchScreen() {
 
       {/* Equipos y jugadores */}
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Equipos y jugadores (opcional)</Text>
+        <Text style={s.label}>Equipos y jugadores</Text>
         <Text style={s.hint}>
           Te unirás automáticamente como jugador 1 del primer equipo. El resto puede ser por nombre
           (sin cuenta en la app).
@@ -382,7 +383,7 @@ export default function CreateMatchScreen() {
           name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo A (opcional)"
+              label="Nombre equipo A"
               placeholder="Jugador1 - Jugador2"
               value={field.value ?? ''}
               onChangeText={field.onChange}
@@ -396,7 +397,7 @@ export default function CreateMatchScreen() {
           name="team_a_player_2"
           render={({ field }) => (
             <Input
-              label="Compañero (jugador 2, opcional)"
+              label="Compañero (jugador 2)"
               placeholder="Nombre"
               value={field.value ?? ''}
               onChangeText={field.onChange}
@@ -410,7 +411,7 @@ export default function CreateMatchScreen() {
           name="team_b_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B (opcional)"
+              label="Nombre equipo B"
               placeholder="Jugador1 - Jugador2"
               value={field.value ?? ''}
               onChangeText={field.onChange}
@@ -455,7 +456,7 @@ export default function CreateMatchScreen() {
         name="notes"
         render={({ field }) => (
           <Input
-            label="Notas opcionales"
+            label="Notas"
             placeholder="Información para los participantes..."
             value={field.value ?? ''}
             onChangeText={field.onChange}

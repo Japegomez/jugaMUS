@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { MUS_POINTS_PER_GAME, MUS_ROUNDS, MUS_ROUND_TAP_POINTS, TEAM } from '@/constants'
 import type { MusRound } from '@/constants'
-import { loadScoreboardState, saveScoreboardState } from '@/lib/scoreboardStorage'
+import {
+  loadScoreboardState,
+  saveScoreboardState,
+  clearScoreboardState,
+} from '@/lib/scoreboardStorage'
 
 export type TeamId = typeof TEAM.A | typeof TEAM.B
 
@@ -250,6 +254,24 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     setGameOver(null)
   }, [])
 
+  /** Reinicia el marcador en memoria y en almacenamiento (p. ej. tras ir a registrar resultado). */
+  const resetBoard = useCallback(async () => {
+    skipPersistRef.current = true
+    const fresh = createDefaultScoreboardState()
+    historyRef.current = []
+    stateRef.current = fresh
+    setState(fresh)
+    setGameOver(null)
+    setCanUndo(false)
+    try {
+      await clearScoreboardState(matchId)
+    } catch {
+      // Best-effort local cleanup; in-memory reset already applied.
+    } finally {
+      skipPersistRef.current = false
+    }
+  }, [matchId])
+
   return {
     state,
     loaded,
@@ -263,5 +285,6 @@ export function useLiveScoreboard(matchId: string, durationTargetGames: number) 
     adjustGames,
     undo,
     dismissGameOver,
+    resetBoard,
   }
 }

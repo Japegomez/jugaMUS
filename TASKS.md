@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 23/07/2026 (backlog: tests unitarios E.164 / reglas de partida)
+> Actualizado: 24/07/2026 (hotfix marcador / crear partida v1.3.4)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -18,7 +18,7 @@
 | UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
 | UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
 | UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                  |
-| Hotfix marcador        | Completada | Orientación, navegación Mis partidas, avatar Google, editar rival; v1.3.3      |
+| Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4           |
 
 ---
 
@@ -471,6 +471,15 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Navegación: cerrar ficha/editar/marcador → Mis partidas (no Descubrir)
 - [x] Avatar Google → bucket `avatars`; OAuth redirect/apikey
 - [x] Versión app → **1.3.3** (`app.json`, `package.json`); push a `develop`
+
+### Hotfix marcador / crear partida (v1.3.4) — 24/07/2026
+
+- [x] Empezar partida sin modal de confirmación (aviso de plantilla incompleta se mantiene)
+- [x] Fin de partida en marcador: overlay in-tree (no `Modal` RN) para evitar crash iOS de orientación
+- [x] Copy fin de partida: «ganan la partida» + solo marcador numérico; texto confirmar sin «del scoreboard»
+- [x] Al ir a registrar resultado (o cancelar el modal), el marcador local se reinicia; intent in-memory abre el modal tras remount por orientación
+- [x] Crear partida: ✕ → Mis partidas; sin autofocus/teclado al abrir; labels en negrita; sin «*» en fecha ni «(opcional)» en etiquetas
+- [x] Versión app → **1.3.4** (`app.json`, `package.json`); push a `develop`
 
 ---
 

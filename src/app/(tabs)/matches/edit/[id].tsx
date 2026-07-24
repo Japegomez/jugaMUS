@@ -355,7 +355,7 @@ export default function EditMatchScreen() {
         name="start_at"
         render={({ field }) => (
           <DateTimePicker
-            label="Fecha y hora *"
+            label="Fecha y hora"
             value={field.value}
             onChange={field.onChange}
             error={errors.start_at?.message}
@@ -490,7 +490,7 @@ export default function EditMatchScreen() {
       ) : null}
 
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Equipos y jugadores (opcional)</Text>
+        <Text style={s.label}>Equipos y jugadores</Text>
         <Text style={s.hint}>
           Si dejas el nombre del equipo vacío, se usará «Jugador1 - Jugador2» con los nombres de la
           plantilla.
@@ -500,7 +500,7 @@ export default function EditMatchScreen() {
           name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo A (opcional)"
+              label="Nombre equipo A"
               placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
@@ -517,7 +517,7 @@ export default function EditMatchScreen() {
             name="team_a_player_2"
             render={({ field }) => (
               <Input
-                label="Compañero (jugador 2, opcional)"
+                label="Compañero (jugador 2)"
                 placeholder="Nombre"
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
@@ -532,7 +532,7 @@ export default function EditMatchScreen() {
           name="team_b_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B (opcional)"
+              label="Nombre equipo B"
               placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
