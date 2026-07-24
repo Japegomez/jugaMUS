@@ -5,7 +5,7 @@ import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
 export const INCOMPLETE_ROSTER_START_MESSAGE =
-  'Faltan jugadores para empezar la partida. Invita a tus amigos o añade sus nombres manualmente en la plantilla. No podrás empezar hasta que la plantilla esté completa.'
+  'Faltan jugadores para empezar la partida. Invita a tus amigos o añade sus nombres manualmente con el botón «Editar partida». No podrás empezar hasta que todos los puestos estén cubiertos.'
 
 export interface IncompleteRosterStartModalProps {
   visible: boolean
