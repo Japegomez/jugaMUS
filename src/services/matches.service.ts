@@ -594,6 +594,18 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 
 /** Creator starts a planned match now: sets `start_at` to the current instant and status to `in_progress`. */
 export async function startMatch(id: string): Promise<MatchRow> {
+  const match = await getMatch(id)
+  if (match.status !== MATCH_STATUS.PLANNED) {
+    throw new Error(
+      'La partida ya no está planificada. Puede que ya haya empezado o se haya cancelado.'
+    )
+  }
+  if (!isRosterFull(match, match.participants)) {
+    throw new Error(
+      'Faltan jugadores. Completa la plantilla (invitar amigos o añadir nombres) antes de empezar.'
+    )
+  }
+
   const nowIso = new Date().toISOString()
   const { data: row, error } = await supabase
     .from('matches')

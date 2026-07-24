@@ -24,6 +24,7 @@ import {
 import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { StartMatchModal } from '@/components/matches/StartMatchModal'
+import { IncompleteRosterStartModal } from '@/components/matches/IncompleteRosterStartModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
@@ -45,7 +46,12 @@ import {
 } from '@/hooks/useMatches'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
-import { freeTeamSlots, getParticipantProfile, resolveTeamName } from '@/services/matches.service'
+import {
+  freeTeamSlots,
+  getParticipantProfile,
+  isRosterFull,
+  resolveTeamName,
+} from '@/services/matches.service'
 import {
   buildMatchTeamEditSlots,
   canEditMatchTeam,
@@ -489,6 +495,7 @@ export default function MatchDetailScreen() {
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [startMatchVisible, setStartMatchVisible] = useState(false)
+  const [incompleteRosterStartVisible, setIncompleteRosterStartVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
@@ -1081,7 +1088,13 @@ export default function MatchDetailScreen() {
           {isCreator && isPlanned ? (
             <Button
               title="Empezar partida"
-              onPress={() => setStartMatchVisible(true)}
+              onPress={() => {
+                if (!isRosterFull(match, match.participants)) {
+                  setIncompleteRosterStartVisible(true)
+                  return
+                }
+                setStartMatchVisible(true)
+              }}
               style={s.actionBtn}
             />
           ) : null}
@@ -1193,6 +1206,11 @@ export default function MatchDetailScreen() {
         onClose={() => setStartMatchVisible(false)}
         loading={startMatch.isPending}
         onConfirm={handleConfirmStartMatch}
+      />
+
+      <IncompleteRosterStartModal
+        visible={incompleteRosterStartVisible}
+        onClose={() => setIncompleteRosterStartVisible(false)}
       />
 
       <LeaveMatchModal
