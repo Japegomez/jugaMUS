@@ -277,7 +277,9 @@ function textFieldsForTeam(team: string): (keyof TextPlayerFields)[] {
     : ['team_a_player_1', 'team_a_player_2']
 }
 
-/** Roster slots for the team edit modal (registered locked, text editable). */
+/** Roster slots for the team edit modal (registered locked, text editable).
+ * Free seats show an empty text field so the user can add a name.
+ */
 export function buildMatchTeamEditSlots(
   match: TextPlayerFields,
   participants: ParticipantWithProfile[],
@@ -292,9 +294,11 @@ export function buildMatchTeamEditSlots(
   const text2 = match[field2]?.trim() || null
   const slots: MatchTeamEditSlot[] = []
   let regIdx = 0
+  const usedFields = new Set<keyof TextPlayerFields>()
 
   if (text1) {
     slots.push({ kind: 'text', field: field1, value: text1 })
+    usedFields.add(field1)
   } else if (registered[regIdx]) {
     slots.push({
       kind: 'registered',
@@ -312,30 +316,50 @@ export function buildMatchTeamEditSlots(
 
   if (text2 && text2 !== firstName) {
     slots.push({ kind: 'text', field: field2, value: text2 })
+    usedFields.add(field2)
   } else if (registered[regIdx]) {
     slots.push({
       kind: 'registered',
       displayName: registered[regIdx].profile.display_name?.trim() || 'Jugador registrado',
     })
+    regIdx++
   }
 
-  return slots.slice(0, 2)
+  let emptiesToAdd = freeTeamSlots(match, participants, team)
+  for (const field of TEXT_SLOTS_BY_TEAM[team] ?? []) {
+    if (emptiesToAdd <= 0 || slots.length >= MAX_PLAYERS_PER_TEAM) break
+    if (usedFields.has(field)) continue
+    if (match[field]?.trim()) continue
+    slots.push({ kind: 'text', field, value: '' })
+    usedFields.add(field)
+    emptiesToAdd--
+  }
+
+  return slots.slice(0, MAX_PLAYERS_PER_TEAM)
 }
 
-/** Active participant on a standalone planned match may edit their team roster. */
+/**
+ * Who may edit team rosters on a standalone planned match:
+ * - creator: both teams
+ * - other active participants: only their own team
+ */
 export function canEditMatchTeam(
-  match: Pick<MatchRow, 'status' | 'tournament_id'>,
+  match: Pick<MatchRow, 'status' | 'tournament_id' | 'creator_id'>,
   participants: ParticipantWithProfile[],
   userId: string | undefined
-): { canEdit: boolean; team: string | null } {
+): { canEdit: boolean; teams: string[] } {
   if (!userId || match.tournament_id || match.status !== MATCH_STATUS.PLANNED) {
-    return { canEdit: false, team: null }
+    return { canEdit: false, teams: [] }
+  }
+
+  if (match.creator_id === userId) {
+    return { canEdit: true, teams: [TEAM.A, TEAM.B] }
   }
 
   const mine = activeParticipants(participants).find((p) => p.user_id === userId)
-  if (!mine) return { canEdit: false, team: null }
+  if (!mine) return { canEdit: false, teams: [] }
 
-  return { canEdit: true, team: mine.team }
+  return { canEdit: true, teams: [mine.team] }
 }
 
 function mapMatchTeamRpcError(message: string): string {
@@ -348,6 +372,9 @@ function mapMatchTeamRpcError(message: string): string {
     return 'Solo puedes editar la pareja mientras la partida está planificada'
   }
   if (message.includes('forbidden')) return 'No tienes permiso para editar este equipo'
+  if (message.includes('invalid_team') || message.includes('team_required')) {
+    return 'Equipo no válido'
+  }
   if (message.includes('invalid_text_field')) return 'Campo de jugador no válido'
   if (message.includes('roster_full')) return 'El equipo ya está completo'
   if (message.includes('cannot_clear_text_player')) {
@@ -358,6 +385,7 @@ function mapMatchTeamRpcError(message: string): string {
 
 export type UpdateMatchTeamInput = {
   matchId: string
+  team: string
   teamName: string
   textUpdates: Partial<Record<keyof TextPlayerFields, string | null>>
 }
@@ -373,6 +401,7 @@ export async function updateMatchTeam(input: UpdateMatchTeamInput): Promise<Matc
     p_match_id: input.matchId,
     p_team_name: input.teamName?.trim() ?? '',
     p_text_updates: textUpdates,
+    p_team: input.team,
   })
 
   if (error) throw new Error(mapMatchTeamRpcError(error.message))
@@ -594,6 +623,18 @@ export async function cancelMatch(id: string): Promise<MatchRow> {
 
 /** Creator starts a planned match now: sets `start_at` to the current instant and status to `in_progress`. */
 export async function startMatch(id: string): Promise<MatchRow> {
+  const match = await getMatch(id)
+  if (match.status !== MATCH_STATUS.PLANNED) {
+    throw new Error(
+      'La partida ya no está planificada. Puede que ya haya empezado o se haya cancelado.'
+    )
+  }
+  if (!isRosterFull(match, match.participants)) {
+    throw new Error(
+      'Faltan jugadores. Usa «Editar partida» para invitar amigos o añadir nombres antes de empezar.'
+    )
+  }
+
   const nowIso = new Date().toISOString()
   const { data: row, error } = await supabase
     .from('matches')

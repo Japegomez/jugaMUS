@@ -9,9 +9,13 @@ import { APP_OAUTH_CALLBACK_PATH, APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@
  * Build standalone:          genera `jugamus://auth/callback`
  *
  * En Supabase → Auth → URL Configuration → Redirect URLs añade:
- *   exp://**                         (wildcard para Expo Go)
+ *   exp://**                         (wildcard para Expo Go LAN)
+ *   exps://**                        (wildcard para Expo Go tunnel)
  *   jugamus://auth/callback          (para builds de producción/desarrollo nativo)
  *   jugamus://auth/update-password   (recuperación de contraseña)
+ *
+ * Site URL no debe ser la raíz del API de Supabase (p. ej. https://xxx.supabase.co),
+ * o un redirect fallido muestra "No API key found in request".
  */
 export function getOAuthRedirectUrl(): string {
   return Linking.createURL(APP_OAUTH_CALLBACK_PATH)

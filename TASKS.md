@@ -18,7 +18,7 @@
 | UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                     |
 | UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1 |
 | UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                  |
-| Hotfix marcador        | Completada | Orientación sin parpadeo; status bar Android; botones esquina; v1.3.2          |
+| Hotfix marcador        | Completada | Orientación, navegación Mis partidas, avatar Google, editar rival; v1.3.3      |
 
 ---
 
@@ -463,6 +463,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 - [x] Botones: cerrar arriba-izquierda, deshacer abajo-izquierda
 - [x] Versión app → **1.3.2** (`app.json`, `package.json`)
+
+### Hotfix partidas / auth (v1.3.3) — 24/07/2026
+
+- [x] Orientación: vuelve a portrait al salir del marcador (focus/blur)
+- [x] Creador puede editar ambos equipos; slots vacíos editables; copy plantilla incompleta
+- [x] Navegación: cerrar ficha/editar/marcador → Mis partidas (no Descubrir)
+- [x] Avatar Google → bucket `avatars`; OAuth redirect/apikey
+- [x] Versión app → **1.3.3** (`app.json`, `package.json`); push a `develop`
 
 ---
 

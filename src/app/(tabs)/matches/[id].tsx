@@ -24,6 +24,7 @@ import {
 import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { StartMatchModal } from '@/components/matches/StartMatchModal'
+import { IncompleteRosterStartModal } from '@/components/matches/IncompleteRosterStartModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
@@ -45,7 +46,12 @@ import {
 } from '@/hooks/useMatches'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
-import { freeTeamSlots, getParticipantProfile, resolveTeamName } from '@/services/matches.service'
+import {
+  freeTeamSlots,
+  getParticipantProfile,
+  isRosterFull,
+  resolveTeamName,
+} from '@/services/matches.service'
 import {
   buildMatchTeamEditSlots,
   canEditMatchTeam,
@@ -454,6 +460,10 @@ export default function MatchDetailScreen() {
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
 
+  const closeToMyMatches = useCallback(() => {
+    router.replace('/(tabs)/matches' as Href)
+  }, [router])
+
   const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)
   const {
     data: resultBundle,
@@ -489,8 +499,10 @@ export default function MatchDetailScreen() {
   const [approveResultVisible, setApproveResultVisible] = useState(false)
   const [cancelMatchVisible, setCancelMatchVisible] = useState(false)
   const [startMatchVisible, setStartMatchVisible] = useState(false)
+  const [incompleteRosterStartVisible, setIncompleteRosterStartVisible] = useState(false)
   const [leaveMatchVisible, setLeaveMatchVisible] = useState(false)
   const [editTeamVisible, setEditTeamVisible] = useState(false)
+  const [editingTeam, setEditingTeam] = useState<string | null>(null)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
 
   const needsPrivateAccess = Boolean(
@@ -561,7 +573,7 @@ export default function MatchDetailScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No se pudo cargar la partida.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeToMyMatches} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -656,13 +668,15 @@ export default function MatchDetailScreen() {
   const teamAName = resolveTeamName(match, TEAM.A, match.participants)
   const teamBName = resolveTeamName(match, TEAM.B, match.participants)
 
-  const { canEdit: canEditTeam, team: editableTeam } = canEditMatchTeam(
+  const { canEdit: canEditTeam, teams: editableTeams } = canEditMatchTeam(
     match,
     match.participants,
     userId
   )
+  const canEditTeamA = canEditTeam && editableTeams.includes(TEAM.A)
+  const canEditTeamB = canEditTeam && editableTeams.includes(TEAM.B)
   const editTeamSlots =
-    editableTeam && canEditTeam
+    editingTeam && canEditTeam && editableTeams.includes(editingTeam)
       ? buildMatchTeamEditSlots(
           {
             team_a_player_1: match.team_a_player_1,
@@ -671,22 +685,31 @@ export default function MatchDetailScreen() {
             team_b_player_2: match.team_b_player_2,
           },
           match.participants,
-          editableTeam
+          editingTeam
         )
       : []
-  const editTeamLabel =
-    editableTeam === TEAM.B ? teamBName : editableTeam === TEAM.A ? teamAName : ''
+  const editTeamLabel = editingTeam === TEAM.B ? teamBName : editingTeam === TEAM.A ? teamAName : ''
   const editCustomTeamName =
-    editableTeam &&
+    editingTeam &&
     !isUnspecifiedTeamName(
-      editableTeam === TEAM.B ? match.team_b_name : match.team_a_name,
-      editableTeam
+      editingTeam === TEAM.B ? match.team_b_name : match.team_a_name,
+      editingTeam
     )
-      ? (editableTeam === TEAM.B ? match.team_b_name : match.team_a_name).trim()
+      ? (editingTeam === TEAM.B ? match.team_b_name : match.team_a_name).trim()
       : ''
 
+  const openEditTeam = (team: string) => {
+    setEditingTeam(team)
+    setEditTeamVisible(true)
+  }
+
+  const closeEditTeam = () => {
+    setEditTeamVisible(false)
+    setEditingTeam(null)
+  }
+
   const handleEditTeam = async (values: EditMatchTeamFormValues) => {
-    if (!editableTeam) return
+    if (!editingTeam) return
 
     const rosterText = {
       team_a_player_1: match.team_a_player_1,
@@ -702,7 +725,7 @@ export default function MatchDetailScreen() {
       }
     }
 
-    const editableFields = editableTextSlotsForTeam(match.participants, editableTeam, draftText)
+    const editableFields = editableTextSlotsForTeam(match.participants, editingTeam, draftText)
     const textUpdates: Partial<Record<keyof typeof draftText, string | null>> = {}
     for (const field of editableFields) {
       const newVal = values.textByField[field]?.trim() || null
@@ -729,10 +752,11 @@ export default function MatchDetailScreen() {
     try {
       await updateMatchTeam.mutateAsync({
         matchId: id,
+        team: editingTeam,
         teamName: values.teamName,
         textUpdates,
       })
-      setEditTeamVisible(false)
+      closeEditTeam()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
       throw err
@@ -866,7 +890,7 @@ export default function MatchDetailScreen() {
         <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
           <View style={{ flex: 1 }} />
           <Pressable
-            onPress={() => router.back()}
+            onPress={closeToMyMatches}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Cerrar">
@@ -976,12 +1000,8 @@ export default function MatchDetailScreen() {
                         })
                     : undefined
                 }
-                editLabel={canEditTeam && editableTeam === TEAM.A ? 'Editar' : undefined}
-                onEdit={
-                  canEditTeam && editableTeam === TEAM.A
-                    ? () => setEditTeamVisible(true)
-                    : undefined
-                }
+                editLabel={canEditTeamA ? 'Editar' : undefined}
+                onEdit={canEditTeamA ? () => openEditTeam(TEAM.A) : undefined}
               />
               <TeamSection
                 team={TEAM.B}
@@ -1007,12 +1027,8 @@ export default function MatchDetailScreen() {
                         })
                     : undefined
                 }
-                editLabel={canEditTeam && editableTeam === TEAM.B ? 'Editar' : undefined}
-                onEdit={
-                  canEditTeam && editableTeam === TEAM.B
-                    ? () => setEditTeamVisible(true)
-                    : undefined
-                }
+                editLabel={canEditTeamB ? 'Editar' : undefined}
+                onEdit={canEditTeamB ? () => openEditTeam(TEAM.B) : undefined}
               />
             </>
           )}
@@ -1064,7 +1080,6 @@ export default function MatchDetailScreen() {
               title="Abandonar partida"
               onPress={() => setLeaveMatchVisible(true)}
               loading={leaveMatch.isPending}
-              variant="secondary"
               style={s.actionBtn}
             />
           ) : null}
@@ -1073,7 +1088,6 @@ export default function MatchDetailScreen() {
             <Button
               title="Editar partida"
               onPress={() => router.push(`/(tabs)/matches/edit/${id}`)}
-              variant="secondary"
               style={s.actionBtn}
             />
           ) : null}
@@ -1081,12 +1095,18 @@ export default function MatchDetailScreen() {
           {isCreator && isPlanned ? (
             <Button
               title="Empezar partida"
-              onPress={() => setStartMatchVisible(true)}
+              onPress={() => {
+                if (!isRosterFull(match, match.participants)) {
+                  setIncompleteRosterStartVisible(true)
+                  return
+                }
+                setStartMatchVisible(true)
+              }}
               style={s.actionBtn}
             />
           ) : null}
 
-          {canCancelMatch ? (
+          {canCancelMatch && isPlanned ? (
             <Button
               title="Cancelar partida"
               onPress={() => setCancelMatchVisible(true)}
@@ -1114,11 +1134,19 @@ export default function MatchDetailScreen() {
           {canOpenScoreboard ? (
             <Button
               title="Marcador"
-              variant="secondary"
               onPress={() => {
                 prefetchOrientationLock(ScreenOrientation.OrientationLock.LANDSCAPE)
                 router.push(`/(tabs)/matches/scoreboard/${id}` as Href)
               }}
+              style={s.actionBtn}
+            />
+          ) : null}
+
+          {canCancelMatch && isInProgress ? (
+            <Button
+              title="Cancelar partida"
+              onPress={() => setCancelMatchVisible(true)}
+              variant="danger"
               style={s.actionBtn}
             />
           ) : null}
@@ -1195,6 +1223,11 @@ export default function MatchDetailScreen() {
         onConfirm={handleConfirmStartMatch}
       />
 
+      <IncompleteRosterStartModal
+        visible={incompleteRosterStartVisible}
+        onClose={() => setIncompleteRosterStartVisible(false)}
+      />
+
       <LeaveMatchModal
         visible={leaveMatchVisible}
         onClose={() => setLeaveMatchVisible(false)}
@@ -1207,7 +1240,7 @@ export default function MatchDetailScreen() {
         teamLabel={editTeamLabel}
         customTeamName={editCustomTeamName}
         slots={editTeamSlots}
-        onClose={() => setEditTeamVisible(false)}
+        onClose={closeEditTeam}
         onSubmit={handleEditTeam}
         loading={updateMatchTeam.isPending}
       />

@@ -70,6 +70,10 @@ export function acquireOrientationLock(
 
   return () => {
     owners.delete(ownerId)
+    // Si se salió sin montar el scoreboard, no dejar prefetch en landscape.
+    if (ownerId === 'scoreboard') {
+      owners.delete('prefetch')
+    }
     scheduleApply(300)
   }
 }

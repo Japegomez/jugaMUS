@@ -1,7 +1,7 @@
 // Sentry debe cargarse antes que el resto de módulos de la app.
 import { Sentry } from '@/lib/sentry'
 import { useEffect } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { Stack, useRootNavigationState, useRouter, useSegments, type Href } from 'expo-router'
 import { PostHogProvider } from 'posthog-react-native'
 import {
@@ -21,17 +21,9 @@ import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync
 import { useNotifications } from '@/hooks/useNotifications'
 import { inviteHrefFromSegments } from '@/lib/inviteDeepLink'
 import { posthog } from '@/lib/posthog'
+import { queryClient } from '@/lib/queryClient'
 
 SplashScreen.preventAutoHideAsync()
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-})
 
 function RootLayout() {
   const { session, initialized, passwordRecoveryPending } = useAuthStore()
@@ -47,7 +39,7 @@ function RootLayout() {
 
   useNotifications()
   useBackgroundSessionTimeout()
-  useOrientationLock(ScreenOrientation.OrientationLock.PORTRAIT_UP, 'root')
+  useOrientationLock(ScreenOrientation.OrientationLock.PORTRAIT_UP, 'root', { while: 'mounted' })
 
   useEffect(() => {
     useAuthStore.getState().initializeAuth()
