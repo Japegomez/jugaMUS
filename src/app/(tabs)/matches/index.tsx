@@ -18,21 +18,21 @@ import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
 import { TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
-import type { MyMatchesDashboard, UserMatchSummary } from '@/services/matches.service'
+import type { MyMatchesDashboard } from '@/services/matches.service'
 import type { UserTournamentSummary } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 import { formatCityAndPlace } from '@/utils/location'
 
-function matchLocation(row: Pick<UserMatchSummary, 'city' | 'place_defined' | 'place_text'>) {
-  return formatCityAndPlace(row.city, row.place_defined ?? true, row.place_text)
+type LocationFields = {
+  city: string | null
+  place_defined?: boolean | null
+  place_text?: string | null
 }
 
-function tournamentLocation(
-  row: Pick<UserTournamentSummary, 'city' | 'place_defined' | 'place_text'>
-) {
-  return formatCityAndPlace(row.city, row.place_defined ?? true, row.place_text)
+function matchLocation(row: LocationFields) {
+  return formatCityAndPlace(row.city ?? '', row.place_defined ?? true, row.place_text)
 }
 
 function MatchListRow({
@@ -42,6 +42,7 @@ function MatchListRow({
   tone,
   statusLabel,
   hint,
+  hintTone = 'warning',
   kindLabel,
   accessibilityKind,
   onPress,
@@ -52,6 +53,7 @@ function MatchListRow({
   tone: StatusDotTone
   statusLabel: string
   hint?: string
+  hintTone?: 'warning' | 'info'
   kindLabel?: string
   accessibilityKind: string
   onPress: () => void
@@ -69,7 +71,9 @@ function MatchListRow({
           {title}
         </Text>
         <Text style={styles.rowMeta}>{location}</Text>
-        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
+        {hint ? (
+          <Text style={[styles.rowHint, hintTone === 'info' && styles.rowHintInfo]}>{hint}</Text>
+        ) : null}
       </View>
       <View style={styles.rowTrailing}>
         <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
@@ -93,6 +97,7 @@ type MatchesListItem =
       tone: StatusDotTone
       statusLabel: string
       hint?: string
+      hintTone?: 'warning' | 'info'
       kindLabel?: string
       href: string
       accessibilityKind: string
@@ -163,11 +168,12 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       accessibilityKind: 'Torneo',
       kindLabel: 'Torneo',
       title: t.title,
-      location: tournamentLocation(t),
+      location: matchLocation(t),
       startAt: t.start_at,
       tone: 'active' as const,
       statusLabel: tournamentStatusLabel(t),
       hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
+      hintTone: t.isOrganizer ? ('info' as const) : undefined,
     })),
   ].sort((a, b) => {
     if (a.kind !== 'row' || b.kind !== 'row') return 0
@@ -194,11 +200,12 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       accessibilityKind: 'Torneo',
       kindLabel: 'Torneo',
       title: t.title,
-      location: tournamentLocation(t),
+      location: matchLocation(t),
       startAt: t.start_at,
       tone: 'upcoming' as const,
       statusLabel: tournamentStatusLabel(t),
       hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
+      hintTone: t.isOrganizer ? ('info' as const) : undefined,
     })),
   ].sort((a, b) => {
     if (a.kind !== 'row' || b.kind !== 'row') return 0
@@ -296,6 +303,7 @@ export default function MatchesScreen() {
               tone={item.tone}
               statusLabel={item.statusLabel}
               hint={item.hint}
+              hintTone={item.hintTone}
               kindLabel={item.kindLabel}
               accessibilityKind={item.accessibilityKind}
               onPress={() => router.push(item.href as Href)}
@@ -372,6 +380,9 @@ const styles = StyleSheet.create({
     color: Colors.warning,
     marginTop: 4,
     lineHeight: 16,
+  },
+  rowHintInfo: {
+    color: Colors.textSecondary,
   },
   rowTrailing: { alignItems: 'flex-end', flexShrink: 0, maxWidth: 96 },
   rowStatus: {

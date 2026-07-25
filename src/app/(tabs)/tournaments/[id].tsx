@@ -425,6 +425,7 @@ export default function TournamentDetailScreen() {
                     <PairCard
                       key={p.id}
                       pair={p}
+                      hasEntryFee={Boolean(tournament.entry_fee)}
                       subtitle={
                         inRegistration && !isTournamentPairComplete(p)
                           ? 'Falta un jugador'

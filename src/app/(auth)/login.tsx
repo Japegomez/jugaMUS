@@ -97,7 +97,7 @@ export default function LoginScreen() {
         <Button
           title="Marcador"
           onPress={() => router.push('/(auth)/guest-scoreboard' as Href)}
-          style={[styles.scoreboardBtn, isCompactHeight && { minHeight: space(48) }]}
+          style={[styles.scoreboardBtn, isCompactHeight && { minHeight: Math.max(48, space(48)) }]}
           textStyle={[styles.scoreboardBtnLabel, { fontSize: font(18) }]}
         />
 

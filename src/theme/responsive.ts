@@ -39,7 +39,7 @@ export function useResponsiveLayout(): ResponsiveLayout {
     const isLandscape = width > height
     const contentHeight = Math.max(240, height - insets.top - insets.bottom)
     const scale = Math.min(1, Math.max(0.82, Math.min(shortSide, contentHeight) / 420))
-    const space = (n: number) => Math.max(1, Math.round(n * scale))
+    const space = (n: number) => (n === 0 ? 0 : Math.max(1, Math.round(n * scale)))
     const font = (n: number) => Math.max(11, Math.round(n * scale))
 
     return {
@@ -57,5 +57,5 @@ export function useResponsiveLayout(): ResponsiveLayout {
       authTopPadding: Math.max(insets.top, 16) + Layout.screenTopExtra,
       contentHeight,
     }
-  }, [width, height, insets])
+  }, [width, height, insets.top, insets.bottom, insets.left, insets.right])
 }

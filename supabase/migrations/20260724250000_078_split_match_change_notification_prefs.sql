@@ -19,8 +19,7 @@ COMMENT ON COLUMN public.profiles.notify_on_match_edit IS
 COMMENT ON COLUMN public.profiles.notify_on_match_cancel IS
   'Notify when a match or tournament is cancelled.';
 
-ALTER TABLE public.profiles
-  DROP COLUMN IF EXISTS notify_on_match_change;
+-- Keep notify_on_match_change during staggered client rollout; drop in a later migration.
 
 REVOKE SELECT ON public.profiles FROM authenticated;
 GRANT SELECT (
@@ -30,6 +29,7 @@ GRANT SELECT (
   photo_url,
   notify_push,
   notify_on_join,
+  notify_on_match_change,
   notify_on_match_start,
   notify_on_match_edit,
   notify_on_match_cancel,
@@ -49,6 +49,7 @@ GRANT UPDATE (
   photo_url,
   notify_push,
   notify_on_join,
+  notify_on_match_change,
   notify_on_match_start,
   notify_on_match_edit,
   notify_on_match_cancel,

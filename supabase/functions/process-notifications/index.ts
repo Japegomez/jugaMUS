@@ -180,13 +180,23 @@ Deno.serve(async (req) => {
   }
 
   // Preference-disabled: drop permanently (do not retry).
+  const notificationsById = new Map(notifications.map((n) => [n.id, n]))
+  const prefSkipByMaxAttempts = new Map<number, string[]>()
   for (const id of prefSkippedIds) {
-    const notif = notifications.find((n) => n.id === id)!
-    await supabase
-      .from('notification_queue')
-      .update({ status: 'failed', attempts: notif.max_attempts })
-      .eq('id', id)
+    const notif = notificationsById.get(id)
+    if (!notif) continue
+    const group = prefSkipByMaxAttempts.get(notif.max_attempts) ?? []
+    group.push(id)
+    prefSkipByMaxAttempts.set(notif.max_attempts, group)
   }
+  await Promise.all(
+    [...prefSkipByMaxAttempts.entries()].map(([maxAttempts, ids]) =>
+      supabase
+        .from('notification_queue')
+        .update({ status: 'failed', attempts: maxAttempts })
+        .in('id', ids)
+    )
+  )
 
   // 4. Mark skipped (no token) as failed if exhausted attempts, else leave pending
   for (const id of skippedIds) {

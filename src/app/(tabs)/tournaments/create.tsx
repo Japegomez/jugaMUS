@@ -140,6 +140,7 @@ export default function CreateTournamentScreen() {
 
   const [step, setStep] = useState<1 | 2>(1)
   const [tournamentId, setTournamentId] = useState<string | null>(null)
+  const [hasEntryFee, setHasEntryFee] = useState(false)
   const [pairs, setPairs] = useState<TournamentPairRow[]>([])
   const [pairModalOpen, setPairModalOpen] = useState(false)
   const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
@@ -165,6 +166,7 @@ export default function CreateTournamentScreen() {
       return () => {
         setStep(1)
         setTournamentId(null)
+        setHasEntryFee(false)
         setPairs([])
         setPairModalOpen(false)
         setEditingPair(null)
@@ -203,6 +205,7 @@ export default function CreateTournamentScreen() {
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       setTournamentId(row.id)
+      setHasEntryFee((entryFee ?? 0) > 0)
       setStep(2)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear el torneo')
@@ -520,6 +523,7 @@ export default function CreateTournamentScreen() {
           <PairCard
             key={p.id}
             pair={p}
+            hasEntryFee={hasEntryFee}
             subtitle={!isTournamentPairComplete(p) ? 'Falta un jugador' : undefined}
             editLabel="Editar"
             onEdit={() => setEditingPair(p)}

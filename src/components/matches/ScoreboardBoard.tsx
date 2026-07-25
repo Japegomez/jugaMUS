@@ -39,7 +39,9 @@ function useBoardScale() {
   const shortSide = Math.min(width, height)
   const availableHeight = Math.max(260, shortSide - insets.top - insets.bottom)
   // Diseño de referencia ~400–420 pt de altura útil en landscape.
-  const scale = Math.min(1, Math.max(0.7, availableHeight / 400))
+  const rawScale = Math.min(1, Math.max(0.7, availableHeight / 400))
+  // Quantize to 0.05 steps to avoid insignificant style churn.
+  const scale = Math.round(rawScale * 20) / 20
   return { scale, insets }
 }
 

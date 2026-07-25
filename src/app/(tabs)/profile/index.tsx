@@ -81,7 +81,7 @@ export default function ProfileScreen() {
   }
 
   const onNotifChange = async (field: NotificationPrefField, value: boolean) => {
-    if (!profile) return
+    if (!profile || updateProfile.isPending) return
     setSavingField(field)
     try {
       await updateProfile.mutateAsync(buildNotifUpdates(profile, field, value))
@@ -94,7 +94,7 @@ export default function ProfileScreen() {
   }
 
   const onReminderTimingChange = async (timing: '24h' | '2h', enabled: boolean) => {
-    if (!profile) return
+    if (!profile || updateProfile.isPending) return
     const field = timing === '24h' ? 'notify_on_reminder_24h' : 'notify_on_reminder_2h'
     setSavingField(field)
     try {
@@ -175,7 +175,8 @@ export default function ProfileScreen() {
         <NotifToggleRow
           label="Todas"
           value={profile.notify_push}
-          disabled={notifDisabled && savingField === 'notify_push'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_push'}
           onValueChange={(value) => void onNotifChange('notify_push', value)}
         />
 
@@ -183,37 +184,43 @@ export default function ProfileScreen() {
         <NotifToggleRow
           label="Alguien se une a tu partida"
           value={profile.notify_on_join}
-          disabled={notifDisabled && savingField === 'notify_on_join'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_join'}
           onValueChange={(value) => void onNotifChange('notify_on_join', value)}
         />
         <NotifToggleRow
           label="Partida o torneo: inicio"
           value={profile.notify_on_match_start}
-          disabled={notifDisabled && savingField === 'notify_on_match_start'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_match_start'}
           onValueChange={(value) => void onNotifChange('notify_on_match_start', value)}
         />
         <NotifToggleRow
           label="Partida o torneo: edición"
           value={profile.notify_on_match_edit}
-          disabled={notifDisabled && savingField === 'notify_on_match_edit'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_match_edit'}
           onValueChange={(value) => void onNotifChange('notify_on_match_edit', value)}
         />
         <NotifToggleRow
           label="Partida o torneo: cancelación"
           value={profile.notify_on_match_cancel}
-          disabled={notifDisabled && savingField === 'notify_on_match_cancel'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_match_cancel'}
           onValueChange={(value) => void onNotifChange('notify_on_match_cancel', value)}
         />
         <NotifToggleRow
           label="Resultado pendiente de validar"
           value={profile.notify_on_result}
-          disabled={notifDisabled && savingField === 'notify_on_result'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_result'}
           onValueChange={(value) => void onNotifChange('notify_on_result', value)}
         />
         <NotifToggleRow
           label="Resultado pendiente de enviar"
           value={profile.notify_on_reminder_in_progress}
-          disabled={notifDisabled && savingField === 'notify_on_reminder_in_progress'}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_reminder_in_progress'}
           onValueChange={(value) => void onNotifChange('notify_on_reminder_in_progress', value)}
         />
         <View style={[styles.reminderRow, styles.infoRowLast]}>
@@ -222,13 +229,15 @@ export default function ProfileScreen() {
             <ReminderChip
               label="24 h antes"
               selected={profile.notify_on_reminder_24h}
-              disabled={notifDisabled && savingField === 'notify_on_reminder_24h'}
+              disabled={notifDisabled}
+              busy={savingField === 'notify_on_reminder_24h'}
               onPress={() => void onReminderTimingChange('24h', !profile.notify_on_reminder_24h)}
             />
             <ReminderChip
               label="2 h antes"
               selected={profile.notify_on_reminder_2h}
-              disabled={notifDisabled && savingField === 'notify_on_reminder_2h'}
+              disabled={notifDisabled}
+              busy={savingField === 'notify_on_reminder_2h'}
               onPress={() => void onReminderTimingChange('2h', !profile.notify_on_reminder_2h)}
             />
           </View>
@@ -336,12 +345,14 @@ function NotifToggleRow({
   value,
   onValueChange,
   disabled = false,
+  busy = false,
   isLast = false,
 }: {
   label: string
   value: boolean
   onValueChange: (next: boolean) => void
   disabled?: boolean
+  busy?: boolean
   isLast?: boolean
 }) {
   return (
@@ -351,6 +362,7 @@ function NotifToggleRow({
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
+        accessibilityState={{ disabled, busy }}
         trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
         thumbColor={Colors.white}
         ios_backgroundColor={Colors.switchTrackOff}
@@ -364,11 +376,13 @@ function ReminderChip({
   selected,
   onPress,
   disabled = false,
+  busy = false,
 }: {
   label: string
   selected: boolean
   onPress: () => void
   disabled?: boolean
+  busy?: boolean
 }) {
   return (
     <Pressable
@@ -380,7 +394,7 @@ function ReminderChip({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityState={{ selected, disabled }}>
+      accessibilityState={{ selected, disabled, busy }}>
       <Text style={[styles.reminderChipText, selected && styles.reminderChipTextOn]}>{label}</Text>
     </Pressable>
   )

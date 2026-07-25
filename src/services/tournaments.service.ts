@@ -287,41 +287,45 @@ export async function addTournamentPair(input: AddPairInput): Promise<Tournament
   const { data, error } = await supabase.rpc('add_tournament_pair', {
     p_tournament_id: input.tournamentId,
     p_name: input.name?.trim() ?? '',
-    p_player_a_user_id: input.playerAUserId ?? null,
-    p_player_a_text: input.playerAText ?? null,
-    p_player_b_user_id: input.playerBUserId ?? null,
-    p_player_b_text: input.playerBText ?? null,
+    p_player_a_user_id: input.playerAUserId ?? undefined,
+    p_player_a_text: input.playerAText ?? undefined,
+    p_player_b_user_id: input.playerBUserId ?? undefined,
+    p_player_b_text: input.playerBText ?? undefined,
     p_entry_fee_paid: entryFeePaid,
   })
 
   if (error) throw new Error(mapTournamentPairRpcError(error.message))
   const row = data as TournamentPairRow
   // Ensure UI reflects the submitted flag even if the RPC payload omits the column.
-  if (row.entry_fee_paid !== entryFeePaid) {
-    const { data: patched, error: patchError } = await supabase
-      .from('tournament_pairs')
-      .update({ entry_fee_paid: entryFeePaid })
-      .eq('id', row.id)
-      .select(
-        `*,
+  if (row.entry_fee_paid === entryFeePaid) {
+    return row
+  }
+
+  const { data: patched, error: patchError } = await supabase
+    .from('tournament_pairs')
+    .update({ entry_fee_paid: entryFeePaid })
+    .eq('id', row.id)
+    .select(
+      `*,
         player_a_profile:profiles!tournament_pairs_player_a_user_id_fkey(display_name),
         player_b_profile:profiles!tournament_pairs_player_b_user_id_fkey(display_name)`
-      )
-      .single()
-    if (!patchError && patched) {
-      const p = patched as TournamentPairRow & {
-        player_a_profile?: { display_name: string } | null
-        player_b_profile?: { display_name: string } | null
-      }
-      return {
-        ...p,
-        entry_fee_paid: entryFeePaid,
-        player_a_display_name: p.player_a_profile?.display_name ?? null,
-        player_b_display_name: p.player_b_profile?.display_name ?? null,
-      }
-    }
+    )
+    .single()
+
+  if (patchError || !patched) {
+    return row
   }
-  return { ...row, entry_fee_paid: entryFeePaid }
+
+  const p = patched as TournamentPairRow & {
+    player_a_profile?: { display_name: string } | null
+    player_b_profile?: { display_name: string } | null
+  }
+  return {
+    ...p,
+    entry_fee_paid: p.entry_fee_paid,
+    player_a_display_name: p.player_a_profile?.display_name ?? null,
+    player_b_display_name: p.player_b_profile?.display_name ?? null,
+  }
 }
 
 export async function joinTournamentPair(

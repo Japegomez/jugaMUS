@@ -9,6 +9,7 @@ AS $$
 DECLARE
   v_tournament public.tournaments%ROWTYPE;
   v_user_id UUID;
+  v_match RECORD;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'not_authenticated';
@@ -35,12 +36,39 @@ BEGIN
     RAISE EXCEPTION 'tournament_not_cancellable';
   END IF;
 
-  UPDATE public.matches
-  SET
-    status = 'cancelled',
-    updated_at = NOW()
-  WHERE tournament_id = p_tournament_id
-    AND status IN ('planned', 'in_progress');
+  FOR v_match IN
+    SELECT m.id, m.status
+    FROM public.matches m
+    WHERE m.tournament_id = p_tournament_id
+      AND m.status IN ('planned', 'in_progress')
+  LOOP
+    UPDATE public.matches
+    SET
+      status = 'cancelled',
+      updated_at = NOW()
+    WHERE id = v_match.id
+      AND status IN ('planned', 'in_progress');
+
+    IF FOUND THEN
+      INSERT INTO public.match_state_transitions
+        (match_id, from_status, to_status, triggered_by, reason)
+      VALUES
+        (v_match.id, v_match.status, 'cancelled', 'user', 'tournament_cancelled');
+    END IF;
+  END LOOP;
+
+  -- Drop pending reminders for cancelled bracket matches or the tournament itself.
+  DELETE FROM public.notification_queue nq
+  WHERE nq.status = 'pending'
+    AND nq.type IN ('reminder_24h', 'reminder_2h', 'reminder_5h_in_progress')
+    AND (
+      nq.payload_json->>'tournament_id' = p_tournament_id::text
+      OR nq.payload_json->>'match_id' IN (
+        SELECT m.id::text
+        FROM public.matches m
+        WHERE m.tournament_id = p_tournament_id
+      )
+    );
 
   UPDATE public.tournaments
   SET

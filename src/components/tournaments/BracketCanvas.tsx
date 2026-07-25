@@ -82,12 +82,12 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
   const scoreFs = Math.max(9, Math.round(11 * layoutScale))
 
   return (
-    <View style={[styles.canvasWrap, { minHeight: Math.min(canvasHeight, contentHeight * 0.7) }]}>
+    <View style={[styles.canvasWrap, { minHeight: canvasHeight }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator
         nestedScrollEnabled
-        style={{ maxHeight: Math.max(220, contentHeight * 0.65) }}>
+        style={{ height: canvasHeight }}>
         <View style={{ width: layout.width, height: canvasHeight, position: 'relative' }}>
           <Svg width={layout.width} height={canvasHeight}>
             {layout.roundLabels.map((rl) => (

@@ -8,6 +8,8 @@ import { Fonts } from '@/theme/typography'
 
 type PairCardProps = {
   pair: TournamentPairRow
+  /** When false/undefined, hide paid/pending inscription status (free tournaments). */
+  hasEntryFee?: boolean
   subtitle?: string
   joinLabel?: string
   onJoin?: () => void
@@ -18,6 +20,7 @@ type PairCardProps = {
 
 export function PairCard({
   pair,
+  hasEntryFee = false,
   subtitle,
   joinLabel,
   onJoin,
@@ -36,9 +39,11 @@ export function PairCard({
       ) : (
         <Text style={styles.empty}>Sin jugadores</Text>
       )}
-      <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
-        {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
-      </Text>
+      {hasEntryFee ? (
+        <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
+          {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
+        </Text>
+      ) : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.actions}>
         {onEdit && editLabel ? (
