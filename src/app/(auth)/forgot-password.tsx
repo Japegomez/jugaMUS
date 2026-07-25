@@ -17,10 +17,11 @@ import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
-import { Layout } from '@/theme/layout'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 
 export default function ForgotPasswordScreen() {
+  const { authTopPadding, font } = useResponsiveLayout()
   const resetPassword = useAuthStore((s) => s.resetPassword)
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -54,9 +55,9 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: authTopPadding }]}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Recuperar contraseña</Text>
+        <Text style={[styles.heading, { fontSize: font(26) }]}>Recuperar contraseña</Text>
         <Text style={styles.sub}>
           Te enviaremos un enlace por email para restablecer la contraseña (si existe una cuenta
           asociada).
@@ -112,11 +113,9 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Layout.authScreenTopPadding,
     paddingBottom: 32,
   },
   heading: {
-    fontSize: 26,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 8,

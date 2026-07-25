@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useMemo, useState } from 'react'
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import {
   SCOREBOARD_TUTORIAL_STEPS,
@@ -29,22 +30,49 @@ type ScoreboardBoardProps = {
   onClose: () => void
 }
 
+type BoardStyles = ReturnType<typeof createBoardStyles>
+
+/** Escala el layout landscape para pantallas bajas (p. ej. iPhone 14 en horizontal). */
+function useBoardScale() {
+  const { height, width } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
+  const shortSide = Math.min(width, height)
+  const availableHeight = Math.max(260, shortSide - insets.top - insets.bottom)
+  // Diseño de referencia ~400–420 pt de altura útil en landscape.
+  const rawScale = Math.min(1, Math.max(0.7, availableHeight / 400))
+  // Quantize to 0.05 steps to avoid insignificant style churn.
+  const scale = Math.round(rawScale * 20) / 20
+  return { scale, insets }
+}
+
 function ChipButton({
   label,
   onPress,
   accessibilityLabel,
+  styles,
+  size = 'default',
 }: {
   label: string
   onPress: () => void
   accessibilityLabel: string
+  styles: BoardStyles
+  size?: 'default' | 'pair' | 'round'
 }) {
+  const chipStyle =
+    size === 'pair' ? styles.pairChip : size === 'round' ? styles.roundChip : styles.chip
+  const textStyle =
+    size === 'pair'
+      ? styles.pairChipText
+      : size === 'round'
+        ? styles.roundChipText
+        : styles.chipText
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.chip, pressed && s.pressed]}
+      style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}>
-      <Text style={s.chipText}>{label}</Text>
+      <Text style={textStyle}>{label}</Text>
     </Pressable>
   )
 }
@@ -55,32 +83,34 @@ function GamesStepper({
   teamName,
   dimmed,
   onAdjustGames,
+  styles,
 }: {
   team: TeamId
   games: number
   teamName: string
   dimmed: boolean
   onAdjustGames: (team: TeamId, delta: number) => void
+  styles: BoardStyles
 }) {
   return (
-    <View style={[s.gamesRow, dimmed && s.dimmed]}>
+    <View style={[styles.gamesRow, dimmed && styles.dimmed]}>
       <Pressable
         onPress={() => onAdjustGames(team, -1)}
-        style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
+        style={({ pressed }) => [styles.gamesBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={`Restar juego a ${teamName}`}>
-        <Text style={s.gamesBtnText}>−</Text>
+        <Text style={styles.gamesBtnText}>−</Text>
       </Pressable>
-      <View style={s.gamesValueBox}>
-        <Text style={s.gamesValue}>{games}</Text>
-        <Text style={s.gamesLabel}>juegos</Text>
+      <View style={styles.gamesValueBox}>
+        <Text style={styles.gamesValue}>{games}</Text>
+        <Text style={styles.gamesLabel}>juegos</Text>
       </View>
       <Pressable
         onPress={() => onAdjustGames(team, 1)}
-        style={({ pressed }) => [s.gamesBtn, pressed && s.pressed]}
+        style={({ pressed }) => [styles.gamesBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={`Sumar juego a ${teamName}`}>
-        <Text style={s.gamesBtnText}>+</Text>
+        <Text style={styles.gamesBtnText}>+</Text>
       </Pressable>
     </View>
   )
@@ -96,6 +126,7 @@ function PairColumn({
   onTapPairPoint,
   onAdjustPairPoints,
   onAdjustGames,
+  styles,
 }: {
   team: TeamId
   teamName: string
@@ -106,6 +137,7 @@ function PairColumn({
   onTapPairPoint: (team: TeamId) => void
   onAdjustPairPoints: (team: TeamId, delta: number) => void
   onAdjustGames: (team: TeamId, delta: number) => void
+  styles: BoardStyles
 }) {
   const highlightPoints = highlight === 'pairPoints' || highlight === 'arrowsAndPairPoints'
 
@@ -115,6 +147,8 @@ function PairColumn({
       label="−1"
       onPress={() => onAdjustPairPoints(team, -1)}
       accessibilityLabel={`Restar 1 punto a ${teamName}`}
+      styles={styles}
+      size="pair"
     />
   )
   const plusOneBtn = (
@@ -123,6 +157,8 @@ function PairColumn({
       label="+1"
       onPress={() => onAdjustPairPoints(team, 1)}
       accessibilityLabel={`Sumar 1 punto a ${teamName}`}
+      styles={styles}
+      size="pair"
     />
   )
   const plusFiveBtn = (
@@ -131,32 +167,34 @@ function PairColumn({
       label="+5"
       onPress={() => onAdjustPairPoints(team, 5)}
       accessibilityLabel={`Sumar 5 puntos a ${teamName}`}
+      styles={styles}
+      size="pair"
     />
   )
   const pointButtons = [minusBtn, plusOneBtn, plusFiveBtn]
 
   return (
-    <View style={s.pairColumn}>
-      <Text style={[s.teamName, tutorialActive && s.dimmed]} numberOfLines={1}>
+    <View style={styles.pairColumn}>
+      <Text style={[styles.teamName, tutorialActive && styles.dimmed]} numberOfLines={1}>
         {teamName}
       </Text>
 
       <Pressable
         onPress={() => onTapPairPoint(team)}
         style={({ pressed }) => [
-          s.pointsSquare,
-          pressed && s.pointsSquarePressed,
-          tutorialActive && !highlightPoints && s.dimmed,
-          highlightPoints && s.spotlight,
+          styles.pointsSquare,
+          pressed && styles.pointsSquarePressed,
+          tutorialActive && !highlightPoints && styles.dimmed,
+          highlightPoints && styles.spotlight,
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Sumar 1 punto a ${teamName}`}>
-        <Text style={s.pointsValue} adjustsFontSizeToFit numberOfLines={1}>
+        <Text style={styles.pointsValue} adjustsFontSizeToFit numberOfLines={1}>
           {points}
         </Text>
       </Pressable>
 
-      <View style={[s.chipRow, tutorialActive && s.dimmed]}>{pointButtons}</View>
+      <View style={[styles.chipRow, tutorialActive && styles.dimmed]}>{pointButtons}</View>
 
       <GamesStepper
         team={team}
@@ -164,6 +202,7 @@ function PairColumn({
         teamName={teamName}
         dimmed={tutorialActive}
         onAdjustGames={onAdjustGames}
+        styles={styles}
       />
     </View>
   )
@@ -177,6 +216,7 @@ function RoundRow({
   onTapRound,
   onAdjustRound,
   onAwardRound,
+  styles,
 }: {
   round: MusRound
   value: number
@@ -185,75 +225,85 @@ function RoundRow({
   onTapRound: (round: MusRound) => void
   onAdjustRound: (round: MusRound, delta: number) => void
   onAwardRound: (round: MusRound, team: TeamId) => void
+  styles: BoardStyles
 }) {
   const label = MUS_ROUND_LABELS[round]
   const highlightCenters = highlight === 'roundCenters'
   const highlightArrows = highlight === 'arrowsAndPairPoints'
 
   return (
-    <View style={s.roundRow}>
-      <View style={[s.roundHeader, tutorialActive && s.dimmed]}>
-        <View style={s.roundAdjustGroup}>
+    <View style={styles.roundRow}>
+      <View style={[styles.roundHeader, tutorialActive && styles.dimmed]}>
+        <View style={styles.roundAdjustGroup}>
           <ChipButton
             label="−1"
             onPress={() => onAdjustRound(round, -1)}
             accessibilityLabel={`Restar 1 a ${label}`}
+            styles={styles}
+            size="round"
           />
           <ChipButton
             label="+1"
             onPress={() => onAdjustRound(round, 1)}
             accessibilityLabel={`Sumar 1 a ${label}`}
+            styles={styles}
+            size="round"
           />
         </View>
-        <Text style={s.roundLabel}>{label}</Text>
+        <Text style={styles.roundLabel}>{label}</Text>
         <ChipButton
           label="+5"
           onPress={() => onAdjustRound(round, 5)}
           accessibilityLabel={`Sumar 5 a ${label}`}
+          styles={styles}
+          size="round"
         />
       </View>
 
-      <View style={s.roundValueRow}>
-        <Pressable
-          onPress={() => onAwardRound(round, TEAM.A)}
-          hitSlop={8}
-          style={({ pressed }) => [
-            s.arrowBtn,
-            pressed && s.pressed,
-            tutorialActive && !highlightArrows && s.dimmed,
-            highlightArrows && s.spotlightSoft,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Sumar ${label} a la pareja de la izquierda`}>
-          <Text style={s.arrowText}>←</Text>
-        </Pressable>
+      {/* Slot flexible: centra el contador entre esta etiqueta y la de la siguiente ronda. */}
+      <View style={styles.roundValueSlot}>
+        <View style={styles.roundValueRow}>
+          <Pressable
+            onPress={() => onAwardRound(round, TEAM.A)}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.arrowBtn,
+              pressed && styles.pressed,
+              tutorialActive && !highlightArrows && styles.dimmed,
+              highlightArrows && styles.spotlightSoft,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Sumar ${label} a la pareja de la izquierda`}>
+            <Text style={styles.arrowText}>←</Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => onTapRound(round)}
-          style={({ pressed }) => [
-            s.roundValueBox,
-            pressed && s.pressed,
-            tutorialActive && !highlightCenters && s.dimmed,
-            highlightCenters && s.spotlight,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Sumar 2 a ${label}`}>
-          <Text style={s.roundValue}>{value}</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => onTapRound(round)}
+            style={({ pressed }) => [
+              styles.roundValueBox,
+              pressed && styles.pressed,
+              tutorialActive && !highlightCenters && styles.dimmed,
+              highlightCenters && styles.spotlight,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Sumar 2 a ${label}`}>
+            <Text style={styles.roundValue}>{value}</Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => onAwardRound(round, TEAM.B)}
-          hitSlop={8}
-          style={({ pressed }) => [
-            s.arrowBtn,
-            pressed && s.pressed,
-            tutorialActive && !highlightArrows && s.dimmed,
-            highlightArrows && s.spotlightSoft,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Sumar ${label} a la pareja de la derecha`}>
-          <Text style={s.arrowText}>→</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => onAwardRound(round, TEAM.B)}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.arrowBtn,
+              pressed && styles.pressed,
+              tutorialActive && !highlightArrows && styles.dimmed,
+              highlightArrows && styles.spotlightSoft,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Sumar ${label} a la pareja de la derecha`}>
+            <Text style={styles.arrowText}>→</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   )
@@ -274,6 +324,8 @@ export function ScoreboardBoard({
   onClose,
 }: ScoreboardBoardProps) {
   useHiddenStatusBar()
+  const { scale, insets } = useBoardScale()
+  const styles = useMemo(() => createBoardStyles(scale), [scale])
   const [tutorialVisible, setTutorialVisible] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
 
@@ -298,11 +350,23 @@ export function ScoreboardBoard({
     : 'none'
   const highlightUndo = highlight === 'undo'
 
-  return (
-    <View style={s.board}>
-      {tutorialVisible ? <View style={s.screenDim} pointerEvents="none" /> : null}
+  const undoIconSize = Math.round(22 * scale)
+  const cornerInset = Math.round(10 * scale)
 
-      <View style={s.mainRow}>
+  return (
+    <View
+      style={[
+        styles.board,
+        {
+          paddingTop: Math.max(insets.top, 4),
+          paddingBottom: Math.max(insets.bottom, 4),
+          paddingLeft: Math.max(insets.left, 0),
+          paddingRight: Math.max(insets.right, 0),
+        },
+      ]}>
+      {tutorialVisible ? <View style={styles.screenDim} pointerEvents="none" /> : null}
+
+      <View style={styles.mainRow}>
         <PairColumn
           team={TEAM.A}
           teamName={teamAName}
@@ -313,9 +377,10 @@ export function ScoreboardBoard({
           onTapPairPoint={onTapPairPoint}
           onAdjustPairPoints={onAdjustPairPoints}
           onAdjustGames={onAdjustGames}
+          styles={styles}
         />
 
-        <View style={s.centerColumn}>
+        <View style={styles.centerColumn}>
           {MUS_ROUNDS.map((round) => (
             <RoundRow
               key={round}
@@ -326,6 +391,7 @@ export function ScoreboardBoard({
               onTapRound={onTapRound}
               onAdjustRound={onAdjustRound}
               onAwardRound={onAwardRound}
+              styles={styles}
             />
           ))}
         </View>
@@ -340,16 +406,25 @@ export function ScoreboardBoard({
           onTapPairPoint={onTapPairPoint}
           onAdjustPairPoints={onAdjustPairPoints}
           onAdjustGames={onAdjustGames}
+          styles={styles}
         />
       </View>
 
       <Pressable
         onPress={onClose}
         hitSlop={12}
-        style={({ pressed }) => [s.backBtn, pressed && s.pressed, tutorialVisible && s.dimmed]}
+        style={({ pressed }) => [
+          styles.backBtn,
+          {
+            top: Math.max(insets.top, 4) + cornerInset,
+            left: Math.max(insets.left, 0) + cornerInset,
+          },
+          pressed && styles.pressed,
+          tutorialVisible && styles.dimmed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Cerrar">
-        <Text style={s.cornerBtnText}>✕</Text>
+        <Text style={styles.cornerBtnText}>✕</Text>
       </Pressable>
 
       <Pressable
@@ -357,15 +432,19 @@ export function ScoreboardBoard({
         disabled={!canUndo}
         hitSlop={12}
         style={({ pressed }) => [
-          s.undoBtn,
-          pressed && s.pressed,
-          !canUndo && !highlightUndo && s.cornerBtnDisabled,
-          tutorialVisible && !highlightUndo && s.dimmed,
-          highlightUndo && [s.spotlightSoft, s.undoBtnRaised],
+          styles.undoBtn,
+          {
+            bottom: Math.max(insets.bottom, 4) + cornerInset,
+            left: Math.max(insets.left, 0) + cornerInset,
+          },
+          pressed && styles.pressed,
+          !canUndo && !highlightUndo && styles.cornerBtnDisabled,
+          tutorialVisible && !highlightUndo && styles.dimmed,
+          highlightUndo && [styles.spotlightSoft, styles.undoBtnRaised],
         ]}
         accessibilityRole="button"
         accessibilityLabel="Deshacer último cambio">
-        <Ionicons name="arrow-undo" size={22} color={Colors.white} />
+        <Ionicons name="arrow-undo" size={undoIconSize} color={Colors.white} />
       </Pressable>
 
       {tutorialVisible ? (
@@ -380,203 +459,263 @@ export function ScoreboardBoard({
   )
 }
 
-const s = StyleSheet.create({
-  board: {
-    flex: 1,
-    backgroundColor: Colors.primary,
-  },
-  screenDim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.28)',
-    zIndex: 1,
-  },
-  dimmed: {
-    opacity: 0.38,
-  },
-  spotlight: {
-    opacity: 1,
-    borderColor: '#F0D56A',
-    shadowColor: '#F0D56A',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 10,
-    elevation: 8,
-    zIndex: 2,
-  },
-  spotlightSoft: {
-    opacity: 1,
-    backgroundColor: 'rgba(240,213,106,0.28)',
-    borderColor: '#F0D56A',
-    zIndex: 2,
-  },
-  backBtn: {
-    position: 'absolute',
-    left: 10,
-    top: 10,
-    width: 40,
-    height: 34,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    zIndex: 2,
-  },
-  cornerBtnDisabled: { opacity: 0.35 },
-  cornerBtnText: { color: Colors.white, fontSize: 20, fontFamily: Fonts.bold, lineHeight: 24 },
-  undoBtn: {
-    position: 'absolute',
-    left: 10,
-    bottom: 10,
-    width: 40,
-    height: 34,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    zIndex: 2,
-  },
-  undoBtnRaised: {
-    zIndex: 60,
-    elevation: 60,
-  },
-  mainRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    gap: 8,
-    paddingHorizontal: 10,
-    zIndex: 2,
-  },
+function createBoardStyles(scale: number) {
+  const s = (n: number) => Math.max(1, Math.round(n * scale))
+  const fs = (n: number) => Math.max(10, Math.round(n * scale))
 
-  pairColumn: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 8,
-  },
-  teamName: {
-    color: Colors.white,
-    fontSize: 24,
-    fontFamily: Fonts.bold,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-    textAlign: 'center',
-  },
-  pointsSquare: {
-    alignSelf: 'center',
-    height: '44%',
-    maxHeight: 180,
-    minHeight: 112,
-    aspectRatio: 0.82,
-    flexGrow: 0,
-    flexShrink: 1,
-    backgroundColor: Colors.white,
-    borderRadius: 10,
-    borderWidth: 2.5,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  pointsSquarePressed: { backgroundColor: '#EDEDED' },
-  pointsValue: {
-    fontSize: 80,
-    fontFamily: Fonts.bold,
-    color: Colors.textPrimary,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 8,
-  },
-  chip: {
-    minWidth: 44,
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    borderRadius: 7,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: 15, fontFamily: Fonts.bold, color: Colors.textPrimary },
-  pressed: { opacity: 0.7 },
+  return StyleSheet.create({
+    board: {
+      flex: 1,
+      backgroundColor: Colors.primary,
+    },
+    screenDim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.28)',
+      zIndex: 1,
+    },
+    dimmed: {
+      opacity: 0.38,
+    },
+    spotlight: {
+      opacity: 1,
+      borderColor: '#F0D56A',
+      shadowColor: '#F0D56A',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.9,
+      shadowRadius: 10,
+      elevation: 8,
+      zIndex: 2,
+    },
+    spotlightSoft: {
+      opacity: 1,
+      backgroundColor: 'rgba(240,213,106,0.28)',
+      borderColor: '#F0D56A',
+      zIndex: 2,
+    },
+    backBtn: {
+      position: 'absolute',
+      width: s(40),
+      height: s(34),
+      borderRadius: s(8),
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      zIndex: 2,
+    },
+    cornerBtnDisabled: { opacity: 0.35 },
+    cornerBtnText: {
+      color: Colors.white,
+      fontSize: fs(20),
+      fontFamily: Fonts.bold,
+      lineHeight: fs(24),
+    },
+    undoBtn: {
+      position: 'absolute',
+      width: s(40),
+      height: s(34),
+      borderRadius: s(8),
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      zIndex: 2,
+    },
+    undoBtnRaised: {
+      zIndex: 60,
+      elevation: 60,
+    },
+    mainRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: s(8),
+      paddingHorizontal: s(10),
+      minHeight: 0,
+      zIndex: 2,
+    },
 
-  gamesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  gamesBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  gamesBtnText: { color: Colors.white, fontSize: 22, fontFamily: Fonts.bold, lineHeight: 24 },
-  gamesValueBox: { alignItems: 'center', minWidth: 52 },
-  gamesValue: { color: Colors.white, fontSize: 28, fontFamily: Fonts.bold, lineHeight: 30 },
-  gamesLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
+    pairColumn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: s(12),
+      paddingBottom: s(6),
+      minHeight: 0,
+    },
+    teamName: {
+      color: Colors.white,
+      fontSize: fs(22),
+      fontFamily: Fonts.bold,
+      marginBottom: s(8),
+      paddingHorizontal: 4,
+      textAlign: 'center',
+    },
+    pointsSquare: {
+      alignSelf: 'center',
+      height: `${36 + 8 * scale}%`,
+      maxHeight: s(180),
+      minHeight: s(88),
+      aspectRatio: 0.82,
+      flexGrow: 0,
+      flexShrink: 1,
+      backgroundColor: Colors.white,
+      borderRadius: s(10),
+      borderWidth: 2.5,
+      borderColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: s(6),
+      paddingHorizontal: s(8),
+      paddingVertical: s(4),
+    },
+    pointsSquarePressed: { backgroundColor: '#EDEDED' },
+    pointsValue: {
+      fontSize: fs(72),
+      fontFamily: Fonts.bold,
+      color: Colors.textPrimary,
+    },
+    chipRow: {
+      flexDirection: 'row',
+      gap: s(8),
+      marginBottom: s(6),
+    },
+    chip: {
+      minWidth: s(40),
+      paddingHorizontal: s(7),
+      paddingVertical: s(5),
+      borderRadius: s(7),
+      backgroundColor: Colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    chipText: { fontSize: fs(14), fontFamily: Fonts.bold, color: Colors.textPrimary },
+    pairChip: {
+      minWidth: s(52),
+      paddingHorizontal: s(12),
+      paddingVertical: s(9),
+      borderRadius: s(9),
+      backgroundColor: Colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pairChipText: { fontSize: fs(17), fontFamily: Fonts.bold, color: Colors.textPrimary },
+    roundChip: {
+      minWidth: s(46),
+      paddingHorizontal: s(9),
+      paddingVertical: s(6),
+      borderRadius: s(8),
+      backgroundColor: Colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    roundChipText: { fontSize: fs(15), fontFamily: Fonts.bold, color: Colors.textPrimary },
+    pressed: { opacity: 0.7 },
 
-  centerColumn: {
-    flex: 1.15,
-    alignSelf: 'stretch',
-    justifyContent: 'space-between',
-    paddingVertical: 0,
-  },
-  roundRow: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 3,
-  },
-  roundHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  roundAdjustGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  roundLabel: {
-    color: Colors.white,
-    fontSize: 17,
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.5,
-  },
-  roundValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  arrowBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  arrowText: { color: Colors.white, fontSize: 34, fontFamily: Fonts.bold, lineHeight: 38 },
-  roundValueBox: {
-    minWidth: 52,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    borderWidth: 2.5,
-    borderColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roundValue: { fontSize: 26, fontFamily: Fonts.bold, color: Colors.textPrimary },
-})
+    gamesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(10),
+    },
+    gamesBtn: {
+      width: s(40),
+      height: s(40),
+      borderRadius: s(20),
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    gamesBtnText: {
+      color: Colors.white,
+      fontSize: fs(24),
+      fontFamily: Fonts.bold,
+      lineHeight: fs(26),
+    },
+    gamesValueBox: { alignItems: 'center', minWidth: s(56) },
+    gamesValue: {
+      color: Colors.white,
+      fontSize: fs(32),
+      fontFamily: Fonts.bold,
+      lineHeight: fs(34),
+    },
+    gamesLabel: { color: 'rgba(255,255,255,0.75)', fontSize: fs(13) },
+
+    centerColumn: {
+      flex: 1.15,
+      alignSelf: 'stretch',
+      justifyContent: 'flex-start',
+      minHeight: 0,
+      paddingTop: s(12),
+      paddingBottom: 0,
+    },
+    roundRow: {
+      flex: 1,
+      minHeight: 0,
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      paddingVertical: 0,
+    },
+    roundHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(5),
+      marginBottom: 0,
+      flexShrink: 0,
+      zIndex: 1,
+    },
+    roundAdjustGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(5),
+    },
+    roundLabel: {
+      color: Colors.white,
+      fontSize: fs(17),
+      fontFamily: Fonts.bold,
+      letterSpacing: 0.5,
+      flexShrink: 1,
+    },
+    roundValueSlot: {
+      flex: 1,
+      minHeight: 0,
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+      // Evita que chips de ronda mayores solapen el contador de debajo.
+      paddingTop: s(2),
+      paddingBottom: s(2),
+    },
+    roundValueRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(8),
+    },
+    arrowBtn: {
+      width: s(36),
+      height: s(36),
+      borderRadius: s(9),
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    arrowText: {
+      color: Colors.white,
+      fontSize: fs(28),
+      fontFamily: Fonts.bold,
+      lineHeight: fs(32),
+    },
+    roundValueBox: {
+      minWidth: s(46),
+      paddingHorizontal: s(6),
+      paddingVertical: s(2),
+      backgroundColor: Colors.white,
+      borderRadius: s(8),
+      borderWidth: 2.5,
+      borderColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    roundValue: { fontSize: fs(22), fontFamily: Fonts.bold, color: Colors.textPrimary },
+  })
+}

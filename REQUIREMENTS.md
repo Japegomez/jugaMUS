@@ -17,7 +17,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
 - **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI. CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
 - **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422).
-- **Notificaciones en perfil (may. 2026):** preferencias **push** y por **evento** (unión, cambio de partida, resultado, recordatorios) en la pantalla de perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla.
+- **Notificaciones en perfil (may./jul. 2026):** preferencias **push** («Todas») y por **evento** en perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla. Eventos: unión; partida/torneo inicio, edición y cancelación (separados); resultado pendiente de validar; resultado pendiente de enviar (aviso ~5 h en curso); recordatorios 24 h y/o 2 h antes (chips multi-selección). `enqueue_notification` y `process-notifications` respetan `notify_push` + `notify_on_*` (migraciones `077`–`079`).
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand. Pendiente commit/PR desde rama `feature/ui-redesign`.
 - **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final (y el partido de 3º/4º si está activado). Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Sincronización multi-dispositivo: Supabase Realtime (`058`) en `matches`, participantes, resultados, torneos y parejas; invalidación React Query en Descubrir, Mis partidas, historial y ficha/cuadro de torneo (sin polling 30 s en detalle). **Edición de parejas (may.–jun. 2026):** organizador o miembros de la pareja pueden editar nombre y plazas texto en inscripción; solo el organizador elimina parejas (`062`). Opcional **3º y 4º puesto** entre perdedores de semifinales (`064`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
@@ -33,8 +33,10 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`.
 - **Sesión Auth (jul. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo sigue vigente.
 - **Torneos — auto-cancel sin cuadro (jul. 2026):** en `registration` pasado `start_at` sin `bracket_generated_at` → `cancelled` (+ notificación al organizador). Crear/editar: título/ciudad/lugar opcionales (defaults «Torneo» / «Ciudad por definir»). Aviso al guardar. Migraciones `070`/`071`.
+- **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
 - **PostHog producto (jul. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
-- **Versión app (jul. 2026):** **1.3.4** (`app.json`, `package.json`).
+- **Versión app (jul. 2026):** **1.4.0** (`app.json`, `package.json`).
+- **UI responsive (jul. 2026):** helpers `useResponsiveLayout` / `ScrollableModalBody` para escalado tipográfico y modales con scroll seguro en pantallas pequeñas.
 - **Crear partida — UX (jul. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ cierra a **Mis partidas** (no `back` a Descubrir). Sin autofocus/teclado al abrir el formulario. Etiquetas de campo en negrita; sin asteriscos ni «(opcional)» en labels de crear/editar. **Empezar partida:** sin modal de confirmación (sí aviso si plantilla incompleta). Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`).
 - **Apple Sign In (jun. 2026):** nombre de perfil legible con `fullName` de Apple y backfill para relay emails (`060`–`061`).
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
@@ -104,8 +106,8 @@ Solo dos roles en el MVP:
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
 - Preferencias de notificación en pantalla de perfil:
-  - **Push** (activar/desactivar)
-  - **Por evento:** unión a partida, edición/cancelación, resultado, recordatorios (columnas `notify_on_*` en `profiles`, migración `022`)
+  - **Todas** (`notify_push`): master que enciende/apaga todos los eventos
+  - **Por evento:** unión; inicio / edición / cancelación de partida o torneo; resultado pendiente de validar; resultado pendiente de enviar; recordatorios 24 h y 2 h (selección independiente) — columnas `notify_on_*` (migraciones `022`, `078`, `079`)
 - Enlaces a términos y política de privacidad desde el perfil
 - **Perfil de otro usuario (solo lectura):** nombre, ciudad, teléfono según permisos del servidor e historial de partidas visibles; navegación desde participantes registrados en detalle de partida
 - **El teléfono solo es visible para participantes de la misma partida confirmada** (también en perfil ajeno vía RPC)
@@ -170,12 +172,12 @@ Solo dos roles en el MVP:
 - Push cuando alguien se une a tu partida
 - Push cuando la partida es editada o cancelada
 - Push al ser expulsado o cuando alguien abandona
-- Preferencias granulares en cliente (push + evento); **pendiente:** que triggers/cron respeten `notify_on_*` además de `notify_push`
+- Preferencias granulares en cliente (push + evento); `enqueue_notification` y Edge Function `process-notifications` respetan `notify_push` y `notify_on_*`
 
 **Notificaciones automáticas (Fase 2)**
 
-- Recordatorio 24h y 2h antes de la partida
-- Aviso a las 5h si la partida sigue en curso (para registrar resultado)
+- Recordatorio 24h y/o 2h antes de la partida (preferencias independientes)
+- Aviso a las 5h si la partida sigue en curso sin resultado («resultado pendiente de enviar»)
 - A las 12h sin resultado: estado → `finished_no_result` (con aviso)
 
 **Resultados (Fase 2)**
@@ -279,9 +281,13 @@ CREATE TABLE profiles (
   notify_push  BOOLEAN NOT NULL DEFAULT TRUE,
   -- Migración 022 (may. 2026):
   notify_on_join BOOLEAN NOT NULL DEFAULT TRUE,
-  notify_on_match_change BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_match_start BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_match_edit BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_match_cancel BOOLEAN NOT NULL DEFAULT TRUE,
   notify_on_result BOOLEAN NOT NULL DEFAULT TRUE,
-  notify_on_reminder BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_reminder_24h BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_reminder_2h BOOLEAN NOT NULL DEFAULT TRUE,
+  notify_on_reminder_in_progress BOOLEAN NOT NULL DEFAULT TRUE,
   push_token   TEXT,
   role        TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   status      TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),

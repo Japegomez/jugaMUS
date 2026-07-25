@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -50,7 +51,7 @@ export function DeleteAccountModal({
             <Text style={s.close}>✕</Text>
           </Pressable>
         </View>
-        <View style={s.body}>
+        <ScrollableModalBody>
           <Text style={s.warning}>
             Esta acción es irreversible. Se eliminarán tu perfil, historial de partidas y todos los
             datos asociados a tu cuenta.
@@ -73,7 +74,7 @@ export function DeleteAccountModal({
             disabled={loading}
             style={s.btn}
           />
-        </View>
+        </ScrollableModalBody>
       </SafeAreaView>
     </Modal>
   )
@@ -92,7 +93,6 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.danger },
   close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
-  body: { padding: 20 },
   warning: {
     fontSize: 15,
     fontFamily: Fonts.semiBold,

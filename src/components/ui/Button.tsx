@@ -80,9 +80,9 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: Colors.primary,
   },
+  /** Same brand green as primary (no opacity tint). */
   secondary: {
     backgroundColor: Colors.primary,
-    opacity: 0.9,
   },
   outline: {
     backgroundColor: 'transparent',

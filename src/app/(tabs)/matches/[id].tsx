@@ -31,6 +31,7 @@ import { RecordResultModal } from '@/components/matches/RecordResultModal'
 import { SubmitResultModal } from '@/components/matches/SubmitResultModal'
 import { Button } from '@/components/ui/Button'
 import { ReportModal } from '@/components/ui/ReportModal'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { ShareInviteButton } from '@/components/ShareInviteButton'
 import { useAuthStore } from '@/hooks/useAuth'
 import {
@@ -389,7 +390,7 @@ function JoinModal({
             <Text style={jm.close}>✕</Text>
           </Pressable>
         </View>
-        <View style={jm.body}>
+        <ScrollableModalBody>
           <Text style={jm.subtitle}>Elige tu equipo</Text>
           {([TEAM.A, TEAM.B] as const).map((team) => {
             const slots = team === TEAM.A ? slotsA : slotsB
@@ -413,7 +414,7 @@ function JoinModal({
             )
           })}
           {loading ? <ActivityIndicator style={{ marginTop: 16 }} /> : null}
-        </View>
+        </ScrollableModalBody>
       </SafeAreaView>
     </Modal>
   )
@@ -432,7 +433,6 @@ const jm = StyleSheet.create({
   },
   title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
-  body: { padding: 20 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 16 },
   option: {
     backgroundColor: Colors.surface,

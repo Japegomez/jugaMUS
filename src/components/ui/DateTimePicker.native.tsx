@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import RNDateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 
@@ -44,6 +52,9 @@ export function DateTimePicker({
 function IOSPicker({ label, value, onChange, error, minDate }: DateTimePickerProps) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(() => parseIsoToDate(value))
+  const { height } = useWindowDimensions()
+  // En landscape / pantallas bajas el spinner fijo de 216 pt empuja el sheet fuera de vista.
+  const spinnerHeight = Math.min(216, Math.max(140, Math.round(height * 0.35)))
 
   const openModal = () => {
     setDraft(parseIsoToDate(value))
@@ -107,7 +118,7 @@ function IOSPicker({ label, value, onChange, error, minDate }: DateTimePickerPro
                 onChange={(_, d) => {
                   if (d) setDraft(d)
                 }}
-                style={s.iosSpinner}
+                style={[s.iosSpinner, { height: spinnerHeight }]}
               />
             </View>
           </SafeAreaView>
@@ -260,5 +271,5 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   modalCancel: { fontSize: 16, color: Colors.textSecondary },
   modalConfirm: { fontSize: 16, color: Colors.primary, fontFamily: Fonts.bold },
-  iosSpinner: { height: 216, width: '100%', backgroundColor: 'transparent' },
+  iosSpinner: { width: '100%', backgroundColor: 'transparent' },
 })

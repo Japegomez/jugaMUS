@@ -42,6 +42,7 @@ export type TournamentInsert = Pick<
   | 'creator_joins_as_player'
 > & {
   include_third_place?: boolean
+  entry_fee?: number | null
 }
 
 export type TournamentUpdate = Pick<
@@ -55,6 +56,7 @@ export type TournamentUpdate = Pick<
   | 'place_text'
   | 'duration_target_games'
   | 'visibility'
+  | 'entry_fee'
 >
 
 export type BracketNodeRow = {
@@ -94,6 +96,7 @@ export type AddPairInput = {
   playerAText?: string | null
   playerBUserId?: string | null
   playerBText?: string | null
+  entryFeePaid?: boolean
 }
 
 export type UpdatePairInput = {
@@ -101,6 +104,7 @@ export type UpdatePairInput = {
   name?: string
   playerAText?: string | null
   playerBText?: string | null
+  entryFeePaid?: boolean
 }
 
 export async function createTournament(
@@ -121,6 +125,7 @@ export async function createTournament(
     p_location_privacy: data.location_privacy,
     p_creator_joins_as_player: data.creator_joins_as_player ?? false,
     p_include_third_place: data.include_third_place ?? false,
+    p_entry_fee: data.entry_fee ?? undefined,
   })
 
   if (error) throw new Error(error.message)
@@ -227,6 +232,25 @@ export async function updateTournament(
   return row as TournamentRow
 }
 
+function mapCancelTournamentError(message: string): string {
+  if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
+  if (message.includes('forbidden')) return 'Solo el organizador puede cancelar el torneo'
+  if (message.includes('tournament_not_found')) return 'Torneo no encontrado'
+  if (message.includes('tournament_not_cancellable')) {
+    return 'Este torneo ya no se puede cancelar'
+  }
+  return message
+}
+
+/** Organizer cancels a registration / in-progress tournament and its open matches. */
+export async function cancelTournament(id: string): Promise<TournamentRow> {
+  const { data, error } = await supabase.rpc('cancel_tournament', {
+    p_tournament_id: id,
+  })
+  if (error) throw new Error(mapCancelTournamentError(error.message))
+  return data as TournamentRow
+}
+
 function mapPrivateTournamentRpcError(message: string): string {
   if (message.includes('not_authenticated')) return 'Debes iniciar sesión'
   if (message.includes('password_empty')) return 'La contraseña no puede estar vacía'
@@ -259,6 +283,7 @@ export async function grantTournamentPasswordAccess(
 }
 
 export async function addTournamentPair(input: AddPairInput): Promise<TournamentPairRow> {
+  const entryFeePaid = Boolean(input.entryFeePaid)
   const { data, error } = await supabase.rpc('add_tournament_pair', {
     p_tournament_id: input.tournamentId,
     p_name: input.name?.trim() ?? '',
@@ -266,10 +291,41 @@ export async function addTournamentPair(input: AddPairInput): Promise<Tournament
     p_player_a_text: input.playerAText ?? undefined,
     p_player_b_user_id: input.playerBUserId ?? undefined,
     p_player_b_text: input.playerBText ?? undefined,
+    p_entry_fee_paid: entryFeePaid,
   })
 
   if (error) throw new Error(mapTournamentPairRpcError(error.message))
-  return data as TournamentPairRow
+  const row = data as TournamentPairRow
+  // Ensure UI reflects the submitted flag even if the RPC payload omits the column.
+  if (row.entry_fee_paid === entryFeePaid) {
+    return row
+  }
+
+  const { data: patched, error: patchError } = await supabase
+    .from('tournament_pairs')
+    .update({ entry_fee_paid: entryFeePaid })
+    .eq('id', row.id)
+    .select(
+      `*,
+        player_a_profile:profiles!tournament_pairs_player_a_user_id_fkey(display_name),
+        player_b_profile:profiles!tournament_pairs_player_b_user_id_fkey(display_name)`
+    )
+    .single()
+
+  if (patchError || !patched) {
+    return row
+  }
+
+  const p = patched as TournamentPairRow & {
+    player_a_profile?: { display_name: string } | null
+    player_b_profile?: { display_name: string } | null
+  }
+  return {
+    ...p,
+    entry_fee_paid: p.entry_fee_paid,
+    player_a_display_name: p.player_a_profile?.display_name ?? null,
+    player_b_display_name: p.player_b_profile?.display_name ?? null,
+  }
 }
 
 export async function joinTournamentPair(
@@ -293,6 +349,7 @@ export async function updateTournamentPair(input: UpdatePairInput): Promise<Tour
     p_name: input.name?.trim() ?? '',
     p_player_a_text: input.playerAText ?? '',
     p_player_b_text: input.playerBText ?? '',
+    p_entry_fee_paid: input.entryFeePaid ?? undefined,
   })
 
   if (error) throw new Error(mapTournamentPairRpcError(error.message))

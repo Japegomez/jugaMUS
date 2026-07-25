@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: Colors.surface,
     color: Colors.textPrimary,
-    minHeight: 100,
+    minHeight: 72,
   },
   actions: { marginTop: 20, gap: 10 },
   actionBtn: {},

@@ -8,6 +8,8 @@ import { Fonts } from '@/theme/typography'
 
 type PairCardProps = {
   pair: TournamentPairRow
+  /** When false/undefined, hide paid/pending inscription status (free tournaments). */
+  hasEntryFee?: boolean
   subtitle?: string
   joinLabel?: string
   onJoin?: () => void
@@ -18,6 +20,7 @@ type PairCardProps = {
 
 export function PairCard({
   pair,
+  hasEntryFee = false,
   subtitle,
   joinLabel,
   onJoin,
@@ -26,6 +29,7 @@ export function PairCard({
   onEdit,
 }: PairCardProps) {
   const members = pairMemberLabels(pair)
+  const entryFeePaid = pair.entry_fee_paid === true
 
   return (
     <View style={styles.card}>
@@ -35,6 +39,11 @@ export function PairCard({
       ) : (
         <Text style={styles.empty}>Sin jugadores</Text>
       )}
+      {hasEntryFee ? (
+        <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
+          {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
+        </Text>
+      ) : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.actions}>
         {onEdit && editLabel ? (
@@ -66,7 +75,10 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary },
   members: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
   empty: { fontSize: 14, color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' },
+  feeStatus: { fontSize: 13, fontFamily: Fonts.semiBold, marginTop: 6 },
+  feePaid: { color: Colors.primary },
+  feePending: { color: Colors.textSecondary },
   subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 6 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  actionBtn: { flexGrow: 1, minWidth: 120 },
+  actionBtn: { flexGrow: 1, flexBasis: '40%', minWidth: 100 },
 })

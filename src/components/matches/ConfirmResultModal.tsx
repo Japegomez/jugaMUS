@@ -3,6 +3,7 @@ import { Modal, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } fro
 
 import { MatchResultScoreLines } from '@/components/matches/MatchResultScoreLines'
 import { Button } from '@/components/ui/Button'
+import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -47,7 +48,7 @@ export function ConfirmResultModal({
             <Text style={s.close}>✕</Text>
           </Pressable>
         </View>
-        <View style={s.body}>
+        <ScrollableModalBody>
           <MatchResultScoreLines
             teamAName="Equipo A"
             teamBName="Equipo B"
@@ -78,7 +79,7 @@ export function ConfirmResultModal({
               style={s.btn}
             />
           </View>
-        </View>
+        </ScrollableModalBody>
       </SafeAreaView>
     </Modal>
   )
@@ -97,13 +98,12 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
   close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
-  body: { padding: 20 },
   score: { fontSize: 20, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 8 },
   submitter: { fontSize: 15, color: Colors.textSecondary, marginBottom: 20 },
   submitterName: { fontFamily: Fonts.bold, color: Colors.textPrimary },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textPrimary, marginBottom: 8 },
   textarea: {
-    minHeight: 100,
+    minHeight: 72,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 10,

@@ -6,6 +6,7 @@ import { MATCH_STATUS } from '@/constants'
 import type { BracketNodeRow } from '@/services/tournaments.service'
 import { buildBracketLayout, isPlaceholderNode, truncateName } from '@/utils/bracketLayout'
 import { Colors } from '@/theme/colors'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 
 type BracketCanvasProps = {
@@ -52,6 +53,7 @@ function scoreLabel(node: BracketNodeRow): string {
 
 export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
   const router = useRouter()
+  const { isNarrow, scale, contentHeight } = useResponsiveLayout()
 
   if (!bracketGenerated) {
     return (
@@ -72,20 +74,28 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
     )
   }
 
-  const layout = buildBracketLayout(nodes)
-  const canvasHeight = Math.max(layout.height, 280)
+  const layoutScale = isNarrow ? Math.min(0.88, scale) : Math.min(1, scale)
+  const layout = buildBracketLayout(nodes, { scale: layoutScale })
+  const canvasHeight = Math.max(layout.height, Math.min(280, Math.round(contentHeight * 0.45)))
+  const titleFs = Math.max(10, Math.round(13 * layoutScale))
+  const nameFs = Math.max(9, Math.round(12 * layoutScale))
+  const scoreFs = Math.max(9, Math.round(11 * layoutScale))
 
   return (
     <View style={[styles.canvasWrap, { minHeight: canvasHeight }]}>
-      <ScrollView horizontal showsHorizontalScrollIndicator nestedScrollEnabled>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator
+        nestedScrollEnabled
+        style={{ height: canvasHeight }}>
         <View style={{ width: layout.width, height: canvasHeight, position: 'relative' }}>
           <Svg width={layout.width} height={canvasHeight}>
             {layout.roundLabels.map((rl) => (
               <SvgText
                 key={rl.roundSize}
                 x={rl.x}
-                y={20}
-                fontSize={13}
+                y={Math.round(18 * layoutScale) + 4}
+                fontSize={titleFs}
                 fontWeight="700"
                 fill={Colors.primary}
                 textAnchor="middle">
@@ -121,6 +131,9 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
               const aWinner = Boolean(node.winner_pair_id && node.winner_pair_id === node.pair_a_id)
               const bWinner = Boolean(node.winner_pair_id && node.winner_pair_id === node.pair_b_id)
               const placeholder = isPlaceholderNode(node)
+              const yA = node.y + node.height * 0.32
+              const yScore = node.y + node.height * 0.55
+              const yB = node.y + node.height * 0.82
 
               return (
                 <G key={`${node.round_size}-${node.bracket_position}`}>
@@ -137,8 +150,8 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                   />
                   <SvgText
                     x={node.x + 8}
-                    y={node.y + 22}
-                    fontSize={12}
+                    y={yA}
+                    fontSize={nameFs}
                     fontWeight={aWinner ? '700' : '500'}
                     fill={
                       placeholder
@@ -151,8 +164,8 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                   </SvgText>
                   <SvgText
                     x={node.x + node.width / 2}
-                    y={node.y + 38}
-                    fontSize={11}
+                    y={yScore}
+                    fontSize={scoreFs}
                     fill={Colors.textSecondary}
                     textAnchor="middle">
                     {scoreLabel(node)}
@@ -160,8 +173,8 @@ export function BracketCanvas({ nodes, bracketGenerated }: BracketCanvasProps) {
                   {!node.is_bye ? (
                     <SvgText
                       x={node.x + 8}
-                      y={node.y + 58}
-                      fontSize={12}
+                      y={yB}
+                      fontSize={nameFs}
                       fontWeight={bWinner ? '700' : '500'}
                       fill={
                         placeholder

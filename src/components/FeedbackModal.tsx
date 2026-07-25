@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: Colors.surface,
     color: Colors.textPrimary,
-    minHeight: 120,
+    minHeight: 80,
   },
   hint: { fontSize: 12, color: Colors.textSecondary, marginTop: 6 },
   actions: { marginTop: 20, gap: 10 },

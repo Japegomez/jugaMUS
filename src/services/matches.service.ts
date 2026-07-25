@@ -12,6 +12,10 @@ import {
   type ExploreContentType,
 } from '@/constants'
 import type { Database, TablesInsert, TablesUpdate } from '@/types/database.types'
+import {
+  getUserTournamentsDashboard,
+  type UserTournamentSummary,
+} from '@/services/tournaments.service'
 import { resolveMatchOutcome, type MatchOutcome } from '@/utils/matchDisplay'
 
 /** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
@@ -1018,13 +1022,18 @@ function mergeMatchSummaryInto(byId: Map<string, UserMatchSummary>, row: UserMat
   }
 }
 
-/** Creator + confirmed participant matches (excludes bye bracket rows). */
+/**
+ * Creator + confirmed participant matches (excludes bye bracket rows).
+ * Tournament bracket matches only appear when the user is a participant — not merely
+ * because they are the tournament organizer (`matches.creator_id`).
+ */
 async function listUserMatchSummariesForDashboard(userId: string): Promise<UserMatchSummary[]> {
   const [asCreator, asParticipant] = await Promise.all([
     supabase
       .from('matches')
       .select(USER_MATCH_SUMMARY_SELECT)
       .eq('creator_id', userId)
+      .is('tournament_id', null)
       .eq('tournament_is_bye', false)
       .limit(120),
     supabase
@@ -1083,6 +1092,9 @@ export type MyMatchesDashboard = {
   upcoming: UserMatchSummary[]
   inProgress: UserMatchSummary[]
   awaitingResultValidation: AwaitingResultMatchRow[]
+  /** Torneos donde el usuario organiza o participa (inscripción / en curso). */
+  tournamentsUpcoming: UserTournamentSummary[]
+  tournamentsInProgress: UserTournamentSummary[]
 }
 
 /**
@@ -1165,9 +1177,10 @@ async function listAwaitingResultValidationClientFallback(
  * and matches where the user must approve or dispute a submitted result.
  */
 export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
-  const [awaitingRes, matchSummaries] = await Promise.all([
+  const [awaitingRes, matchSummaries, tournaments] = await Promise.all([
     supabase.rpc('list_matches_awaiting_my_result_action'),
     listUserMatchSummariesForDashboard(userId),
+    getUserTournamentsDashboard(userId),
   ])
 
   let awaitingResultValidation: AwaitingResultMatchRow[]
@@ -1202,6 +1215,8 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     upcoming,
     inProgress,
     awaitingResultValidation: awaitingWithPlaces,
+    tournamentsUpcoming: tournaments.upcoming,
+    tournamentsInProgress: tournaments.inProgress,
   }
 }
 

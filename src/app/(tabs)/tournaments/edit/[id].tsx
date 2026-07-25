@@ -17,6 +17,8 @@ import {
   AUTO_CANCEL_NO_BRACKET_ALERT,
   DEFAULT_TOURNAMENT_CITY,
   DEFAULT_TOURNAMENT_TITLE,
+  entryFeeToFormValue,
+  parseEntryFeeInput,
   tournamentPlacePayload,
 } from '@/utils/tournamentForm'
 import { Colors } from '@/theme/colors'
@@ -32,6 +34,15 @@ const schema = z.object({
   duration_target_games: z.number().int().min(1).max(6),
   visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
   password: z.string().max(100).optional().or(z.literal('')),
+  entry_fee: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (v) => !v || /^\d+([.,]\d{1,2})?$/.test(v.trim()),
+      'Introduce un importe válido (entero o con hasta 2 decimales)'
+    ),
   notes: z.string().trim().max(300).optional().or(z.literal('')),
 })
 
@@ -65,6 +76,7 @@ export default function EditTournamentScreen() {
             | typeof MATCH_VISIBILITY.LINK
             | typeof MATCH_VISIBILITY.PRIVATE,
           password: '',
+          entry_fee: entryFeeToFormValue(tournament.entry_fee),
           notes: tournament.notes ?? '',
         }
       : undefined,
@@ -128,6 +140,13 @@ export default function EditTournamentScreen() {
     }
 
     try {
+      let entryFee: number | null = null
+      try {
+        entryFee = parseEntryFeeInput(values.entry_fee)
+      } catch (err) {
+        Alert.alert('Inscripción', err instanceof Error ? err.message : 'Importe no válido')
+        return
+      }
       await updateTournament.mutateAsync({
         id,
         data: {
@@ -139,6 +158,7 @@ export default function EditTournamentScreen() {
           ...tournamentPlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
+          entry_fee: entryFee,
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
@@ -232,6 +252,20 @@ export default function EditTournamentScreen() {
             onChangeText={field.onChange}
             error={errors.place_text?.message}
             autoCapitalize="sentences"
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="entry_fee"
+        render={({ field }) => (
+          <Input
+            label="Inscripción (€)"
+            placeholder="Ej. 10 o 10,50"
+            value={field.value ?? ''}
+            onChangeText={field.onChange}
+            error={errors.entry_fee?.message}
+            keyboardType="decimal-pad"
           />
         )}
       />

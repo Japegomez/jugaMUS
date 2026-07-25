@@ -18,11 +18,12 @@ import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
 import { registerSchema, type RegisterFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
-import { Layout } from '@/theme/layout'
+import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 
 export default function RegisterScreen() {
   const router = useRouter()
+  const { authTopPadding, font } = useResponsiveLayout()
   const signUp = useAuthStore((s) => s.signUp)
   const [submitting, setSubmitting] = useState(false)
 
@@ -69,9 +70,9 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: authTopPadding }]}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.heading}>Crear cuenta</Text>
+        <Text style={[styles.heading, { fontSize: font(26) }]}>Crear cuenta</Text>
         <Text style={styles.sub}>Completa los datos para registrarte</Text>
 
         <Controller
@@ -187,11 +188,9 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: Layout.authScreenTopPadding,
     paddingBottom: 32,
   },
   heading: {
-    fontSize: 26,
     fontFamily: Fonts.bold,
     color: Colors.primary,
     marginBottom: 8,

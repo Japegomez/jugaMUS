@@ -27,6 +27,43 @@ interface NotificationRow {
 interface ProfileRow {
   id: string
   push_token: string | null
+  notify_push: boolean
+  notify_on_join: boolean
+  notify_on_match_start: boolean
+  notify_on_match_edit: boolean
+  notify_on_match_cancel: boolean
+  notify_on_result: boolean
+  notify_on_reminder_24h: boolean
+  notify_on_reminder_2h: boolean
+  notify_on_reminder_in_progress: boolean
+}
+
+/** Maps queue `type` values to profile event preference columns. */
+function isNotificationAllowed(type: string, profile: ProfileRow): boolean {
+  if (!profile.notify_push) return false
+  switch (type) {
+    case 'participant_joined':
+      return profile.notify_on_join
+    case 'match_started':
+      return profile.notify_on_match_start
+    case 'match_updated':
+    case 'match_finished_no_result':
+      return profile.notify_on_match_edit
+    case 'match_cancelled':
+    case 'match_cancelled_insufficient':
+    case 'tournament_cancelled':
+      return profile.notify_on_match_cancel
+    case 'result_pending_validation':
+      return profile.notify_on_result
+    case 'reminder_24h':
+      return profile.notify_on_reminder_24h
+    case 'reminder_2h':
+      return profile.notify_on_reminder_2h
+    case 'reminder_5h_in_progress':
+      return profile.notify_on_reminder_in_progress
+    default:
+      return true
+  }
 }
 
 interface ExpoPushMessage {
@@ -97,11 +134,13 @@ Deno.serve(async (req) => {
 
   const notifications = rows as NotificationRow[]
 
-  // 2. Fetch push tokens for the relevant users (deduplicated)
+  // 2. Fetch push tokens + preference flags for the relevant users (deduplicated)
   const userIds = [...new Set(notifications.map((n) => n.user_id))]
   const { data: profiles, error: profileErr } = await supabase
     .from('profiles')
-    .select('id, push_token')
+    .select(
+      'id, push_token, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress'
+    )
     .in('id', userIds)
 
   if (profileErr) {
@@ -109,17 +148,23 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 
-  const tokenMap = new Map<string, string | null>(
-    (profiles as ProfileRow[]).map((p) => [p.id, p.push_token])
+  const profileMap = new Map<string, ProfileRow>(
+    (profiles as ProfileRow[]).map((p) => [p.id, p])
   )
 
   // 3. Build Expo messages and map to notification IDs
   const messages: ExpoPushMessage[] = []
   const messageToNotifId: string[] = []
   const skippedIds: string[] = []
+  const prefSkippedIds: string[] = []
 
   for (const notif of notifications) {
-    const token = tokenMap.get(notif.user_id)
+    const profile = profileMap.get(notif.user_id)
+    if (!profile || !isNotificationAllowed(notif.type, profile)) {
+      prefSkippedIds.push(notif.id)
+      continue
+    }
+    const token = profile.push_token
     if (!token || !token.startsWith('ExponentPushToken[')) {
       skippedIds.push(notif.id)
       continue
@@ -133,6 +178,25 @@ Deno.serve(async (req) => {
     })
     messageToNotifId.push(notif.id)
   }
+
+  // Preference-disabled: drop permanently (do not retry).
+  const notificationsById = new Map(notifications.map((n) => [n.id, n]))
+  const prefSkipByMaxAttempts = new Map<number, string[]>()
+  for (const id of prefSkippedIds) {
+    const notif = notificationsById.get(id)
+    if (!notif) continue
+    const group = prefSkipByMaxAttempts.get(notif.max_attempts) ?? []
+    group.push(id)
+    prefSkipByMaxAttempts.set(notif.max_attempts, group)
+  }
+  await Promise.all(
+    [...prefSkipByMaxAttempts.entries()].map(([maxAttempts, ids]) =>
+      supabase
+        .from('notification_queue')
+        .update({ status: 'failed', attempts: maxAttempts })
+        .in('id', ids)
+    )
+  )
 
   // 4. Mark skipped (no token) as failed if exhausted attempts, else leave pending
   for (const id of skippedIds) {
@@ -152,7 +216,14 @@ Deno.serve(async (req) => {
   }
 
   if (messages.length === 0) {
-    return new Response(JSON.stringify({ processed: 0, skipped: skippedIds.length }), { status: 200 })
+    return new Response(
+      JSON.stringify({
+        processed: 0,
+        skipped: skippedIds.length,
+        pref_skipped: prefSkippedIds.length,
+      }),
+      { status: 200 }
+    )
   }
 
   // 5. Send to Expo Push API in chunks of MAX_EXPO_BATCH
@@ -224,7 +295,13 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ processed: messages.length + skippedIds.length, sent, failed, skipped: skippedIds.length }),
+    JSON.stringify({
+      processed: messages.length + skippedIds.length + prefSkippedIds.length,
+      sent,
+      failed,
+      skipped: skippedIds.length,
+      pref_skipped: prefSkippedIds.length,
+    }),
     { status: 200 }
   )
 })

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/Button'
+import { Chip } from '@/components/ui/Chip'
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
@@ -310,7 +311,7 @@ export default function CreateMatchScreen() {
 
       {/* Duración */}
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Duración (juegos) *</Text>
+        <Text style={s.label}>Duración (juegos)</Text>
         <View style={s.durationRow}>
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <Chip
@@ -328,7 +329,7 @@ export default function CreateMatchScreen() {
 
       {/* Visibilidad */}
       <View style={s.fieldWrap}>
-        <Text style={s.label}>Visibilidad *</Text>
+        <Text style={s.label}>Visibilidad</Text>
         <View style={s.visRow}>
           <Chip
             label="Pública"
@@ -357,7 +358,7 @@ export default function CreateMatchScreen() {
           name="password"
           render={({ field }) => (
             <Input
-              label="Contraseña *"
+              label="Contraseña"
               placeholder="Elige una contraseña para acceder"
               value={field.value ?? ''}
               onChangeText={field.onChange}
@@ -478,52 +479,6 @@ export default function CreateMatchScreen() {
   )
 }
 
-// ─── Chip ─────────────────────────────────────────────────────────────────────
-
-interface ChipProps {
-  label: string
-  sublabel?: string
-  selected: boolean
-  onPress: () => void
-}
-
-function Chip({ label, sublabel, selected, onPress }: ChipProps) {
-  return (
-    <Pressable
-      style={[chip.base, selected && chip.selected]}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}>
-      <Text style={[chip.label, selected && chip.labelSelected]}>{label}</Text>
-      {sublabel ? (
-        <Text style={[chip.sublabel, selected && chip.sublabelSelected]}>{sublabel}</Text>
-      ) : null}
-    </Pressable>
-  )
-}
-
-const chip = StyleSheet.create({
-  base: {
-    flex: 1,
-    marginHorizontal: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    alignItems: 'center',
-  },
-  selected: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.wonBackground,
-  },
-  label: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
-  labelSelected: { color: Colors.primary },
-  sublabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
-  sublabelSelected: { color: Colors.primary },
-})
-
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
   container: { padding: 20, paddingBottom: 40 },
@@ -549,10 +504,12 @@ const s = StyleSheet.create({
   },
   durationRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: -4,
   },
   visRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginHorizontal: -4,
   },
   hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },

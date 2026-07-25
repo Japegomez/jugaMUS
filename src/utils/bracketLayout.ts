@@ -92,7 +92,17 @@ export function expandBracketNodes(nodes: BracketNodeRow[]): BracketNodeRow[] {
   return expanded
 }
 
-export function buildBracketLayout(nodes: BracketNodeRow[]): BracketLayout {
+export function buildBracketLayout(
+  nodes: BracketNodeRow[],
+  options?: { scale?: number }
+): BracketLayout {
+  const scale = Math.min(1, Math.max(0.7, options?.scale ?? 1))
+  const nodeWidth = Math.round(NODE_WIDTH * scale)
+  const nodeHeight = Math.round(NODE_HEIGHT * scale)
+  const columnGap = Math.round(COLUMN_GAP * scale)
+  const roundHeader = Math.round(ROUND_HEADER * scale)
+  const padding = Math.round(PADDING * scale)
+
   const expanded = expandBracketNodes(nodes)
   if (expanded.length === 0) {
     return { nodes: [], connectors: [], width: 0, height: 0, roundLabels: [] }
@@ -103,17 +113,17 @@ export function buildBracketLayout(nodes: BracketNodeRow[]): BracketLayout {
   const numColumns = roundSizes.length
 
   const slotsInFirstRound = maxRoundSize / 2
-  const totalHeight = PADDING * 2 + ROUND_HEADER + slotsInFirstRound * NODE_HEIGHT * 2
+  const totalHeight = padding * 2 + roundHeader + slotsInFirstRound * nodeHeight * 2
 
   const layoutNodes: LayoutNode[] = expanded.map((node) => {
     const colIndex = roundSizes.indexOf(node.round_size)
-    const x = PADDING + colIndex * (NODE_WIDTH + COLUMN_GAP)
+    const x = padding + colIndex * (nodeWidth + columnGap)
     const slotsInRound = node.round_size / 2
     const slotHeight = totalHeight / slotsInRound
     const y =
-      PADDING + ROUND_HEADER + node.bracket_position * slotHeight + slotHeight / 2 - NODE_HEIGHT / 2
+      padding + roundHeader + node.bracket_position * slotHeight + slotHeight / 2 - nodeHeight / 2
 
-    return { ...node, x, y, width: NODE_WIDTH, height: NODE_HEIGHT }
+    return { ...node, x, y, width: nodeWidth, height: nodeHeight }
   })
 
   const nodeByKey = new Map<string, LayoutNode>()
@@ -130,11 +140,11 @@ export function buildBracketLayout(nodes: BracketNodeRow[]): BracketLayout {
     const next = nodeByKey.get(`${nextRoundSize}:${nextPos}`)
     if (!next) continue
 
-    const x1 = node.x + NODE_WIDTH
-    const y1 = node.y + NODE_HEIGHT / 2
+    const x1 = node.x + node.width
+    const y1 = node.y + node.height / 2
     const x2 = next.x
-    const y2 = next.y + NODE_HEIGHT / 2
-    const midX = x1 + COLUMN_GAP / 2
+    const y2 = next.y + next.height / 2
+    const midX = x1 + columnGap / 2
 
     connectors.push({ x1, y1, x2: midX, y2: y1, x3: midX, y3: y2 })
     connectors.push({ x1: midX, y1: y2, x2, y2, x3: x2, y3: y2 })
@@ -143,10 +153,10 @@ export function buildBracketLayout(nodes: BracketNodeRow[]): BracketLayout {
   const roundLabels = roundSizes.map((roundSize, colIndex) => ({
     roundSize,
     label: roundLabel(roundSize),
-    x: PADDING + colIndex * (NODE_WIDTH + COLUMN_GAP) + NODE_WIDTH / 2,
+    x: padding + colIndex * (nodeWidth + columnGap) + nodeWidth / 2,
   }))
 
-  const width = PADDING * 2 + numColumns * NODE_WIDTH + (numColumns - 1) * COLUMN_GAP
+  const width = padding * 2 + numColumns * nodeWidth + (numColumns - 1) * columnGap
 
   return {
     nodes: layoutNodes,
