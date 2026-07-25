@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 25/07/2026 (hotfix torneos / notificaciones / UI responsive v1.3.5)
+> Actualizado: 25/07/2026 (minor v1.4.0 — torneos, prefs, audit)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -20,6 +20,7 @@
 | UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                   |
 | Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4            |
 | Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5 |
+| Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                      |
 
 ---
 
@@ -490,6 +491,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Notificaciones: respetar prefs en servidor; split inicio/edición/cancelación; chips 24 h / 2 h; «resultado pendiente de enviar»
 - [x] UI: `useResponsiveLayout`, `ScrollableModalBody`, botón secondary sin tint
 - [x] Versión app → **1.3.5** (`app.json`, `package.json`)
+
+### Minor release (v1.4.0) — 25/07/2026
+
+- [x] PR review: bracket canvas sin clip vertical; cancel torneo con transitions + limpia reminders; prefs legacy conservadas (`080`); PairCard/`hasEntryFee`; prefs bloqueadas en pending; Chip compartido; audit deps
+- [x] Security: shim `vendor/brace-expansion` + overrides (`tar`, `uuid`) → `npm audit --audit-level=high` limpio
+- [x] Versión app → **1.4.0** (`app.json`, `package.json`); push a `develop`
 
 ---
 
