@@ -167,6 +167,129 @@ export function buildBracketLayout(
   }
 }
 
+// ─── V2 layout: one card per pair ────────────────────────────────────────────
+
+const V2_CARD_W = 132
+const V2_CARD_H = 46
+const V2_PAIR_GAP = 4 // gap between pair-A and pair-B cards inside a match
+const V2_MATCH_GAP = 28 // gap between consecutive matches in the same round
+const V2_COL_GAP = 60 // horizontal gap between round columns (space for connectors)
+const V2_LABEL_H = 34 // height reserved for the round label at the top
+const V2_PAD_H = 12 // left/right canvas padding
+const V2_PAD_V = 12 // top/bottom canvas padding
+
+export type PairCardBox = { x: number; y: number; width: number; height: number }
+
+export type MatchLayoutV2 = {
+  node: BracketNodeRow
+  pairA: PairCardBox
+  pairB: PairCardBox
+  matchCenterY: number
+}
+
+export type ConnectorSegment = { x1: number; y1: number; x2: number; y2: number }
+
+export type BracketLayoutV2 = {
+  matches: MatchLayoutV2[]
+  connectors: ConnectorSegment[]
+  roundLabels: { roundSize: number; label: string; x: number }[]
+  width: number
+  height: number
+}
+
+export function buildBracketLayoutV2(nodes: BracketNodeRow[], scale = 1): BracketLayoutV2 {
+  const cw = Math.round(V2_CARD_W * scale)
+  const ch = Math.round(V2_CARD_H * scale)
+  const pg = Math.round(V2_PAIR_GAP * scale)
+  const mg = Math.round(V2_MATCH_GAP * scale)
+  const cg = Math.round(V2_COL_GAP * scale)
+  const lh = Math.round(V2_LABEL_H * scale)
+  const ph = Math.round(V2_PAD_H * scale)
+  const pv = Math.round(V2_PAD_V * scale)
+
+  const expanded = expandBracketNodes(nodes)
+  if (!expanded.length) return { matches: [], connectors: [], roundLabels: [], width: 0, height: 0 }
+
+  const maxRoundSize = Math.max(...expanded.map((n) => n.round_size))
+  const roundSizes = [...new Set(expanded.map((n) => n.round_size))].sort((a, b) => b - a)
+
+  const matchH = ch * 2 + pg
+  const firstRoundCount = maxRoundSize / 2
+  const totalHeight =
+    pv + lh + firstRoundCount * matchH + Math.max(0, firstRoundCount - 1) * mg + pv
+
+  function calcMatchCenterY(roundSize: number, pos: number): number {
+    if (roundSize === maxRoundSize) {
+      return pv + lh + pos * (matchH + mg) + Math.round(matchH / 2)
+    }
+    const cA = calcMatchCenterY(roundSize * 2, pos * 2)
+    const cB = calcMatchCenterY(roundSize * 2, pos * 2 + 1)
+    return Math.round((cA + cB) / 2)
+  }
+
+  const colIndexOf = new Map<number, number>()
+  roundSizes.forEach((rs, i) => colIndexOf.set(rs, i))
+
+  const matches: MatchLayoutV2[] = expanded.map((node) => {
+    const col = colIndexOf.get(node.round_size) ?? 0
+    const x = ph + col * (cw + cg)
+    const cy = calcMatchCenterY(node.round_size, node.bracket_position)
+    return {
+      node,
+      pairA: { x, y: cy - ch - Math.ceil(pg / 2), width: cw, height: ch },
+      pairB: { x, y: cy + Math.floor(pg / 2), width: cw, height: ch },
+      matchCenterY: cy,
+    }
+  })
+
+  const matchByKey = new Map<string, MatchLayoutV2>()
+  for (const m of matches) {
+    matchByKey.set(`${m.node.round_size}:${m.node.bracket_position}`, m)
+  }
+
+  const connectors: ConnectorSegment[] = []
+
+  for (const m of matches) {
+    const { node, pairA, pairB, matchCenterY: mcy } = m
+    if (node.round_size <= 2) continue
+
+    const parent = matchByKey.get(`${node.round_size / 2}:${Math.floor(node.bracket_position / 2)}`)
+    if (!parent) continue
+
+    const feedsIntoA = node.bracket_position % 2 === 0
+    const parentCard = feedsIntoA ? parent.pairA : parent.pairB
+    const parentMidY = parentCard.y + Math.floor(parentCard.height / 2)
+    const jx = pairA.x + cw + Math.round(cg / 2)
+    const aMidY = pairA.y + Math.floor(ch / 2)
+    const bMidY = pairB.y + Math.floor(ch / 2)
+
+    connectors.push({ x1: pairA.x + cw, y1: aMidY, x2: jx, y2: aMidY })
+    connectors.push({ x1: pairB.x + cw, y1: bMidY, x2: jx, y2: bMidY })
+    connectors.push({ x1: jx, y1: aMidY, x2: jx, y2: bMidY })
+    connectors.push({ x1: jx, y1: mcy, x2: parentCard.x, y2: mcy })
+    if (mcy !== parentMidY) {
+      connectors.push({ x1: parentCard.x, y1: mcy, x2: parentCard.x, y2: parentMidY })
+    }
+  }
+
+  const numCols = roundSizes.length
+  const totalWidth = ph * 2 + numCols * cw + (numCols - 1) * cg
+
+  return {
+    matches,
+    connectors,
+    roundLabels: roundSizes.map((rs, i) => ({
+      roundSize: rs,
+      label: roundLabel(rs),
+      x: ph + i * (cw + cg) + Math.floor(cw / 2),
+    })),
+    width: totalWidth,
+    height: totalHeight,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function truncateName(name: string | null | undefined, max = 18): string {
   if (!name) return '—'
   const trimmed = name.trim()

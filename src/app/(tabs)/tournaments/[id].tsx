@@ -180,24 +180,30 @@ export default function TournamentDetailScreen() {
 
   const handleGenerate = async () => {
     if (completePairs.length < 2) {
-      Alert.alert(
+      showAlert(
         'Parejas insuficientes',
         'Se necesitan al menos 2 parejas completas (con dos jugadores) para organizar el cuadro.'
       )
       return
     }
+
     const skipped = tournament.pairs.length - completePairs.length
     if (skipped > 0) {
-      Alert.alert(
+      const proceed = await confirmAlert(
         'Parejas incompletas',
-        `${skipped} pareja(s) sin los dos jugadores no entrarán en el cuadro. ¿Continuar?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Organizar', onPress: () => void runGenerateBracket() },
-        ]
+        `${skipped} pareja(s) sin los dos jugadores no entrarán en el cuadro.\n\nOrganizar el cuadro es una acción irreversible. ¿Continuar?`,
+        { confirmText: 'Organizar', destructive: true }
       )
-      return
+      if (!proceed) return
+    } else {
+      const proceed = await confirmAlert(
+        'Organizar cuadro',
+        'Se generará el cuadro con todas las parejas inscritas. Esta acción es irreversible y no se podrán añadir ni eliminar parejas después.\n\n¿Continuar?',
+        { confirmText: 'Organizar', destructive: true }
+      )
+      if (!proceed) return
     }
+
     await runGenerateBracket()
   }
 
@@ -364,7 +370,17 @@ export default function TournamentDetailScreen() {
 
             {tab === 'bracket' ? (
               <View style={s.bracketSection}>
-                <BracketCanvas nodes={mainBracketNodes} bracketGenerated={bracketGenerated} />
+                <Text style={s.bracketHelp}>
+                  Pulsa sobre cada pareja del cuadro para avanzar a la siguiente ronda.
+                </Text>
+                <BracketCanvas
+                  nodes={mainBracketNodes}
+                  bracketGenerated={bracketGenerated}
+                  pairs={tournament.pairs}
+                  tournamentId={id}
+                  durationTargetGames={tournament.duration_target_games ?? 4}
+                  isOrganizer={isCreator}
+                />
                 {thirdPlaceNode ? (
                   <View style={s.thirdPlaceSection}>
                     <Text style={s.thirdPlaceTitle}>3º y 4º puesto</Text>
@@ -574,6 +590,12 @@ const s = StyleSheet.create({
   tabText: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
   tabTextOn: { color: Colors.primary },
   bracketSection: { marginBottom: 8 },
+  bracketHelp: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 8,
+    lineHeight: 18,
+  },
   thirdPlaceSection: { marginTop: 16, gap: 8 },
   thirdPlaceTitle: {
     fontSize: 15,
