@@ -70,7 +70,7 @@ export function ScoreboardTutorial({ stepIndex, onBack, onNext, onSkip }: Scoreb
   const topPad = Math.max(insets.top, 12)
   const bottomPad = Math.max(insets.bottom, 12)
   // El alto disponible para la tarjeta: deja margen para el contenido del marcador.
-  const cardMaxHeight = Math.round((isLandscape ? height : height) * 0.55)
+  const cardMaxHeight = Math.round(height * 0.55)
 
   const cardMaxWidth = (() => {
     if (step.highlight === 'pairPoints') {

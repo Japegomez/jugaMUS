@@ -3,7 +3,6 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -212,7 +211,7 @@ export default function TournamentDetailScreen() {
       await generateBracket.mutateAsync(id)
       setTab('bracket')
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo generar el cuadro')
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo generar el cuadro')
     }
   }
 
@@ -230,7 +229,7 @@ export default function TournamentDetailScreen() {
       })
       setPairModalOpen(false)
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo añadir la pareja')
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo añadir la pareja')
       // Propagamos el error para evitar que el modal reinicie el formulario.
       throw err
     }
@@ -240,7 +239,7 @@ export default function TournamentDetailScreen() {
     try {
       await joinPair.mutateAsync({ pairId, slot, tournamentId: id })
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo unir a la pareja')
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo unir a la pareja')
     }
   }
 
@@ -257,7 +256,7 @@ export default function TournamentDetailScreen() {
       })
       setEditingPair(null)
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo guardar la pareja')
       throw err
     }
   }

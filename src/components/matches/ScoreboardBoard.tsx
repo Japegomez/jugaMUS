@@ -398,10 +398,9 @@ export function ScoreboardBoard({
         bottom: cornerInset,
         left: cornerInset,
       }
-  const mainRowSidePadding = {
-    paddingLeft: cornerControlGutter,
-    paddingRight: cornerControlGutter,
-  }
+  const mainRowSidePadding = isIosLandscape
+    ? { paddingRight: cornerControlGutter }
+    : { paddingLeft: cornerControlGutter }
 
   return (
     <View

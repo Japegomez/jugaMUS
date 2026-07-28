@@ -6,6 +6,7 @@ import Svg, { Line, Text as SvgText } from 'react-native-svg'
 
 import { MATCH_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
+import { showAlert } from '@/utils/alert'
 import { tournamentBracketQueryKey } from '@/hooks/useTournaments'
 import { useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useSubmitResult } from '@/hooks/useResults'
@@ -228,19 +229,24 @@ export function BracketCanvas({
           teamAGames,
           teamBGames,
         })
-      } else {
+      } else if (isOrganizer) {
         await recordReferee.mutateAsync({
           matchId: node.match_id,
           tournamentId,
           teamAGames,
           teamBGames,
         })
+      } else {
+        // User is in the loser pair — cannot submit; redirect to match detail for review
+        setSelectedResult(null)
+        router.push(`/(tabs)/matches/${node.match_id}`)
+        return
       }
       queryClient.invalidateQueries({ queryKey: tournamentBracketQueryKey(tournamentId) })
       setSelectedResult(null)
     } catch (err) {
-      // Error surfaced via mutation state; keep modal open so user can retry or cancel
       console.warn('[BracketCanvas] record result error:', err)
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
     }
   }
 
@@ -325,7 +331,9 @@ export function BracketCanvas({
             ) {
               const pressable =
                 !isFinalNode &&
-                (state === 'winner' || (recordable && (state === 'normal' || state === 'pending')))
+                (state === 'winner' ||
+                  (recordable && (state === 'normal' || state === 'pending')) ||
+                  (node.winner_pair_id != null && state === 'normal'))
 
               return (
                 <Pressable
