@@ -106,14 +106,6 @@ export function AddPairModal({
             contentContainerStyle={styles.body}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets>
-            <Input
-              label="Nombre de la pareja (opcional)"
-              placeholder="Nombre Jugador1 - Nombre Jugador2"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-
             <View style={styles.slot}>
               <Text style={styles.slotLabel}>Jugador 1</Text>
               <View style={styles.row}>
@@ -180,6 +172,16 @@ export function AddPairModal({
               onChange={setEntryFeePaid}
             />
 
+            <View style={styles.pairNameField}>
+              <Input
+                label="Nombre de la pareja (opcional)"
+                placeholder="Nombre Jugador1 - Nombre Jugador2"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+            </View>
+
             <Button title="Guardar pareja" onPress={() => void handleSubmit()} loading={loading} />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -218,4 +220,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   rowLabel: { fontSize: 15, color: Colors.textPrimary },
+  pairNameField: { marginBottom: 24 },
 })
