@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 25/07/2026 (cierre pendientes ops; quedan tests unitarios + revisión jurídica)
+> Actualizado: 28/07/2026 (hotfix v1.4.5 — cuadro torneos, marcador, BD)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -21,6 +21,7 @@
 | Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4            |
 | Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5 |
 | Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                      |
+| Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                   |
 
 ---
 
@@ -496,6 +497,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] PR review: bracket canvas sin clip vertical; cancel torneo con transitions + limpia reminders; prefs legacy conservadas (`080`); PairCard/`hasEntryFee`; prefs bloqueadas en pending; Chip compartido; audit deps
 - [x] Security: shim `vendor/brace-expansion` + overrides (`tar`, `uuid`) → `npm audit --audit-level=high` limpio
 - [x] Versión app → **1.4.0** (`app.json`, `package.json`); push a `develop`
+
+### Hotfix cuadro torneos / marcador (v1.4.5) — 28/07/2026
+
+- [x] Cuadro torneo: tarjeta por pareja, tap para registrar resultado/avanzar; modal de marcador; etiquetas de ronda; aviso de uso encima del canvas
+- [x] Confirmación irreversible al organizar cuadro; formulario pareja (jugadores primero, nombre opcional al final)
+- [x] Marcador: controles en esquina en iOS horizontal/iPad; tutorial y texto con scroll; `allowFontScaling={false}` en UI crítica
+- [x] BD: no cancelar torneo al generar final (`081`); cancelar todos los partidos al cancelar torneo (`082`); no notificar validar si resultado ya confirmado (`083`)
+- [x] Versión app → **1.4.5** (`app.json`, `package.json`)
 
 ---
 
