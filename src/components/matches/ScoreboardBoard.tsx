@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -72,7 +72,9 @@ function ChipButton({
       style={({ pressed }) => [chipStyle, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}>
-      <Text style={textStyle}>{label}</Text>
+      <Text style={textStyle} allowFontScaling={false}>
+        {label}
+      </Text>
     </Pressable>
   )
 }
@@ -99,18 +101,26 @@ function GamesStepper({
         style={({ pressed }) => [styles.gamesBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={`Restar juego a ${teamName}`}>
-        <Text style={styles.gamesBtnText}>−</Text>
+        <Text style={styles.gamesBtnText} allowFontScaling={false}>
+          −
+        </Text>
       </Pressable>
       <View style={styles.gamesValueBox}>
-        <Text style={styles.gamesValue}>{games}</Text>
-        <Text style={styles.gamesLabel}>juegos</Text>
+        <Text style={styles.gamesValue} allowFontScaling={false}>
+          {games}
+        </Text>
+        <Text style={styles.gamesLabel} allowFontScaling={false}>
+          juegos
+        </Text>
       </View>
       <Pressable
         onPress={() => onAdjustGames(team, 1)}
         style={({ pressed }) => [styles.gamesBtn, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel={`Sumar juego a ${teamName}`}>
-        <Text style={styles.gamesBtnText}>+</Text>
+        <Text style={styles.gamesBtnText} allowFontScaling={false}>
+          +
+        </Text>
       </Pressable>
     </View>
   )
@@ -175,7 +185,10 @@ function PairColumn({
 
   return (
     <View style={styles.pairColumn}>
-      <Text style={[styles.teamName, tutorialActive && styles.dimmed]} numberOfLines={1}>
+      <Text
+        style={[styles.teamName, tutorialActive && styles.dimmed]}
+        numberOfLines={1}
+        allowFontScaling={false}>
         {teamName}
       </Text>
 
@@ -189,7 +202,11 @@ function PairColumn({
         ]}
         accessibilityRole="button"
         accessibilityLabel={`Sumar 1 punto a ${teamName}`}>
-        <Text style={styles.pointsValue} adjustsFontSizeToFit numberOfLines={1}>
+        <Text
+          style={styles.pointsValue}
+          adjustsFontSizeToFit
+          numberOfLines={1}
+          allowFontScaling={false}>
           {points}
         </Text>
       </Pressable>
@@ -250,7 +267,9 @@ function RoundRow({
             size="round"
           />
         </View>
-        <Text style={styles.roundLabel}>{label}</Text>
+        <Text style={styles.roundLabel} numberOfLines={1} allowFontScaling={false}>
+          {label}
+        </Text>
         <ChipButton
           label="+5"
           onPress={() => onAdjustRound(round, 5)}
@@ -274,7 +293,9 @@ function RoundRow({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Sumar ${label} a la pareja de la izquierda`}>
-            <Text style={styles.arrowText}>←</Text>
+            <Text style={styles.arrowText} allowFontScaling={false}>
+              ←
+            </Text>
           </Pressable>
 
           <Pressable
@@ -287,7 +308,9 @@ function RoundRow({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Sumar 2 a ${label}`}>
-            <Text style={styles.roundValue}>{value}</Text>
+            <Text style={styles.roundValue} allowFontScaling={false}>
+              {value}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -301,7 +324,9 @@ function RoundRow({
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Sumar ${label} a la pareja de la derecha`}>
-            <Text style={styles.arrowText}>→</Text>
+            <Text style={styles.arrowText} allowFontScaling={false}>
+              →
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -325,6 +350,8 @@ export function ScoreboardBoard({
 }: ScoreboardBoardProps) {
   useHiddenStatusBar()
   const { scale, insets } = useBoardScale()
+  const { width, height } = useWindowDimensions()
+  const isIosLandscape = Platform.OS === 'ios' && width > height
   const styles = useMemo(() => createBoardStyles(scale), [scale])
   const [tutorialVisible, setTutorialVisible] = useState(true)
   const [stepIndex, setStepIndex] = useState(0)
@@ -350,23 +377,46 @@ export function ScoreboardBoard({
     : 'none'
   const highlightUndo = highlight === 'undo'
 
-  const undoIconSize = Math.round(22 * scale)
-  const cornerInset = Math.round(10 * scale)
+  const undoIconSize = Math.round(26 * scale)
+  const cornerControlGutter = Math.round(58 * scale)
+  const cornerInset = Math.round(20 * scale)
+  const closeBtnPosition = isIosLandscape
+    ? {
+        top: cornerInset,
+        right: cornerInset,
+      }
+    : {
+        top: cornerInset,
+        left: cornerInset,
+      }
+  const undoBtnPosition = isIosLandscape
+    ? {
+        bottom: cornerInset,
+        right: cornerInset,
+      }
+    : {
+        bottom: cornerInset,
+        left: cornerInset,
+      }
+  const mainRowSidePadding = {
+    paddingLeft: cornerControlGutter,
+    paddingRight: cornerControlGutter,
+  }
 
   return (
     <View
       style={[
         styles.board,
         {
-          paddingTop: Math.max(insets.top, 4),
-          paddingBottom: Math.max(insets.bottom, 4),
-          paddingLeft: Math.max(insets.left, 0),
-          paddingRight: Math.max(insets.right, 0),
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
         },
       ]}>
       {tutorialVisible ? <View style={styles.screenDim} pointerEvents="none" /> : null}
 
-      <View style={styles.mainRow}>
+      <View style={[styles.mainRow, mainRowSidePadding]}>
         <PairColumn
           team={TEAM.A}
           teamName={teamAName}
@@ -415,16 +465,15 @@ export function ScoreboardBoard({
         hitSlop={12}
         style={({ pressed }) => [
           styles.backBtn,
-          {
-            top: Math.max(insets.top, 4) + cornerInset,
-            left: Math.max(insets.left, 0) + cornerInset,
-          },
+          closeBtnPosition,
           pressed && styles.pressed,
           tutorialVisible && styles.dimmed,
         ]}
         accessibilityRole="button"
         accessibilityLabel="Cerrar">
-        <Text style={styles.cornerBtnText}>✕</Text>
+        <Text style={styles.cornerBtnText} allowFontScaling={false}>
+          ✕
+        </Text>
       </Pressable>
 
       <Pressable
@@ -433,10 +482,7 @@ export function ScoreboardBoard({
         hitSlop={12}
         style={({ pressed }) => [
           styles.undoBtn,
-          {
-            bottom: Math.max(insets.bottom, 4) + cornerInset,
-            left: Math.max(insets.left, 0) + cornerInset,
-          },
+          undoBtnPosition,
           pressed && styles.pressed,
           !canUndo && !highlightUndo && styles.cornerBtnDisabled,
           tutorialVisible && !highlightUndo && styles.dimmed,
@@ -494,9 +540,9 @@ function createBoardStyles(scale: number) {
     },
     backBtn: {
       position: 'absolute',
-      width: s(40),
-      height: s(34),
-      borderRadius: s(8),
+      width: s(48),
+      height: s(42),
+      borderRadius: s(9),
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(255,255,255,0.15)',
@@ -505,15 +551,15 @@ function createBoardStyles(scale: number) {
     cornerBtnDisabled: { opacity: 0.35 },
     cornerBtnText: {
       color: Colors.white,
-      fontSize: fs(20),
+      fontSize: fs(24),
       fontFamily: Fonts.bold,
-      lineHeight: fs(24),
+      lineHeight: fs(28),
     },
     undoBtn: {
       position: 'absolute',
-      width: s(40),
-      height: s(34),
-      borderRadius: s(8),
+      width: s(48),
+      height: s(42),
+      borderRadius: s(9),
       borderWidth: 1.5,
       borderColor: 'transparent',
       alignItems: 'center',

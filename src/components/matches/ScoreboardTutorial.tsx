@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -61,16 +61,27 @@ export function ScoreboardTutorial({ stepIndex, onBack, onNext, onSkip }: Scoreb
   const step = SCOREBOARD_TUTORIAL_STEPS[stepIndex]
   const isFirst = stepIndex === 0
   const isLast = stepIndex === SCOREBOARD_TUTORIAL_STEPS.length - 1
+  const effectivePlacement: TooltipPlacement =
+    step.highlight === 'undo' && stepIndex > 0
+      ? (SCOREBOARD_TUTORIAL_STEPS[stepIndex - 1]?.placement ?? step.placement)
+      : step.placement
 
   const sidePad = Math.max(insets.left, insets.right, 12)
   const topPad = Math.max(insets.top, 12)
   const bottomPad = Math.max(insets.bottom, 12)
+  // El alto disponible para la tarjeta: deja margen para el contenido del marcador.
+  const cardMaxHeight = Math.round((isLandscape ? height : height) * 0.55)
 
   const cardMaxWidth = (() => {
-    if (step.placement === 'bottom') {
+    if (step.highlight === 'pairPoints') {
+      // Este paso apunta a los contadores: un card más estrecho evita ocupar
+      // demasiado ancho respecto al centro del marcador.
+      return Math.min(isLandscape ? width * 0.32 : width * 0.7, 300)
+    }
+    if (effectivePlacement === 'bottom') {
       return Math.min(isLandscape ? width * 0.72 : width * 0.9, 420)
     }
-    if (step.placement === 'start') {
+    if (effectivePlacement === 'start') {
       // Más estrecho y a un lado para no tapar las casillas centrales de ronda.
       return Math.min(isLandscape ? width * 0.28 : width * 0.88, 260)
     }
@@ -83,7 +94,7 @@ export function ScoreboardTutorial({ stepIndex, onBack, onNext, onSkip }: Scoreb
 
   // Solo el card captura toques; el resto del marcador sigue siendo usable.
   const cardPositionStyle = (() => {
-    switch (step.placement) {
+    switch (effectivePlacement) {
       case 'start':
         if (isLandscape) {
           return {
@@ -100,7 +111,7 @@ export function ScoreboardTutorial({ stepIndex, onBack, onNext, onSkip }: Scoreb
       case 'bottom':
         return {
           left: centeredLeft,
-          bottom: bottomPad + 44,
+          bottom: bottomPad + 12,
           width: cardWidth,
         }
       case 'center':
@@ -115,8 +126,14 @@ export function ScoreboardTutorial({ stepIndex, onBack, onNext, onSkip }: Scoreb
 
   return (
     <View style={s.root} pointerEvents="box-none">
-      <View style={[s.card, cardPositionStyle]}>
-        <Text style={[s.message, width < 360 && s.messageCompact]}>{step.message}</Text>
+      <View style={[s.card, cardPositionStyle, { maxHeight: cardMaxHeight }]}>
+        <ScrollView
+          style={s.messageScroll}
+          contentContainerStyle={s.messageScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}>
+          <Text style={[s.message, width < 360 && s.messageCompact]}>{step.message}</Text>
+        </ScrollView>
 
         <View style={s.footer}>
           <Pressable
@@ -191,6 +208,12 @@ const s = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 12,
     elevation: 12,
+  },
+  messageScroll: {
+    flexShrink: 1,
+  },
+  messageScrollContent: {
+    paddingBottom: 4,
   },
   message: {
     fontSize: 15,
