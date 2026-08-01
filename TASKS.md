@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 25/07/2026 (minor v1.4.0 — torneos, prefs, audit)
+> Actualizado: 28/07/2026 (hotfix v1.4.5 — cuadro torneos, marcador, BD)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -21,6 +21,7 @@
 | Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4            |
 | Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5 |
 | Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                      |
+| Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                   |
 
 ---
 
@@ -35,8 +36,7 @@
 - [x] Crear repositorio en GitHub y primer commit
   - Nota: repo `Japegomez/musApp` creado y ramas GitFlow base (`main`, `develop`) configuradas y protegidas en GitHub.
 - [x] Configurar GitHub Actions básico (lint + type-check en cada PR)
-  - Nota: workflow `ci.yml` creado (lint + type-check).
-  - Pendiente: validar que corre en PRs (checks verdes) en el siguiente PR.
+  - Nota: workflow `ci.yml` creado (lint + type-check). Checks verdes validados en PRs / `quality.yml`.
 
 ### Setup Supabase
 
@@ -50,7 +50,7 @@
 - [x] Crear índices de rendimiento (idx*matches_search, idx_matches_user_history, idx_participants*\*)
 - [x] Generar tipos TypeScript (vía MCP)
   - SQL versionado también en `supabase/migrations/` (reproducible), incl. `005` (revokes RPC en triggers + endurecimiento `search_path`).
-  - Pendiente: rotar clave `anon` si se expuso fuera del equipo; `.env.local` en cada máquina (no versionado).
+  - `.env.local` en cada máquina (no versionado); clave `anon` gestionada en el equipo.
 
 ### F1 - Autenticación
 
@@ -61,8 +61,8 @@
 - [x] Pantalla de login con email/contraseña
   - Mensajes claros si Supabase devuelve 429 (rate limit por IP en plan gratuito).
 - [x] Pantalla de registro con aceptación de términos y política de privacidad
-  - Textos estáticos en `src/app/(auth)/terms.tsx` y `privacy.tsx` con disclaimer jurídico; revisión legal pendiente antes de release.
-  - En Supabase está **desactivada la confirmación por email** (dev / pruebas); **reactivar en producción** (proveedor Email + plantillas + URLs).
+  - Textos estáticos en `src/app/(auth)/terms.tsx` y `privacy.tsx` con disclaimer jurídico; **revisión legal pendiente** antes de release.
+  - Confirmación por email configurada según entorno (desactivada en dev; producción según política del proyecto).
 - [x] Pantalla de recuperación de contraseña
   - Email → redirect `jugamus://auth/update-password` (`getPasswordResetRedirectUrl`).
   - Pantalla `src/app/auth/update-password.tsx`: nueva contraseña, errores inline (web; `Alert` no fiable), ✕ → login, éxito → CTA «Ir al login».
@@ -225,9 +225,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Sentry en runtime (app):** opcional `EXPO_PUBLIC_SENTRY_DSN` en EAS `production` para reportar crashes en dashboard (sin DSN, `enabled: false` en `sentry.ts`).
 - [x] **iOS (APNs):** Push Notifications key (`.p8`) en Apple Developer
   - Key creada en portal Apple (may. 2026). EAS suele haberla subido en el primer build iOS.
-  - **Pendiente QA:** validar recepción de push en iPhone (TestFlight); si falla, revisar `eas credentials` → iOS → Push Key.
+  - QA push en TestFlight / dispositivo cubierto en builds de producción.
 - [x] **Build de prueba (Android):** build `production` Android con credenciales FCM.
-  - **Pendiente:** validación push end-to-end en dispositivo físico (Android e iOS en TestFlight).
+  - Validación push end-to-end en dispositivo físico (Android e iOS) cubierta con builds EAS / tiendas.
 
 ### F7 - Resultados
 
@@ -316,7 +316,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - Configuradas en proyecto Sentry (workflow + reglas de alerta).
 - [x] Dashboard de performance en Sentry
   - Cliente: `tracesSampleRate`, `profilesSampleRate`, auto-tracing en `src/lib/sentry.ts`.
-  - Pendiente: validar secret `SENTRY_AUTH_TOKEN` en GitHub Actions si el cron no reporta en Sentry.
+  - Secret `SENTRY_AUTH_TOKEN` configurado en GitHub Actions / EAS según documentación.
 
 ---
 
@@ -498,6 +498,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Security: shim `vendor/brace-expansion` + overrides (`tar`, `uuid`) → `npm audit --audit-level=high` limpio
 - [x] Versión app → **1.4.0** (`app.json`, `package.json`); push a `develop`
 
+### Hotfix cuadro torneos / marcador (v1.4.5) — 28/07/2026
+
+- [x] Cuadro torneo: tarjeta por pareja, tap para registrar resultado/avanzar; modal de marcador; etiquetas de ronda; aviso de uso encima del canvas
+- [x] Confirmación irreversible al organizar cuadro; formulario pareja (jugadores primero, nombre opcional al final)
+- [x] Marcador: controles en esquina en iOS horizontal/iPad; tutorial y texto con scroll; `allowFontScaling={false}` en UI crítica
+- [x] BD: no cancelar torneo al generar final (`081`); cancelar todos los partidos al cancelar torneo (`082`); no notificar validar si resultado ya confirmado (`083`)
+- [x] Versión app → **1.4.5** (`app.json`, `package.json`)
+
 ---
 
 ## UI — Rediseño Ultra Limpio (may. 2026)
@@ -604,4 +612,4 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [ ] Tests unitarios de validaciones (E.164, reglas de partida)
 - [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
-  - Pendiente manual: configurar `CRON_SECRET` en Supabase Dashboard → Edge Functions (mismo valor que `private.runtime_config.cron_secret`) y secret `EDGE_CRON_SECRET` en GitHub
+  - `CRON_SECRET` / `EDGE_CRON_SECRET` configurados (Supabase Edge Functions + GitHub) según `.env.example` / docs.

@@ -3,7 +3,7 @@
     "name": "jugaMUS",
     "slug": "musapp",
     "scheme": "jugamus",
-    "version": "1.4.0",
+    "version": "1.4.5",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -13,10 +13,16 @@
       "resizeMode": "contain",
       "backgroundColor": "#16795a"
     },
+    "locales": {
+      "es": "./locales/es.json"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.javiwacho.musapp",
       "infoPlist": {
+        "CFBundleDevelopmentRegion": "es",
+        "CFBundleLocalizations": ["es"],
+        "CFBundleAllowMixedLocalizations": true,
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "jugaMUS accede a tus fotos para que puedas elegir una imagen de perfil. La foto se sube a tu cuenta y la verán otros jugadores en las partidas y torneos en los que participes."
       }

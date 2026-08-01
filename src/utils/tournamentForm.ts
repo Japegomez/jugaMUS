@@ -2,9 +2,9 @@ export const DEFAULT_TOURNAMENT_TITLE = 'Torneo'
 export const DEFAULT_TOURNAMENT_CITY = 'Ciudad por definir'
 
 export const AUTO_CANCEL_NO_BRACKET_ALERT = {
-  title: 'Cuadro no organizado',
+  title: 'Aviso',
   message:
-    'Si llega la hora de inicio y el cuadro no está organizado, el torneo se cancelará automáticamente.',
+    'Si llega la hora de inicio y el cuadro no está organizado, el torneo se cancelará automáticamente.\n\nPuedes generar el cuadro en la siguiente pantalla.',
 } as const
 
 /** Same place semantics as match create: empty text → undefined place. */
