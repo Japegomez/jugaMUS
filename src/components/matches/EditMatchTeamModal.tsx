@@ -103,14 +103,6 @@ function EditMatchTeamForm({
           automaticallyAdjustKeyboardInsets>
           <Text style={styles.teamHint}>{teamLabel}</Text>
 
-          <Input
-            label="Nombre de la pareja (opcional)"
-            placeholder="Nombre Jugador1 - Nombre Jugador2"
-            value={teamName}
-            onChangeText={setTeamName}
-            autoCapitalize="words"
-          />
-
           {slots.map((slot, index) => (
             <View key={`slot-${index}`} style={styles.slot}>
               <Text style={styles.slotLabel}>Jugador {index + 1}</Text>
@@ -132,6 +124,14 @@ function EditMatchTeamForm({
               )}
             </View>
           ))}
+
+          <Input
+            label="Nombre de la pareja (opcional)"
+            placeholder="Nombre Jugador1 - Nombre Jugador2"
+            value={teamName}
+            onChangeText={setTeamName}
+            autoCapitalize="words"
+          />
 
           <Button title="Guardar cambios" onPress={() => void handleSubmit()} loading={loading} />
         </ScrollView>
