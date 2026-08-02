@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
@@ -16,12 +16,17 @@ type MatchScorePickerProps = {
   teamAName: string
   teamBName: string
   hint?: string
-  submitLabel: string
-  loading: boolean
+  submitLabel?: string
+  loading?: boolean
   initialTeamAGames?: number
   initialTeamBGames?: number
   lockValues?: boolean
-  onSubmit: (values: MatchScoreValues) => void
+  /** When false, scores are reported via onChange and no submit button is shown. */
+  showSubmitButton?: boolean
+  /** Start with no chips selected (used for inline create-match flow). */
+  startEmpty?: boolean
+  onChange?: (values: MatchScoreValues | null) => void
+  onSubmit?: (values: MatchScoreValues) => void
 }
 
 function scoreOptions(duration: number): number[] {
@@ -52,7 +57,7 @@ function ScoreChipRow({
   locked = false,
 }: {
   label: string
-  value: number
+  value: number | null
   options: number[]
   onChange: (n: number) => void
   locked?: boolean
@@ -83,26 +88,45 @@ function MatchScorePickerFields({
   teamAName,
   teamBName,
   hint,
-  submitLabel,
-  loading,
+  submitLabel = 'Confirmar marcador',
+  loading = false,
   initialTeamAGames,
   initialTeamBGames,
   lockValues = false,
+  showSubmitButton = true,
+  startEmpty = false,
+  onChange,
   onSubmit,
 }: MatchScorePickerProps) {
   const options = useMemo(() => scoreOptions(durationTargetGames), [durationTargetGames])
-  const [teamAGames, setTeamAGames] = useState(initialTeamAGames ?? durationTargetGames)
-  const [teamBGames, setTeamBGames] = useState(initialTeamBGames ?? 0)
+  const [teamAGames, setTeamAGames] = useState<number | null>(
+    startEmpty ? (initialTeamAGames ?? null) : (initialTeamAGames ?? durationTargetGames)
+  )
+  const [teamBGames, setTeamBGames] = useState<number | null>(
+    startEmpty ? (initialTeamBGames ?? null) : (initialTeamBGames ?? 0)
+  )
   const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (teamAGames == null || teamBGames == null) {
+      onChange?.(null)
+      return
+    }
+    onChange?.({ teamAGames, teamBGames })
+  }, [onChange, teamAGames, teamBGames])
+
   const handleSubmit = () => {
+    if (teamAGames == null || teamBGames == null) {
+      setError('Selecciona el marcador de ambos equipos.')
+      return
+    }
     const validationError = validateMatchScores(teamAGames, teamBGames, durationTargetGames)
     if (validationError) {
       setError(validationError)
       return
     }
     setError(null)
-    onSubmit({ teamAGames, teamBGames })
+    onSubmit?.({ teamAGames, teamBGames })
   }
 
   return (
@@ -131,18 +155,20 @@ function MatchScorePickerFields({
 
       {error ? <Text style={s.error}>{error}</Text> : null}
 
-      <Button
-        title={submitLabel}
-        onPress={handleSubmit}
-        loading={loading}
-        style={{ marginTop: 12 }}
-      />
+      {showSubmitButton ? (
+        <Button
+          title={submitLabel}
+          onPress={handleSubmit}
+          loading={loading}
+          style={{ marginTop: 12 }}
+        />
+      ) : null}
     </View>
   )
 }
 
 export function MatchScorePicker(props: MatchScorePickerProps) {
-  const pickerKey = `${props.durationTargetGames}-${props.initialTeamAGames ?? 'a'}-${props.initialTeamBGames ?? 'b'}-${props.lockValues ? 'locked' : 'open'}`
+  const pickerKey = `${props.durationTargetGames}-${props.initialTeamAGames ?? 'a'}-${props.initialTeamBGames ?? 'b'}-${props.lockValues ? 'locked' : 'open'}-${props.startEmpty ? 'empty' : 'prefill'}`
   return <MatchScorePickerFields key={pickerKey} {...props} />
 }
 
