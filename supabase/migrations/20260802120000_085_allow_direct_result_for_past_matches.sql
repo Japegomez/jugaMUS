@@ -13,6 +13,7 @@ AS $$
 DECLARE
   v_match public.matches%ROWTYPE;
   v_others INT;
+  v_team TEXT;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
@@ -45,10 +46,20 @@ BEGIN
     RAISE EXCEPTION 'result_already_exists';
   END IF;
 
+  SELECT mp.team INTO v_team
+  FROM public.match_participants mp
+  WHERE mp.match_id = p_match_id
+    AND mp.user_id = auth.uid()
+    AND mp.state = 'confirmed'
+    AND mp.left_at IS NULL
+  LIMIT 1;
+
+  v_team := COALESCE(NULLIF(TRIM(v_team), ''), 'A');
+
   INSERT INTO public.match_results (
     match_id, team_a_games, team_b_games, submitted_by_team, submitted_by_user_id, status
   ) VALUES (
-    p_match_id, p_team_a_games, p_team_b_games, 'A', auth.uid(), 'confirmed'
+    p_match_id, p_team_a_games, p_team_b_games, v_team, auth.uid(), 'confirmed'
   );
 
   UPDATE public.matches SET status = 'finished', updated_at = NOW() WHERE id = p_match_id;
@@ -60,3 +71,6 @@ BEGIN
   );
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.record_match_result_direct(UUID, INT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_match_result_direct(UUID, INT, INT) TO authenticated;

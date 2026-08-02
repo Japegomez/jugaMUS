@@ -22,7 +22,7 @@ import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCreateMatch, useRecordMatchResultDirect } from '@/hooks/useMatches'
 import { useProfile } from '@/hooks/useProfile'
-import { MATCH_VISIBILITY, TEAM } from '@/constants'
+import { MATCH_STATUS, MATCH_VISIBILITY, TEAM } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -273,6 +273,9 @@ export default function CreateMatchScreen() {
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
+          // Past matches with a result are created already in progress so closing
+          // via record_match_result_direct does not depend on post-join promotion.
+          ...(isPastResultMode ? { status: MATCH_STATUS.IN_PROGRESS } : {}),
           team_a_name: (values.team_a_name ?? '').trim(),
           team_b_name: (values.team_b_name ?? '').trim(),
           team_a_player_1: null,
