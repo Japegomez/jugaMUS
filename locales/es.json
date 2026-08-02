@@ -1,4 +1,6 @@
 {
-  "CFBundleDisplayName": "jugaMUS",
-  "NSPhotoLibraryUsageDescription": "jugaMUS accede a tus fotos para que puedas elegir una imagen de perfil. La foto se sube a tu cuenta y la verán otros jugadores en las partidas y torneos en los que participes."
+  "ios": {
+    "CFBundleDisplayName": "jugaMUS",
+    "NSPhotoLibraryUsageDescription": "jugaMUS accede a tus fotos para que puedas elegir una imagen de perfil. La foto se sube a tu cuenta y la verán otros jugadores en las partidas y torneos en los que participes."
+  }
 }
