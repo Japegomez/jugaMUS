@@ -19,6 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.javiwacho.musapp",
+      "appStoreUrl": "https://apps.apple.com/app/id6775626292",
       "infoPlist": {
         "CFBundleDevelopmentRegion": "es",
         "CFBundleLocalizations": ["es"],
