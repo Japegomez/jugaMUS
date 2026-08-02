@@ -33,12 +33,12 @@ export function PairCard({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.name}>{displayPairName(pair)}</Text>
       {members.length > 0 ? (
         <Text style={styles.members}>{members.join(' · ')}</Text>
       ) : (
         <Text style={styles.empty}>Sin jugadores</Text>
       )}
+      <Text style={styles.name}>{displayPairName(pair)}</Text>
       {hasEntryFee ? (
         <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
           {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  name: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary },
-  members: { fontSize: 14, color: Colors.textSecondary, marginTop: 4 },
+  name: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary, marginTop: 6 },
+  members: { fontSize: 14, color: Colors.textSecondary },
   empty: { fontSize: 14, color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' },
   feeStatus: { fontSize: 13, fontFamily: Fonts.semiBold, marginTop: 6 },
   feePaid: { color: Colors.primary },

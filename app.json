@@ -3,7 +3,7 @@
     "name": "jugaMUS",
     "slug": "musapp",
     "scheme": "jugamus",
-    "version": "1.4.5",
+    "version": "1.5.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,6 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.javiwacho.musapp",
+      "appStoreUrl": "https://apps.apple.com/app/id6775626292",
       "infoPlist": {
         "CFBundleDevelopmentRegion": "es",
         "CFBundleLocalizations": ["es"],

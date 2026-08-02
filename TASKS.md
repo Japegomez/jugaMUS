@@ -1,27 +1,28 @@
 # Tareas - jugaMUS
 
-> Actualizado: 28/07/2026 (hotfix v1.4.5 — cuadro torneos, marcador, BD)
+> Actualizado: 02/08/2026 (minor v1.5.0 — partida pasada con resultado, orden parejas, locales Android)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
 
 ## Estado del proyecto
 
-| Fase                   | Estado     | Descripción                                                                     |
-| ---------------------- | ---------- | ------------------------------------------------------------------------------- |
-| Fase 1 - Core          | Completada | Auth, Perfil, Partidas, Descubrir                                               |
-| Fase 2 - Resultados    | Completada | Notificaciones, Resultados, Reportes                                            |
-| Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                               |
-| Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                             |
-| Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama            |
-| UI — Ultra Limpio      | Completada | Rediseño visual                                                                 |
-| UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                      |
-| UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1  |
-| UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                   |
-| Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4            |
-| Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5 |
-| Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                      |
-| Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                   |
+| Fase                   | Estado     | Descripción                                                                      |
+| ---------------------- | ---------- | -------------------------------------------------------------------------------- |
+| Fase 1 - Core          | Completada | Auth, Perfil, Partidas, Descubrir                                                |
+| Fase 2 - Resultados    | Completada | Notificaciones, Resultados, Reportes                                             |
+| Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                                |
+| Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                              |
+| Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama             |
+| UI — Ultra Limpio      | Completada | Rediseño visual                                                                  |
+| UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                       |
+| UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1   |
+| UX — Tutorial marcador | Completada | Tutorial onboarding del marcador; compactación rondas; v1.3.0                    |
+| Hotfix marcador        | Completada | Orientación, game-over, registro resultado, crear partida UX; v1.3.4             |
+| Hotfix torneos/prefs   | Completada | Inscripción, cancelar torneo, Mis partidas, prefs notif., UI responsive; v1.3.5  |
+| Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                       |
+| Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                    |
+| Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
 
 ---
 
@@ -505,6 +506,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Marcador: controles en esquina en iOS horizontal/iPad; tutorial y texto con scroll; `allowFontScaling={false}` en UI crítica
 - [x] BD: no cancelar torneo al generar final (`081`); cancelar todos los partidos al cancelar torneo (`082`); no notificar validar si resultado ya confirmado (`083`)
 - [x] Versión app → **1.4.5** (`app.json`, `package.json`)
+
+### Minor — partidas pasadas y UX parejas (v1.5.0) — 02/08/2026
+
+- [x] Crear partida con `start_at` pasado: bloque «Partida ya jugada» + marcador (sin preselección; nombres de equipo derivados); plantilla completa; resultado directo → ficha `finished`
+- [x] Migración `085`: `record_match_result_direct` admite `in_progress` y `finished_no_result`
+- [x] Orden UI consistente: integrantes de pareja/equipo antes del nombre (crear/editar partida, modales, PairCard)
+- [x] `locales/es.json`: claves nativas bajo `ios` (fix Android `ExtraTranslation` / `lintVitalRelease`)
+- [x] Versión app → **1.5.0** (`app.json`, `package.json`)
 
 ---
 

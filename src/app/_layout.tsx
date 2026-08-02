@@ -15,7 +15,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import { useOrientationLock } from '@/hooks/useOrientationLock'
 import * as ScreenOrientation from 'expo-screen-orientation'
 import { useAuthStore } from '@/hooks/useAuth'
-import { AppRatingPromptHost } from '@/components/AppRatingPromptHost'
+import { AppPromptsHost } from '@/components/AppPromptsHost'
 import { useBackgroundSessionTimeout } from '@/hooks/useBackgroundSessionTimeout'
 import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync'
 import { useNotifications } from '@/hooks/useNotifications'
@@ -97,7 +97,7 @@ function RootLayout() {
     <PostHogProvider client={posthog}>
       <QueryClientProvider client={queryClient}>
         <AppQueryScope />
-        <AppRatingPromptHost />
+        <AppPromptsHost />
         <Stack screenOptions={{ headerShown: false }} />
       </QueryClientProvider>
     </PostHogProvider>

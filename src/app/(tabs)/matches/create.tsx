@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useFocusEffect } from '@react-navigation/native'
 import { useRouter, type Href } from 'expo-router'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -13,9 +13,16 @@ import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
+import {
+  MatchScorePicker,
+  type MatchScoreValues,
+  validateMatchScores,
+} from '@/components/matches/MatchScorePicker'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
-import { useCreateMatch } from '@/hooks/useMatches'
-import { MATCH_VISIBILITY } from '@/constants'
+import { useAuthStore } from '@/hooks/useAuth'
+import { useCreateMatch, useRecordMatchResultDirect } from '@/hooks/useMatches'
+import { useProfile } from '@/hooks/useProfile'
+import { MATCH_STATUS, MATCH_VISIBILITY, TEAM } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -24,8 +31,10 @@ import {
   AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT,
   hasIncompleteMatchRoster,
   PAST_DATE_INCOMPLETE_ROSTER_ALERT,
+  isMatchStartAtPast,
   requiresFutureStartAtForIncompleteRoster,
 } from '@/utils/matchCreateForm'
+import { resolveTeamName } from '@/utils/matchTeamNames'
 import { showFormFieldsMissingAlert } from '@/utils/formValidation'
 
 const DEFAULT_MATCH_TITLE = 'Partida'
@@ -140,7 +149,11 @@ function matchPlacePayload(placeText?: string): {
 export default function CreateMatchScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const sessionUserId = useAuthStore((s) => s.session?.user.id)
+  const { data: profile } = useProfile(sessionUserId)
   const createMatch = useCreateMatch()
+  const recordMatchResult = useRecordMatchResultDirect()
+  const [pastResult, setPastResult] = useState<MatchScoreValues | null>(null)
 
   const {
     control,
@@ -157,15 +170,89 @@ export default function CreateMatchScreen() {
   useFocusEffect(
     useCallback(() => {
       reset(createDefaultFormValues())
+      setPastResult(null)
       Keyboard.dismiss()
     }, [reset])
   )
 
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
+  const startAtValue = watch('start_at')
+  const teamANameValue = watch('team_a_name')
+  const teamBNameValue = watch('team_b_name')
+  const teamAPlayer2 = watch('team_a_player_2')
+  const teamBPlayer1 = watch('team_b_player_1')
+  const teamBPlayer2 = watch('team_b_player_2')
+  const isPastResultMode = isMatchStartAtPast(startAtValue)
+
+  const previewTeamNames = useMemo(() => {
+    const draft = {
+      team_a_name: teamANameValue ?? '',
+      team_b_name: teamBNameValue ?? '',
+      team_a_player_1: null,
+      team_a_player_2: teamAPlayer2?.trim() || null,
+      team_b_player_1: teamBPlayer1?.trim() || null,
+      team_b_player_2: teamBPlayer2?.trim() || null,
+    }
+    const creatorParticipant = profile?.display_name
+      ? [
+          {
+            team: TEAM.A,
+            joined_at: '1970-01-01T00:00:00.000Z',
+            left_at: null,
+            profile: { display_name: profile.display_name },
+          },
+        ]
+      : []
+    return {
+      teamA: resolveTeamName(draft, TEAM.A, creatorParticipant),
+      teamB: resolveTeamName(draft, TEAM.B, []),
+    }
+  }, [
+    profile?.display_name,
+    teamANameValue,
+    teamAPlayer2,
+    teamBNameValue,
+    teamBPlayer1,
+    teamBPlayer2,
+  ])
+
+  useEffect(() => {
+    setPastResult(null)
+  }, [durationValue, isPastResultMode])
 
   const onSubmit = async (values: CreateMatchValues) => {
+    if (isPastResultMode && !pastResult) {
+      showAlert('Resultado pendiente', 'Selecciona el marcador de la partida antes de crearla.')
+      return
+    }
+    if (isPastResultMode && pastResult) {
+      const scoreError = validateMatchScores(
+        pastResult.teamAGames,
+        pastResult.teamBGames,
+        values.duration_target_games
+      )
+      if (scoreError) {
+        showAlert('Marcador no válido', scoreError)
+        return
+      }
+    }
     if (
+      isPastResultMode &&
+      hasIncompleteMatchRoster({
+        team_a_player_2: values.team_a_player_2,
+        team_b_player_1: values.team_b_player_1,
+        team_b_player_2: values.team_b_player_2,
+      })
+    ) {
+      showAlert(
+        'Faltan jugadores',
+        'Para registrar una partida ya jugada debes completar los cuatro jugadores de los dos equipos.'
+      )
+      return
+    }
+    if (
+      !isPastResultMode &&
       requiresFutureStartAtForIncompleteRoster(values.start_at, {
         team_a_player_2: values.team_a_player_2,
         team_b_player_1: values.team_b_player_1,
@@ -186,6 +273,9 @@ export default function CreateMatchScreen() {
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
+          // Past matches with a result are created already in progress so closing
+          // via record_match_result_direct does not depend on post-join promotion.
+          ...(isPastResultMode ? { status: MATCH_STATUS.IN_PROGRESS } : {}),
           team_a_name: (values.team_a_name ?? '').trim(),
           team_b_name: (values.team_b_name ?? '').trim(),
           team_a_player_1: null,
@@ -196,6 +286,7 @@ export default function CreateMatchScreen() {
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
       if (
+        !isPastResultMode &&
         hasIncompleteMatchRoster({
           team_a_player_2: values.team_a_player_2,
           team_b_player_1: values.team_b_player_1,
@@ -206,6 +297,13 @@ export default function CreateMatchScreen() {
           AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.title,
           AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.message
         )
+      }
+      if (isPastResultMode && pastResult) {
+        await recordMatchResult.mutateAsync({
+          matchId: match.id,
+          teamAGames: pastResult.teamAGames,
+          teamBGames: pastResult.teamBGames,
+        })
       }
       router.replace(`/(tabs)/matches/${match.id}`)
     } catch (err) {
@@ -381,20 +479,6 @@ export default function CreateMatchScreen() {
         </Text>
         <Controller
           control={control}
-          name="team_a_name"
-          render={({ field }) => (
-            <Input
-              label="Nombre equipo A"
-              placeholder="Jugador1 - Jugador2"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_a_name?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
-        <Controller
-          control={control}
           name="team_a_player_2"
           render={({ field }) => (
             <Input
@@ -409,14 +493,14 @@ export default function CreateMatchScreen() {
         />
         <Controller
           control={control}
-          name="team_b_name"
+          name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B"
+              label="Nombre equipo A"
               placeholder="Jugador1 - Jugador2"
               value={field.value ?? ''}
               onChangeText={field.onChange}
-              error={errors.team_b_name?.message}
+              error={errors.team_a_name?.message}
               autoCapitalize="words"
             />
           )}
@@ -449,7 +533,40 @@ export default function CreateMatchScreen() {
             />
           )}
         />
+        <Controller
+          control={control}
+          name="team_b_name"
+          render={({ field }) => (
+            <Input
+              label="Nombre equipo B"
+              placeholder="Jugador1 - Jugador2"
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              error={errors.team_b_name?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
       </View>
+
+      {isPastResultMode ? (
+        <View style={s.pastResultCard}>
+          <Text style={s.pastResultTitle}>Partida ya jugada</Text>
+          <Text style={s.pastResultText}>
+            La hora de inicio es anterior a la hora actual. Se entiende que estás registrando una
+            partida ya jugada. Introduce el resultado para que se cree directamente como finalizada.
+          </Text>
+          <MatchScorePicker
+            durationTargetGames={durationValue}
+            teamAName={previewTeamNames.teamA}
+            teamBName={previewTeamNames.teamB}
+            hint="Selecciona el marcador final."
+            showSubmitButton={false}
+            startEmpty
+            onChange={setPastResult}
+          />
+        </View>
+      ) : null}
 
       {/* Notas */}
       <Controller
@@ -472,7 +589,7 @@ export default function CreateMatchScreen() {
       <Button
         title="Crear partida"
         onPress={handleSubmit(onSubmit, showFormFieldsMissingAlert)}
-        loading={createMatch.isPending}
+        loading={createMatch.isPending || recordMatchResult.isPending}
         style={s.submitBtn}
       />
     </KeyboardAwareScrollView>
@@ -522,4 +639,24 @@ const s = StyleSheet.create({
   },
   error: { color: Colors.danger, fontSize: 13, marginTop: 4 },
   submitBtn: { marginTop: 8 },
+  pastResultCard: {
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  pastResultTitle: {
+    fontSize: 16,
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+    marginBottom: 6,
+  },
+  pastResultText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
 })

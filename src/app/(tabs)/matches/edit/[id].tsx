@@ -453,20 +453,6 @@ export default function EditMatchScreen() {
           Si dejas el nombre del equipo vacío, se usará «Jugador1 - Jugador2» con los nombres de la
           plantilla.
         </Text>
-        <Controller
-          control={control}
-          name="team_a_name"
-          render={({ field }) => (
-            <Input
-              label="Nombre equipo A"
-              placeholder="Jugador1 - Jugador2"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.team_a_name?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
         {teamAFull && !editableA.includes('team_a_player_2') ? (
           <Text style={s.rosterNote}>Compañero: cubierto por jugadores con cuenta en la app.</Text>
         ) : editableA.includes('team_a_player_2') ? (
@@ -487,14 +473,14 @@ export default function EditMatchScreen() {
         ) : null}
         <Controller
           control={control}
-          name="team_b_name"
+          name="team_a_name"
           render={({ field }) => (
             <Input
-              label="Nombre equipo B"
+              label="Nombre equipo A"
               placeholder="Jugador1 - Jugador2"
               value={field.value}
               onChangeText={field.onChange}
-              error={errors.team_b_name?.message}
+              error={errors.team_a_name?.message}
               autoCapitalize="words"
             />
           )}
@@ -536,6 +522,20 @@ export default function EditMatchScreen() {
             )}
           />
         ) : null}
+        <Controller
+          control={control}
+          name="team_b_name"
+          render={({ field }) => (
+            <Input
+              label="Nombre equipo B"
+              placeholder="Jugador1 - Jugador2"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={errors.team_b_name?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
       </View>
 
       <Button

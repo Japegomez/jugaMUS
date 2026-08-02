@@ -115,14 +115,6 @@ function EditPairForm({
           contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets>
-          <Input
-            label="Nombre de la pareja (opcional)"
-            placeholder="Nombre Jugador1 - Nombre Jugador2"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
-
           <View style={styles.slot}>
             <Text style={styles.slotLabel}>Jugador 1</Text>
             {playerALocked ? (
@@ -158,6 +150,14 @@ function EditPairForm({
               />
             )}
           </View>
+
+          <Input
+            label="Nombre de la pareja (opcional)"
+            placeholder="Nombre Jugador1 - Nombre Jugador2"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
 
           <Checkbox label="Inscripción pagada" checked={entryFeePaid} onChange={setEntryFeePaid} />
 

@@ -114,6 +114,7 @@ export type MatchInsert = Pick<
   | 'duration_target_games'
   | 'visibility'
   | 'location_privacy'
+  | 'status'
   | 'team_a_name'
   | 'team_a_player_1'
   | 'team_a_player_2'
