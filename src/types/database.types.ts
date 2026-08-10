@@ -245,6 +245,7 @@ export type Database = {
           tournament_bracket_position: number | null
           tournament_id: string | null
           tournament_is_bye: boolean
+          tournament_is_third_place: boolean
           tournament_pair_a_id: string | null
           tournament_pair_b_id: string | null
           tournament_round_size: number | null
@@ -275,6 +276,7 @@ export type Database = {
           tournament_bracket_position?: number | null
           tournament_id?: string | null
           tournament_is_bye?: boolean
+          tournament_is_third_place?: boolean
           tournament_pair_a_id?: string | null
           tournament_pair_b_id?: string | null
           tournament_round_size?: number | null
@@ -305,6 +307,7 @@ export type Database = {
           tournament_bracket_position?: number | null
           tournament_id?: string | null
           tournament_is_bye?: boolean
+          tournament_is_third_place?: boolean
           tournament_pair_a_id?: string | null
           tournament_pair_b_id?: string | null
           tournament_round_size?: number | null
@@ -412,6 +415,69 @@ export type Database = {
             foreignKeyName: 'notification_queue_user_id_fkey'
             columns: ['user_id']
             isOneToOne: false
+            referencedRelation: 'profiles_public'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      player_stats: {
+        Row: {
+          badges: Json
+          best_win_streak: number
+          current_streak: number
+          elo_rating: number
+          last_form: Json
+          losses: number
+          matches_played: number
+          tournament_finals: number
+          tournament_thirds: number
+          tournaments_won: number
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          badges?: Json
+          best_win_streak?: number
+          current_streak?: number
+          elo_rating?: number
+          last_form?: Json
+          losses?: number
+          matches_played?: number
+          tournament_finals?: number
+          tournament_thirds?: number
+          tournaments_won?: number
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          badges?: Json
+          best_win_streak?: number
+          current_streak?: number
+          elo_rating?: number
+          last_form?: Json
+          losses?: number
+          matches_played?: number
+          tournament_finals?: number
+          tournament_thirds?: number
+          tournaments_won?: number
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'player_stats_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: true
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'player_stats_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: true
             referencedRelation: 'profiles_public'
             referencedColumns: ['id']
           },
@@ -1088,6 +1154,18 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_leaderboard: {
+        Args: { p_city?: string; p_limit?: number }
+        Returns: Json
+      }
+      get_match_player_insights: {
+        Args: { p_match_id: string; p_viewer_id?: string }
+        Returns: Json
+      }
+      get_player_stats: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
       get_public_profile: {
         Args: { p_profile_id: string }

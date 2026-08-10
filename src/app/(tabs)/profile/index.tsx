@@ -16,6 +16,7 @@ import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
+import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { SignOutModal } from '@/components/SignOutModal'
 import { Button } from '@/components/ui/Button'
 import { isRatingPromptSupported } from '@/lib/appRating'
@@ -243,6 +244,13 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
+
+      {sessionUserId ? (
+        <ProfileStatsCard
+          userId={sessionUserId}
+          onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
+        />
+      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>

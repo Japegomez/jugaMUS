@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/Button'
 import { ReportModal } from '@/components/ui/ReportModal'
 import { ScrollableModalBody } from '@/components/ui/ScrollableModalBody'
 import { ShareInviteButton } from '@/components/ShareInviteButton'
+import { MatchInsightsSection } from '@/components/stats/MatchInsightsSection'
 import { useAuthStore } from '@/hooks/useAuth'
 import {
   useCancelMatch,
@@ -1116,6 +1117,8 @@ export default function MatchDetailScreen() {
             </>
           )}
         </View>
+
+        {!needsPrivateAccess && id ? <MatchInsightsSection matchId={id} /> : null}
 
         {/* Resultado (F7) */}
         <View style={s.section}>

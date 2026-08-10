@@ -30,6 +30,7 @@ import {
 } from '@/services/tournaments.service'
 import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
+import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
 import {
   MATCH_PAGE_SIZE,
   MATCH_STATUS,
@@ -413,6 +414,7 @@ export function useRecordMatchResultDirect() {
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
       invalidatePublicMatchesExplore(queryClient)
+      invalidatePlayerStatsCaches(queryClient)
     },
   })
 }

@@ -6,6 +6,7 @@ import {
   matchQueryKey,
   userMatchesQueryKey,
 } from '@/hooks/useMatches'
+import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 
 export type { RealtimeListTable } from '@/lib/realtimeRowIds'
@@ -45,6 +46,9 @@ export function invalidateAllExploreListQueries(
       queryKey: [...matchQueryKey(matchId), 'match_result'],
       exact: false,
     })
+    queryClient.invalidateQueries({ queryKey: ['match-insights', matchId] })
+    // Confirmed results update ELO / aggregates; refresh player stats + leaderboard.
+    invalidatePlayerStatsCaches(queryClient)
     if (tournamentId) {
       invalidateTournamentQueries(queryClient, tournamentId)
     }
