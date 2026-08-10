@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
+import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import {
   ActivityIndicator,
@@ -73,6 +74,8 @@ import { prefetchOrientationLock } from '@/lib/orientationLock'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { openCreateContactForm } from '@/utils/contacts'
+import { formatPhone } from '@/utils/formatters'
 import { matchStatusDisplay } from '@/utils/matchDisplay'
 import * as ScreenOrientation from 'expo-screen-orientation'
 
@@ -114,6 +117,7 @@ function ParticipantCard({
   const router = useRouter()
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
+  const [creatingContact, setCreatingContact] = useState(false)
   const canOpenProfile = Boolean(
     participant.user_id && currentUserId && participant.user_id !== currentUserId
   )
@@ -136,6 +140,26 @@ function ParticipantCard({
 
   const p = participant?.profile
   if (!p) return null
+
+  const handleCreateContact = async () => {
+    if (creatingContact) return
+    const phone = fullProfile?.phone_e164?.trim()
+    if (!phone) return
+    setCreatingContact(true)
+    try {
+      const result = await openCreateContactForm({
+        displayName: p.display_name,
+        phoneE164: phone,
+      })
+      if (result === 'unsupported') {
+        Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
+      } else if (result === 'error') {
+        Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+      }
+    } finally {
+      setCreatingContact(false)
+    }
+  }
 
   return (
     <View style={card.wrap}>
@@ -161,7 +185,16 @@ function ParticipantCard({
         {canRevealPhone ? (
           <>
             {fullProfile?.phone_e164 ? (
-              <Text style={card.phone}>{fullProfile.phone_e164}</Text>
+              <Pressable
+                onPress={() => void handleCreateContact()}
+                accessibilityRole="button"
+                accessibilityLabel={`Crear contacto con ${p.display_name}`}
+                style={({ pressed }) => [card.phoneBtn, pressed && card.phoneBtnPressed]}
+                disabled={creatingContact}
+                hitSlop={8}>
+                <Text style={card.phone}>{formatPhone(fullProfile.phone_e164)}</Text>
+                <Ionicons name="person-add-outline" size={16} color={Colors.primary} />
+              </Pressable>
             ) : (
               <Pressable onPress={handleRevealPhone} disabled={loading}>
                 <Text style={card.revealPhone}>{loading ? 'Cargando...' : 'Ver teléfono'}</Text>
@@ -223,7 +256,14 @@ const card = StyleSheet.create({
   name: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
   nameLink: { color: Colors.primary },
   city: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-  phone: { fontSize: 13, color: Colors.primary, marginTop: 3, fontFamily: Fonts.medium },
+  phone: { fontSize: 13, color: Colors.primary, fontFamily: Fonts.medium },
+  phoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 3,
+  },
+  phoneBtnPressed: { opacity: 0.7 },
   revealPhone: {
     fontSize: 13,
     color: Colors.primary,
