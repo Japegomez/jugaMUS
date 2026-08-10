@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useViewableUserMatches } from '@/hooks/useMatches'
@@ -145,6 +146,13 @@ export default function UserProfileScreen() {
           <Text style={styles.displayName}>{profile.display_name}</Text>
           {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
+
+        {userId ? (
+          <ProfileStatsCard
+            userId={userId}
+            onPressDetails={() => router.push(`/(tabs)/profile/stats/${userId}` as Href)}
+          />
+        ) : null}
 
         <View style={styles.card}>
           {phone ? (

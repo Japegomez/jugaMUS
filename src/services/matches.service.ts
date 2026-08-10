@@ -520,7 +520,7 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
           `*,
            participants:match_participants(
              id, match_id, user_id, team, state, joined_at, left_at,
-             profile:profiles(id, display_name, photo_url, city)
+             profile:profiles(id, display_name, photo_url, city, phone_e164)
            )`
         )
         .eq('id', id)
