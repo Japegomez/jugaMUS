@@ -1,6 +1,6 @@
 'use strict'
 /**
- * Vendored brace-expansion@5.0.8 (CVE-2026-14257 / GHSA-mh99-v99m-4gvg)
+ * Vendored brace-expansion@5.0.9 (GHSA-rgw5-rvv9-x895 / GHSA-mh99-v99m-4gvg)
  * with a CJS default-function export so minimatch@3/9/10 keep working.
  * Upstream 5.x only exposes `{ expand }` which breaks `require('brace-expansion')(pattern)`.
  */
@@ -96,7 +96,7 @@ function combine(acc, pre, values, max, maxLength, dropEmpties) {
   return out
 }
 
-function expandSequence(body, isAlphaSequence, max) {
+function expandSequence(body, isAlphaSequence, max, maxLength) {
   const n = body.split(/\.\./)
   const N = []
   if (n[0] === undefined || n[1] === undefined) return N
@@ -111,6 +111,7 @@ function expandSequence(body, isAlphaSequence, max) {
     test = gte
   }
   const pad = n.some(isPadded)
+  let length = 0
   for (let i = x; test(i, y) && N.length < max; i += incr) {
     let c
     if (isAlphaSequence) {
@@ -126,7 +127,9 @@ function expandSequence(body, isAlphaSequence, max) {
         }
       }
     }
+    if (length + c.length > maxLength) break
     N.push(c)
+    length += c.length
   }
   return N
 }
@@ -166,7 +169,7 @@ function expand_(str, max, maxLength, isTop) {
     }
     let values
     if (isSequence) {
-      values = expandSequence(m.body, isAlphaSequence, max)
+      values = expandSequence(m.body, isAlphaSequence, max, maxLength)
     } else {
       let n = parseCommaParts(m.body)
       if (n.length === 1 && n[0] !== undefined) {
@@ -178,9 +181,21 @@ function expand_(str, max, maxLength, isTop) {
           continue
         }
       }
+      let dropsEmpties = dropEmpties && !m.post.length && !pre
+      for (let d = 0; dropsEmpties && d < acc.length; d++) {
+        if (acc[d]) dropsEmpties = false
+      }
       values = []
-      for (let j = 0; j < n.length; j++) {
-        values.push.apply(values, expand_(n[j], max, maxLength, false))
+      let valuesLength = 0
+      outer: for (let j = 0; j < n.length; j++) {
+        const expanded = expand_(n[j], max, maxLength, false)
+        for (let k = 0; k < expanded.length; k++) {
+          const v = expanded[k]
+          if (dropsEmpties && !v) continue
+          if (values.length >= max || valuesLength + v.length > maxLength) break outer
+          values.push(v)
+          valuesLength += v.length
+        }
       }
     }
     acc = combine(acc, pre, values, max, maxLength, dropEmpties && !m.post.length)

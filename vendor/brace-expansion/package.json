@@ -1,7 +1,7 @@
 {
   "name": "brace-expansion",
-  "version": "5.0.8",
-  "description": "Compat shim: brace-expansion 5.0.8 security fix with default-function CJS export for minimatch@3/9/10",
+  "version": "5.0.9",
+  "description": "Compat shim: brace-expansion 5.0.9 security fix with default-function CJS export for minimatch@3/9/10",
   "license": "MIT",
   "main": "index.js",
   "type": "commonjs",
