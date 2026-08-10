@@ -77,6 +77,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="profile/index" options={{ title: 'Perfil', ...VISIBLE_TAB_OPTIONS }} />
       <Tabs.Screen name="profile/[userId]" options={{ href: null }} />
       <Tabs.Screen name="profile/edit" options={{ href: null }} />
+      <Tabs.Screen name="profile/stats/[userId]" options={{ href: null }} />
+      <Tabs.Screen name="leaderboard/index" options={{ href: null }} />
     </Tabs>
   )
 }
