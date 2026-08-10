@@ -117,6 +117,7 @@ function ParticipantCard({
   const router = useRouter()
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
+  const [creatingContact, setCreatingContact] = useState(false)
   const canOpenProfile = Boolean(
     participant.user_id && currentUserId && participant.user_id !== currentUserId
   )
@@ -141,16 +142,22 @@ function ParticipantCard({
   if (!p) return null
 
   const handleCreateContact = async () => {
+    if (creatingContact) return
     const phone = fullProfile?.phone_e164?.trim()
     if (!phone) return
-    const result = await openCreateContactForm({
-      displayName: p.display_name,
-      phoneE164: phone,
-    })
-    if (result === 'unsupported') {
-      Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
-    } else if (result === 'error') {
-      Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+    setCreatingContact(true)
+    try {
+      const result = await openCreateContactForm({
+        displayName: p.display_name,
+        phoneE164: phone,
+      })
+      if (result === 'unsupported') {
+        Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
+      } else if (result === 'error') {
+        Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+      }
+    } finally {
+      setCreatingContact(false)
     }
   }
 
@@ -183,6 +190,7 @@ function ParticipantCard({
                 accessibilityRole="button"
                 accessibilityLabel={`Crear contacto con ${p.display_name}`}
                 style={({ pressed }) => [card.phoneBtn, pressed && card.phoneBtnPressed]}
+                disabled={creatingContact}
                 hitSlop={8}>
                 <Text style={card.phone}>{formatPhone(fullProfile.phone_e164)}</Text>
                 <Ionicons name="person-add-outline" size={16} color={Colors.primary} />
