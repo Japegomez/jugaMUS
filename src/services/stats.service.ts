@@ -33,6 +33,18 @@ export type RivalStat = {
   losses: number
 }
 
+export type TournamentPodiumEntry = {
+  tournament_id: string
+  title: string
+  start_at: string
+}
+
+export type TournamentPodium = {
+  gold: TournamentPodiumEntry[]
+  silver: TournamentPodiumEntry[]
+  bronze: TournamentPodiumEntry[]
+}
+
 export type PlayerStats = {
   user_id: string
   elo_rating: number
@@ -48,6 +60,7 @@ export type PlayerStats = {
   tournament_finals: number
   tournament_thirds: number
   tournaments_participated: number
+  tournament_podium: TournamentPodium
   venues: VenueStat[]
   partners: PartnerStat[]
   rivalries: {
@@ -138,6 +151,30 @@ function asRival(value: unknown): RivalStat | null {
   }
 }
 
+function asPodiumEntries(value: unknown): TournamentPodiumEntry[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      const row = (item ?? {}) as Record<string, unknown>
+      if (typeof row.tournament_id !== 'string' || typeof row.title !== 'string') return null
+      return {
+        tournament_id: row.tournament_id,
+        title: row.title,
+        start_at: typeof row.start_at === 'string' ? row.start_at : '',
+      }
+    })
+    .filter((e): e is TournamentPodiumEntry => e != null)
+}
+
+function asTournamentPodium(value: unknown): TournamentPodium {
+  const row = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+  return {
+    gold: asPodiumEntries(row.gold),
+    silver: asPodiumEntries(row.silver),
+    bronze: asPodiumEntries(row.bronze),
+  }
+}
+
 function parsePlayerStats(raw: unknown): PlayerStats | null {
   if (!raw || typeof raw !== 'object') return null
   const row = raw as Record<string, unknown>
@@ -163,6 +200,7 @@ function parsePlayerStats(raw: unknown): PlayerStats | null {
     tournament_finals: Number(row.tournament_finals ?? 0),
     tournament_thirds: Number(row.tournament_thirds ?? 0),
     tournaments_participated: Number(row.tournaments_participated ?? 0),
+    tournament_podium: asTournamentPodium(row.tournament_podium),
     venues: Array.isArray(row.venues)
       ? row.venues.map((v) => {
           const venue = (v ?? {}) as Record<string, unknown>

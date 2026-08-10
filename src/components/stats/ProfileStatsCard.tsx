@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { ELOBadge } from '@/components/stats/ELOBadge'
 import { FormBadges } from '@/components/stats/FormBadges'
 import { StatsGrid } from '@/components/stats/StatsGrid'
+import { TournamentMedalsRow } from '@/components/stats/TournamentPodiumSection'
 import { WinRateBar } from '@/components/stats/WinRateBar'
 import { usePlayerStats } from '@/hooks/useStats'
 import { formatStreak } from '@/services/stats.service'
@@ -53,6 +54,8 @@ export function ProfileStatsCard({
       </View>
 
       <WinRateBar winRate={data.win_rate} wins={data.wins} losses={data.losses} />
+
+      <TournamentMedalsRow podium={data.tournament_podium} />
 
       <Pressable onPress={onPressDetails} accessibilityRole="button" style={styles.linkBtn}>
         <Text style={styles.linkText}>Ver estadísticas</Text>

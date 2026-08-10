@@ -8,6 +8,7 @@ import { FormBadges } from '@/components/stats/FormBadges'
 import { PartnerList } from '@/components/stats/PartnerList'
 import { RivalryList } from '@/components/stats/RivalryList'
 import { StatsGrid } from '@/components/stats/StatsGrid'
+import { TournamentPodiumSection } from '@/components/stats/TournamentPodiumSection'
 import { VenueList } from '@/components/stats/VenueList'
 import { WinRateBar } from '@/components/stats/WinRateBar'
 import { usePlayerStats } from '@/hooks/useStats'
@@ -72,18 +73,14 @@ export default function PlayerStatsScreen() {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Torneos</Text>
-              <StatsGrid
-                items={[
-                  { label: 'Ganados', value: String(data.tournaments_won) },
-                  { label: 'Finales', value: String(data.tournament_finals) },
-                  { label: '3º puesto', value: String(data.tournament_thirds) },
-                  {
-                    label: 'Participaciones',
-                    value: String(data.tournaments_participated),
-                  },
-                ]}
+              <Text style={styles.cardTitle}>Torneos — Podio</Text>
+              <TournamentPodiumSection
+                podium={data.tournament_podium}
+                onPressTournament={(id) => router.push(`/(tabs)/tournaments/${id}` as Href)}
               />
+              <Text style={styles.participations}>
+                {`${data.tournaments_participated} participaciones en total`}
+              </Text>
             </View>
 
             <View style={styles.card}>
@@ -167,6 +164,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  participations: {
+    fontFamily: Fonts.regular,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
   errorBox: {
     padding: 16,
