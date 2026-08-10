@@ -21,7 +21,6 @@ import { ChallengeList } from '@/components/leagues/ChallengeList'
 import { ChallengeModal } from '@/components/leagues/ChallengeModal'
 import {
   EditLeaguePairModal,
-  type EditLeaguePairFormValues,
 } from '@/components/leagues/EditLeaguePairModal'
 import { EloRanking } from '@/components/leagues/EloRanking'
 import { LeaguePairCard } from '@/components/leagues/LeaguePairCard'
@@ -195,6 +194,7 @@ export default function LeagueDetailScreen() {
   const [challengeModalOpen, setChallengeModalOpen] = useState(false)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
   const [cancelVisible, setCancelVisible] = useState(false)
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   const needsPassword = Boolean(
     league &&
@@ -221,6 +221,7 @@ export default function LeagueDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      setNowMs(Date.now())
       void refetchLeague()
       if (fullAccess) {
         void standingsQ.refetch()
@@ -259,7 +260,7 @@ export default function LeagueDetailScreen() {
   const openEnded =
     isOpenEloFormat(league.format) &&
     league.end_at &&
-    new Date(league.end_at).getTime() > Date.now()
+    new Date(league.end_at).getTime() > nowMs
 
   const refreshAll = async () => {
     await refetchLeague()
@@ -433,7 +434,10 @@ export default function LeagueDetailScreen() {
                   )
                 })}
                 {acceptingPairs ? (
-                  <AddPairButton onPress={() => setPairModalOpen(true)} />
+                  <AddPairButton
+                    hasPairs={league.pairs.length > 0}
+                    onPress={() => setPairModalOpen(true)}
+                  />
                 ) : null}
                 {inProgress && isOpenEloFormat(league.format) && userPairId && openEnded ? (
                   <Button

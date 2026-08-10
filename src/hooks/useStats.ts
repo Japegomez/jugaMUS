@@ -38,7 +38,9 @@ export function usePlayerStats(userId?: string | null) {
     queryKey: playerStatsQueryKey(userId ?? ''),
     queryFn: () => getPlayerStats(userId!),
     enabled: Boolean(userId),
-    staleTime: QUERY_STALE_TIME,
+    // get_player_stats recalcula ELO + agregados en cada lectura
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -60,11 +62,16 @@ export function useLeaderboard(city?: string | null) {
   })
 }
 
-export function usePlayerRanking(userId?: string | null) {
+export function usePlayerRanking(
+  userId?: string | null,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true
   return useQuery({
     queryKey: playerRankingQueryKey(userId ?? ''),
     queryFn: () => getPlayerRanking(userId!),
-    enabled: Boolean(userId),
-    staleTime: QUERY_STALE_TIME,
+    enabled: Boolean(userId) && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }

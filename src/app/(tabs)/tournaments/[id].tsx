@@ -469,7 +469,10 @@ export default function TournamentDetailScreen() {
             <View style={s.actions}>
               {inRegistration ? (
                 <>
-                  <AddPairButton onPress={() => setPairModalOpen(true)} />
+                  <AddPairButton
+                    hasPairs={tournament.pairs.length > 0}
+                    onPress={() => setPairModalOpen(true)}
+                  />
                   {isCreator ? (
                     <Button
                       title="Organizar cuadro"
@@ -515,6 +518,9 @@ export default function TournamentDetailScreen() {
         onClose={() => setPairModalOpen(false)}
         onSubmit={handleAddPair}
         loading={addPair.isPending}
+        defaultSelfSlot={
+          userId && userIsInTournamentPair(tournament.pairs, userId) ? null : 'a'
+        }
         selfJoinDisabled={Boolean(userId && userIsInTournamentPair(tournament.pairs, userId))}
       />
 

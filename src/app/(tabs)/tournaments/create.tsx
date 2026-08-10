@@ -522,7 +522,7 @@ export default function CreateTournamentScreen() {
       </Text>
 
       {pairs.length === 0 ? (
-        <Text style={s.empty}>Aún no hay parejas. Pulsa «Añadir pareja».</Text>
+        <Text style={s.empty}>Todavía no hay parejas en este torneo.</Text>
       ) : (
         pairs.map((p) => (
           <PairCard
@@ -535,7 +535,11 @@ export default function CreateTournamentScreen() {
         ))
       )}
 
-      <AddPairButton onPress={() => setPairModalOpen(true)} style={s.actionBtn} />
+      <AddPairButton
+        hasPairs={pairs.length > 0}
+        onPress={() => setPairModalOpen(true)}
+        style={s.actionBtn}
+      />
       <Button title="Guardar torneo" onPress={() => void finish()} style={s.submitBtn} />
 
       <AddPairModal
@@ -543,6 +547,7 @@ export default function CreateTournamentScreen() {
         onClose={() => setPairModalOpen(false)}
         onSubmit={handleAddPair}
         loading={addPair.isPending}
+        defaultSelfSlot={userAlreadyInPair ? null : 'a'}
         selfJoinDisabled={userAlreadyInPair}
       />
 

@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { usePlayerRanking } from '@/hooks/useStats'
+import { usePlayerRanking, usePlayerStats } from '@/hooks/useStats'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -17,19 +17,22 @@ export function RankingSection({
   userId: string
   onPressRanking: () => void
 }) {
-  const { data, isPending, isError } = usePlayerRanking(userId)
+  // Esperar a que get_player_stats termine el refresh de ELO antes de leer ranking
+  const statsQuery = usePlayerStats(userId)
+  const statsReady = Boolean(statsQuery.data) && !statsQuery.isFetching
+  const { data, isPending, isError } = usePlayerRanking(userId, { enabled: statsReady })
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.title}>Ranking</Text>
 
-      {isPending ? <ActivityIndicator color={Colors.primary} /> : null}
+      {isPending || !statsReady ? <ActivityIndicator color={Colors.primary} /> : null}
 
-      {isError ? (
+      {statsReady && isError ? (
         <Text style={styles.empty}>No se pudo cargar el ranking.</Text>
       ) : null}
 
-      {!isPending && !isError && data ? (
+      {statsReady && !isPending && !isError && data ? (
         <View style={styles.rows}>
           {data.city ? (
             <View style={styles.row}>

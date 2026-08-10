@@ -505,16 +505,20 @@ export default function CreateLeagueScreen() {
         Completas: {pairs.filter(isLeaguePairComplete).length} / {pairs.length}
       </Text>
 
-      {pairs.map((pair) => (
-        <LeaguePairCard
-          key={pair.id}
-          pair={pair}
-          subtitle={isLeaguePairComplete(pair) ? 'Completa' : 'Incompleta'}
-          onEdit={() => setEditingPair(pair)}
-        />
-      ))}
+      {pairs.length === 0 ? (
+        <Text style={s.empty}>Todavía no hay parejas en esta liga.</Text>
+      ) : (
+        pairs.map((pair) => (
+          <LeaguePairCard
+            key={pair.id}
+            pair={pair}
+            subtitle={isLeaguePairComplete(pair) ? 'Completa' : 'Incompleta'}
+            onEdit={() => setEditingPair(pair)}
+          />
+        ))
+      )}
 
-      <AddPairButton onPress={() => setPairModalOpen(true)} />
+      <AddPairButton hasPairs={pairs.length > 0} onPress={() => setPairModalOpen(true)} />
       <Button title="Ir a la liga" onPress={() => void finish()} />
 
       <AddLeaguePairModal
@@ -570,6 +574,7 @@ const s = StyleSheet.create({
   heading: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary },
   step: { fontSize: 14, color: Colors.textSecondary, marginBottom: 4 },
   hint: { fontSize: 13, color: Colors.textSecondary },
+  empty: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic' },
   label: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textPrimary, marginTop: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 })

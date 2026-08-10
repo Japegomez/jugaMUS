@@ -65,7 +65,9 @@ export function ProfileStatsCard({
         {medalTotal > 0 ? (
           <VisualPodium podium={data.podium} compact />
         ) : (
-          <Text style={styles.medalsEmpty}>Sin medallas aún</Text>
+          <Text style={styles.medalsEmpty}>
+            Gana torneos y ligas para conseguir medallas
+          </Text>
         )}
       </View>
 

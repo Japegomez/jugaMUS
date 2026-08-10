@@ -45,21 +45,41 @@ export function AddLeaguePairModal({
   title = 'Añadir pareja',
 }: AddLeaguePairModalProps) {
   const [name, setName] = useState('')
-  const [playerAIsSelf, setPlayerAIsSelf] = useState(defaultSelfSlot === 'a')
+  const [playerAIsSelf, setPlayerAIsSelf] = useState(false)
   const [playerAText, setPlayerAText] = useState('')
-  const [playerBIsSelf, setPlayerBIsSelf] = useState(defaultSelfSlot === 'b')
+  const [playerBIsSelf, setPlayerBIsSelf] = useState(false)
   const [playerBText, setPlayerBText] = useState('')
 
-  const reset = () => {
+  // Resetear el formulario cuando el modal abre o cambian las reglas de auto-join.
+  // Patrón "adjust state during render" (evita setState dentro de effect).
+  const [lastOpenKey, setLastOpenKey] = useState<string | null>(null)
+  const openKey = visible ? `${defaultSelfSlot ?? ''}|${selfJoinDisabled ? '1' : '0'}` : null
+  if (openKey !== lastOpenKey) {
+    setLastOpenKey(openKey)
+    if (visible) {
+      setName('')
+      setPlayerAText('')
+      setPlayerBText('')
+      if (selfJoinDisabled) {
+        setPlayerAIsSelf(false)
+        setPlayerBIsSelf(false)
+      } else {
+        setPlayerAIsSelf(defaultSelfSlot === 'a')
+        setPlayerBIsSelf(defaultSelfSlot === 'b')
+      }
+    }
+  }
+
+  const resetForm = () => {
     setName('')
-    setPlayerAIsSelf(defaultSelfSlot === 'a')
     setPlayerAText('')
-    setPlayerBIsSelf(defaultSelfSlot === 'b')
     setPlayerBText('')
+    setPlayerAIsSelf(false)
+    setPlayerBIsSelf(false)
   }
 
   const handleClose = () => {
-    reset()
+    resetForm()
     onClose()
   }
 
@@ -67,12 +87,12 @@ export function AddLeaguePairModal({
     try {
       await onSubmit({
         name,
-        playerAIsSelf,
+        playerAIsSelf: selfJoinDisabled ? false : playerAIsSelf,
         playerAText,
-        playerBIsSelf,
+        playerBIsSelf: selfJoinDisabled ? false : playerBIsSelf,
         playerBText,
       })
-      reset()
+      resetForm()
     } catch {
       /* keep form */
     }
@@ -111,7 +131,7 @@ export function AddLeaguePairModal({
                       setPlayerBIsSelf(false)
                     }
                   }}
-                  disabled={defaultSelfSlot === 'a' || selfJoinDisabled}
+                  disabled={selfJoinDisabled}
                   trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
                   thumbColor={Colors.white}
                   ios_backgroundColor={Colors.switchTrackOff}
@@ -141,7 +161,7 @@ export function AddLeaguePairModal({
                       setPlayerAIsSelf(false)
                     }
                   }}
-                  disabled={defaultSelfSlot === 'b' || selfJoinDisabled}
+                  disabled={selfJoinDisabled}
                   trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
                   thumbColor={Colors.white}
                   ios_backgroundColor={Colors.switchTrackOff}

@@ -716,13 +716,18 @@ export default function MatchDetailScreen() {
   )
   const isPersonalMatch = !match.tournament_id && isCreator && otherRegistered.length === 0
 
+  // Las partidas de liga round-robin se quedan "planned" hasta que se juegan;
+  // el backend las auto-inicia al recibir el resultado.
+  const isPlannedLeagueMatch = isPlanned && Boolean(match.league_id)
+
   const canSubmitResult = Boolean(
     userId &&
     myParticipation &&
     !isPersonalMatch &&
     match.status !== MATCH_STATUS.CANCELLED &&
-    (match.status === MATCH_STATUS.IN_PROGRESS ||
-      match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
+    (isInProgress ||
+      match.status === MATCH_STATUS.FINISHED_NO_RESULT ||
+      isPlannedLeagueMatch) &&
     !resultBlocksNewSubmit
   )
 
@@ -732,7 +737,7 @@ export default function MatchDetailScreen() {
 
   // También permitimos llevar la cuenta en partidos de torneos (no durante validación de resultado).
   const canOpenScoreboard = Boolean(
-    userId && isParticipant && isInProgress && !resultBlocksNewSubmit
+    userId && isParticipant && (isInProgress || isPlannedLeagueMatch) && !resultBlocksNewSubmit
   )
 
   const allTextPlayers =

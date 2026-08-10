@@ -136,7 +136,7 @@ function PodiumList({
           <Text style={styles.sectionEmoji}>{meta.emoji}</Text>
           <Text style={styles.sectionTitle}>{meta.label}</Text>
         </View>
-        <Text style={styles.empty}>Sin podios</Text>
+        <Text style={styles.empty}>Compite para conseguir tu primera medalla</Text>
       </View>
     )
   }
@@ -204,7 +204,11 @@ export function PodiumSection({
   const total = podium.gold.length + podium.silver.length + podium.bronze.length
 
   if (total === 0 && !showMedalCounts) {
-    return <Text style={styles.emptyBlock}>Aún no hay podios en torneos ni ligas</Text>
+    return (
+      <Text style={styles.emptyBlock}>
+        Gana torneos y ligas para conseguir medallas
+      </Text>
+    )
   }
 
   return (

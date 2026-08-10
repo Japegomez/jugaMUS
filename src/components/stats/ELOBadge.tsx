@@ -7,7 +7,7 @@ import { Fonts } from '@/theme/typography'
 
 const ELO_HELP_TITLE = '¿Qué es el ELO?'
 const ELO_HELP_MESSAGE =
-  'Empiezas con 1200. Ganas más puntos si derrotas a rivales más fuertes y pierdes más si caes contra rivales peores.'
+  'Empiezas con 1200. Ganas más puntos si derrotas a rivales más fuertes y pierdes más si caes contra rivales peores. Solo cambia al jugar contra rivales con cuenta en la app; jugar contra rivales introducidos por texto no afecta.'
 
 export function ELOBadge({ rating }: { rating: number }) {
   return (
