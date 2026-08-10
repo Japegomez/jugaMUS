@@ -60,7 +60,7 @@ Please give us reasonable time to investigate and ship a fix before any public d
 This repository uses:
 
 - **Dependabot** alerts and version updates (see `.github/dependabot.yml`)
-- **`npm audit`** in CI (`quality` workflow, high severity and above)
+- **`npm audit`** in CI (`quality` workflow, high severity and above), with an allowlist only for unpatched `image-size` advisories transitive via Metro/Expo SDK 54 (`scripts/npm-audit-ci.mjs`)
 
 Security-related dependency fixes may land on the default branch (`main`); routine version updates are reviewed via Dependabot PRs.
 
