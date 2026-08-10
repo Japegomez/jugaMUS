@@ -3,7 +3,7 @@
     "name": "jugaMUS",
     "slug": "musapp",
     "scheme": "jugamus",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -54,6 +54,12 @@
       "expo-web-browser",
       "expo-apple-authentication",
       "@react-native-community/datetimepicker",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "jugaMUS puede sugerir guardar el teléfono de un jugador en tus contactos cuando lo pulses."
+        }
+      ],
       [
         "expo-notifications",
         {
