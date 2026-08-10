@@ -147,6 +147,13 @@ export default function UserProfileScreen() {
           {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
 
+        {userId ? (
+          <ProfileStatsCard
+            userId={userId}
+            onPressDetails={() => router.push(`/(tabs)/profile/stats/${userId}` as Href)}
+          />
+        ) : null}
+
         <View style={styles.card}>
           {phone ? (
             <PhoneContactRow displayName={profile.display_name} phoneE164={phone} />
@@ -154,13 +161,6 @@ export default function UserProfileScreen() {
             <InfoRow label="Teléfono" value="No disponible" />
           )}
         </View>
-
-        {userId ? (
-          <ProfileStatsCard
-            userId={userId}
-            onPressDetails={() => router.push(`/(tabs)/profile/stats/${userId}` as Href)}
-          />
-        ) : null}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Historial</Text>

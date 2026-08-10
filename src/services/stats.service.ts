@@ -33,17 +33,26 @@ export type RivalStat = {
   losses: number
 }
 
-export type TournamentPodiumEntry = {
-  tournament_id: string
+export type PodiumSource = 'tournament' | 'league'
+
+export type PodiumEntry = {
+  id: string
   title: string
   start_at: string
+  source: PodiumSource
 }
 
-export type TournamentPodium = {
-  gold: TournamentPodiumEntry[]
-  silver: TournamentPodiumEntry[]
-  bronze: TournamentPodiumEntry[]
+export type Podium = {
+  gold: PodiumEntry[]
+  silver: PodiumEntry[]
+  bronze: PodiumEntry[]
 }
+
+/** @deprecated Use PodiumEntry */
+export type TournamentPodiumEntry = PodiumEntry & { tournament_id?: string }
+
+/** @deprecated Use Podium */
+export type TournamentPodium = Podium
 
 export type PlayerStats = {
   user_id: string
@@ -60,7 +69,8 @@ export type PlayerStats = {
   tournament_finals: number
   tournament_thirds: number
   tournaments_participated: number
-  tournament_podium: TournamentPodium
+  leagues_participated: number
+  podium: Podium
   venues: VenueStat[]
   partners: PartnerStat[]
   rivalries: {
@@ -151,22 +161,35 @@ function asRival(value: unknown): RivalStat | null {
   }
 }
 
-function asPodiumEntries(value: unknown): TournamentPodiumEntry[] {
+function asPodiumSource(value: unknown): PodiumSource {
+  return value === 'league' ? 'league' : 'tournament'
+}
+
+function asPodiumEntries(value: unknown): PodiumEntry[] {
   if (!Array.isArray(value)) return []
   return value
     .map((item) => {
       const row = (item ?? {}) as Record<string, unknown>
-      if (typeof row.tournament_id !== 'string' || typeof row.title !== 'string') return null
+      const id =
+        typeof row.id === 'string'
+          ? row.id
+          : typeof row.tournament_id === 'string'
+            ? row.tournament_id
+            : typeof row.league_id === 'string'
+              ? row.league_id
+              : null
+      if (!id || typeof row.title !== 'string') return null
       return {
-        tournament_id: row.tournament_id,
+        id,
         title: row.title,
         start_at: typeof row.start_at === 'string' ? row.start_at : '',
+        source: asPodiumSource(row.source),
       }
     })
-    .filter((e): e is TournamentPodiumEntry => e != null)
+    .filter((e): e is PodiumEntry => e != null)
 }
 
-function asTournamentPodium(value: unknown): TournamentPodium {
+function asPodium(value: unknown): Podium {
   const row = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
   return {
     gold: asPodiumEntries(row.gold),
@@ -200,7 +223,8 @@ function parsePlayerStats(raw: unknown): PlayerStats | null {
     tournament_finals: Number(row.tournament_finals ?? 0),
     tournament_thirds: Number(row.tournament_thirds ?? 0),
     tournaments_participated: Number(row.tournaments_participated ?? 0),
-    tournament_podium: asTournamentPodium(row.tournament_podium),
+    leagues_participated: Number(row.leagues_participated ?? 0),
+    podium: asPodium(row.podium ?? row.tournament_podium),
     venues: Array.isArray(row.venues)
       ? row.venues.map((v) => {
           const venue = (v ?? {}) as Record<string, unknown>
@@ -309,7 +333,11 @@ function parseLeaderboard(raw: unknown): LeaderboardEntry[] {
 
 export async function getPlayerStats(userId: string): Promise<PlayerStats> {
   const { data, error } = await supabase.rpc('get_player_stats', { p_user_id: userId })
-  if (error) throw new Error(error.message)
+  if (error) {
+    const details =
+      typeof error === 'object' && error && 'code' in error ? String(error.code) : undefined
+    throw new Error(details ? `Estadísticas (${details}): ${error.message}` : error.message)
+  }
   const parsed = parsePlayerStats(data)
   if (!parsed) throw new Error('No se pudieron cargar las estadísticas')
   return parsed

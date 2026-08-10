@@ -8,7 +8,8 @@ import { FormBadges } from '@/components/stats/FormBadges'
 import { PartnerList } from '@/components/stats/PartnerList'
 import { RivalryList } from '@/components/stats/RivalryList'
 import { StatsGrid } from '@/components/stats/StatsGrid'
-import { TournamentPodiumSection } from '@/components/stats/TournamentPodiumSection'
+import { PodiumSection } from '@/components/stats/TournamentPodiumSection'
+import type { PodiumEntry } from '@/services/stats.service'
 import { VenueList } from '@/components/stats/VenueList'
 import { WinRateBar } from '@/components/stats/WinRateBar'
 import { usePlayerStats } from '@/hooks/useStats'
@@ -73,13 +74,19 @@ export default function PlayerStatsScreen() {
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Torneos — Podio</Text>
-              <TournamentPodiumSection
-                podium={data.tournament_podium}
-                onPressTournament={(id) => router.push(`/(tabs)/tournaments/${id}` as Href)}
+              <Text style={styles.cardTitle}>Podio — Torneos y ligas</Text>
+              <PodiumSection
+                podium={data.podium}
+                onPressEntry={(entry: PodiumEntry) => {
+                  if (entry.source === 'league') {
+                    router.push(`/(tabs)/leagues/${entry.id}` as Href)
+                  } else {
+                    router.push(`/(tabs)/tournaments/${entry.id}` as Href)
+                  }
+                }}
               />
               <Text style={styles.participations}>
-                {`${data.tournaments_participated} participaciones en total`}
+                {`${data.tournaments_participated} torneos · ${data.leagues_participated} ligas`}
               </Text>
             </View>
 

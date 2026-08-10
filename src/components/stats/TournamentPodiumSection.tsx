@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import type { TournamentPodium, TournamentPodiumEntry } from '@/services/stats.service'
+import type { Podium, PodiumEntry, PodiumSource } from '@/services/stats.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -9,6 +9,11 @@ const MEDAL = {
   silver: { emoji: '🥈', label: 'Plata', color: '#8A8A8A' },
   bronze: { emoji: '🥉', label: 'Bronce', color: '#A0622E' },
 } as const
+
+const SOURCE_LABEL: Record<PodiumSource, string> = {
+  tournament: 'Torneo',
+  league: 'Liga',
+}
 
 function MedalBadge({
   kind,
@@ -29,7 +34,7 @@ function MedalBadge({
   )
 }
 
-function formatTournamentDate(iso: string): string {
+function formatEventDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-ES', {
     day: '2-digit',
     month: 'short',
@@ -37,14 +42,22 @@ function formatTournamentDate(iso: string): string {
   })
 }
 
+function SourceChip({ source }: { source: PodiumSource }) {
+  return (
+    <View style={[styles.sourceChip, source === 'league' && styles.sourceChipLeague]}>
+      <Text style={styles.sourceChipText}>{SOURCE_LABEL[source]}</Text>
+    </View>
+  )
+}
+
 function PodiumList({
   kind,
   entries,
-  onPressTournament,
+  onPressEntry,
 }: {
   kind: keyof typeof MEDAL
-  entries: TournamentPodiumEntry[]
-  onPressTournament?: (tournamentId: string) => void
+  entries: PodiumEntry[]
+  onPressEntry?: (entry: PodiumEntry) => void
 }) {
   const meta = MEDAL[kind]
 
@@ -55,7 +68,7 @@ function PodiumList({
           <Text style={styles.sectionEmoji}>{meta.emoji}</Text>
           <Text style={styles.sectionTitle}>{meta.label}</Text>
         </View>
-        <Text style={styles.empty}>Sin torneos en podio</Text>
+        <Text style={styles.empty}>Sin podios</Text>
       </View>
     )
   }
@@ -68,26 +81,27 @@ function PodiumList({
       </View>
       {entries.map((entry, index) => {
         const row = (
-          <>
+          <View style={styles.rowContent}>
             <View style={styles.rowInfo}>
               <Text style={styles.rowTitle} numberOfLines={2}>
                 {entry.title}
               </Text>
-              <Text style={styles.rowMeta}>{formatTournamentDate(entry.start_at)}</Text>
+              <Text style={styles.rowMeta}>{formatEventDate(entry.start_at)}</Text>
             </View>
-          </>
+            <SourceChip source={entry.source} />
+          </View>
         )
 
-        return onPressTournament ? (
+        return onPressEntry ? (
           <Pressable
-            key={entry.tournament_id}
-            onPress={() => onPressTournament(entry.tournament_id)}
+            key={`${entry.source}-${entry.id}`}
+            onPress={() => onPressEntry(entry)}
             style={[styles.row, index === entries.length - 1 && styles.rowLast]}>
             {row}
           </Pressable>
         ) : (
           <View
-            key={entry.tournament_id}
+            key={`${entry.source}-${entry.id}`}
             style={[styles.row, index === entries.length - 1 && styles.rowLast]}>
             {row}
           </View>
@@ -97,7 +111,7 @@ function PodiumList({
   )
 }
 
-export function TournamentMedalsRow({ podium }: { podium: TournamentPodium }) {
+export function PodiumMedalsRow({ podium }: { podium: Podium }) {
   return (
     <View style={styles.medalsRow}>
       <MedalBadge kind="gold" count={podium.gold.length} compact />
@@ -107,19 +121,22 @@ export function TournamentMedalsRow({ podium }: { podium: TournamentPodium }) {
   )
 }
 
-export function TournamentPodiumSection({
+/** @deprecated Use PodiumMedalsRow */
+export const TournamentMedalsRow = PodiumMedalsRow
+
+export function PodiumSection({
   podium,
-  onPressTournament,
+  onPressEntry,
   showMedalCounts = true,
 }: {
-  podium: TournamentPodium
-  onPressTournament?: (tournamentId: string) => void
+  podium: Podium
+  onPressEntry?: (entry: PodiumEntry) => void
   showMedalCounts?: boolean
 }) {
   const total = podium.gold.length + podium.silver.length + podium.bronze.length
 
   if (total === 0 && !showMedalCounts) {
-    return <Text style={styles.emptyBlock}>Aún no hay podios en torneos</Text>
+    return <Text style={styles.emptyBlock}>Aún no hay podios en torneos ni ligas</Text>
   }
 
   return (
@@ -131,12 +148,15 @@ export function TournamentPodiumSection({
           <MedalBadge kind="bronze" count={podium.bronze.length} />
         </View>
       ) : null}
-      <PodiumList kind="gold" entries={podium.gold} onPressTournament={onPressTournament} />
-      <PodiumList kind="silver" entries={podium.silver} onPressTournament={onPressTournament} />
-      <PodiumList kind="bronze" entries={podium.bronze} onPressTournament={onPressTournament} />
+      <PodiumList kind="gold" entries={podium.gold} onPressEntry={onPressEntry} />
+      <PodiumList kind="silver" entries={podium.silver} onPressEntry={onPressEntry} />
+      <PodiumList kind="bronze" entries={podium.bronze} onPressEntry={onPressEntry} />
     </View>
   )
 }
+
+/** @deprecated Use PodiumSection */
+export const TournamentPodiumSection = PodiumSection
 
 const styles = StyleSheet.create({
   wrap: {
@@ -200,6 +220,11 @@ const styles = StyleSheet.create({
   rowLast: {
     borderBottomWidth: 0,
   },
+  rowContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   rowInfo: {
     flex: 1,
   },
@@ -212,6 +237,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: Fonts.regular,
     fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  sourceChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: Colors.surface,
+  },
+  sourceChipLeague: {
+    backgroundColor: Colors.border,
+  },
+  sourceChipText: {
+    fontFamily: Fonts.medium,
+    fontSize: 11,
     color: Colors.textSecondary,
   },
   empty: {

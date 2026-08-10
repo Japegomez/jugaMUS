@@ -1,12 +1,8 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { ELOBadge } from '@/components/stats/ELOBadge'
-import { FormBadges } from '@/components/stats/FormBadges'
-import { StatsGrid } from '@/components/stats/StatsGrid'
-import { TournamentMedalsRow } from '@/components/stats/TournamentPodiumSection'
-import { WinRateBar } from '@/components/stats/WinRateBar'
+import { PodiumMedalsRow } from '@/components/stats/TournamentPodiumSection'
 import { usePlayerStats } from '@/hooks/useStats'
-import { formatStreak } from '@/services/stats.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -17,7 +13,7 @@ export function ProfileStatsCard({
   userId: string
   onPressDetails: () => void
 }) {
-  const { data, isPending, isError } = usePlayerStats(userId)
+  const { data, isPending, isError, refetch } = usePlayerStats(userId)
 
   if (isPending) {
     return (
@@ -29,8 +25,21 @@ export function ProfileStatsCard({
   }
 
   if (isError || !data) {
-    return null
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Estadísticas</Text>
+        <Text style={styles.errorText}>No se pudieron cargar las estadísticas.</Text>
+        <Pressable
+          onPress={() => void refetch()}
+          accessibilityRole="button"
+          style={styles.retryBtn}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </Pressable>
+      </View>
+    )
   }
+
+  const medalTotal = data.podium.gold.length + data.podium.silver.length + data.podium.bronze.length
 
   return (
     <View style={styles.card}>
@@ -39,26 +48,29 @@ export function ProfileStatsCard({
         <ELOBadge rating={data.elo_rating} />
       </View>
 
-      <StatsGrid
-        items={[
-          { label: 'Win rate', value: `${data.win_rate}%` },
-          { label: 'Partidas', value: String(data.matches_played) },
-          { label: 'Victorias', value: String(data.wins) },
-          { label: 'Racha', value: formatStreak(data.current_streak) },
-        ]}
-      />
-
-      <View style={styles.formBlock}>
-        <Text style={styles.formLabel}>Forma reciente</Text>
-        <FormBadges form={data.last_form} />
+      <View style={styles.winRateBlock}>
+        <Text style={styles.winRateValue}>{data.win_rate}%</Text>
+        <Text style={styles.winRateLabel}>Win rate</Text>
+        <Text style={styles.matchesMeta}>
+          {`${data.wins}V · ${data.losses}D · ${data.matches_played} partidas`}
+        </Text>
       </View>
 
-      <WinRateBar winRate={data.win_rate} wins={data.wins} losses={data.losses} />
+      <View style={styles.medalsBlock}>
+        <Text style={styles.medalsLabel}>Podio</Text>
+        {medalTotal > 0 ? (
+          <PodiumMedalsRow podium={data.podium} />
+        ) : (
+          <Text style={styles.medalsEmpty}>Sin medallas aún</Text>
+        )}
+      </View>
 
-      <TournamentMedalsRow podium={data.tournament_podium} />
-
-      <Pressable onPress={onPressDetails} accessibilityRole="button" style={styles.linkBtn}>
-        <Text style={styles.linkText}>Ver estadísticas</Text>
+      <Pressable
+        onPress={onPressDetails}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.detailsBtn, pressed && styles.detailsBtnPressed]}>
+        <Text style={styles.detailsBtnText}>Ver estadísticas detalladas</Text>
+        <Text style={styles.detailsBtnChevron}>›</Text>
       </Pressable>
     </View>
   )
@@ -70,8 +82,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 12,
-    gap: 12,
+    gap: 14,
   },
   header: {
     flexDirection: 'row',
@@ -85,19 +96,83 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  formBlock: {
-    gap: 6,
+  winRateBlock: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
   },
-  formLabel: {
+  winRateValue: {
+    fontFamily: Fonts.bold,
+    fontSize: 40,
+    color: Colors.primary,
+    lineHeight: 44,
+  },
+  winRateLabel: {
+    fontFamily: Fonts.medium,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  matchesMeta: {
+    marginTop: 4,
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: Colors.textSecondary,
+  },
+  medalsBlock: {
+    gap: 8,
+    paddingTop: 2,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+  },
+  medalsLabel: {
     fontFamily: Fonts.medium,
     fontSize: 12,
     color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  linkBtn: {
+  medalsEmpty: {
+    fontFamily: Fonts.regular,
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  detailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+  },
+  detailsBtnPressed: {
+    opacity: 0.85,
+  },
+  detailsBtnText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 15,
+    color: Colors.white,
+  },
+  detailsBtnChevron: {
+    fontFamily: Fonts.semiBold,
+    fontSize: 20,
+    color: Colors.white,
+    lineHeight: 20,
+  },
+  errorText: {
+    fontFamily: Fonts.regular,
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  retryBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 4,
   },
-  linkText: {
+  retryText: {
     fontFamily: Fonts.semiBold,
     fontSize: 14,
     color: Colors.primary,

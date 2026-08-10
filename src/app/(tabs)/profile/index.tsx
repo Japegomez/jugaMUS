@@ -166,6 +166,13 @@ export default function ProfileScreen() {
         {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
       </View>
 
+      {sessionUserId ? (
+        <ProfileStatsCard
+          userId={sessionUserId}
+          onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
+        />
+      ) : null}
+
       <View style={styles.card}>
         <InfoRow label="Teléfono" value={profile.phone_e164 || '—'} />
       </View>
@@ -244,13 +251,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
-
-      {sessionUserId ? (
-        <ProfileStatsCard
-          userId={sessionUserId}
-          onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
-        />
-      ) : null}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Historial</Text>
