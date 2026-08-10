@@ -1,5 +1,14 @@
-import { useEffect } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
@@ -12,6 +21,8 @@ import { useViewableUserProfile } from '@/hooks/useProfile'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { openCreateContactForm } from '@/utils/contacts'
+import { formatPhone } from '@/utils/formatters'
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -19,6 +30,40 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.infoLabel}>{label}</Text>
       <Text style={styles.infoValue}>{value}</Text>
     </View>
+  )
+}
+
+function PhoneContactRow({ displayName, phoneE164 }: { displayName: string; phoneE164: string }) {
+  const [busy, setBusy] = useState(false)
+
+  const handlePress = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      const result = await openCreateContactForm({ displayName, phoneE164 })
+      if (result === 'unsupported') {
+        Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
+      } else if (result === 'error') {
+        Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Pressable
+      onPress={() => void handlePress()}
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={`Crear contacto con ${displayName}`}
+      style={({ pressed }) => [styles.infoRow, pressed && styles.phoneRowPressed]}>
+      <Text style={styles.infoLabel}>Teléfono</Text>
+      <View style={styles.phoneValue}>
+        <Text style={styles.phoneText}>{formatPhone(phoneE164)}</Text>
+        <Ionicons name="person-add-outline" size={18} color={Colors.primary} />
+      </View>
+    </Pressable>
   )
 }
 
@@ -78,7 +123,7 @@ export default function UserProfileScreen() {
     )
   }
 
-  const phoneLabel = profile.phone_e164?.trim() || 'No disponible'
+  const phone = profile.phone_e164?.trim() ?? ''
 
   return (
     <View style={[styles.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
@@ -102,7 +147,11 @@ export default function UserProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <InfoRow label="Teléfono" value={phoneLabel} />
+          {phone ? (
+            <PhoneContactRow displayName={profile.display_name} phoneE164={phone} />
+          ) : (
+            <InfoRow label="Teléfono" value="No disponible" />
+          )}
         </View>
 
         <View style={styles.card}>
@@ -179,6 +228,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
+  phoneRowPressed: { opacity: 0.7 },
   infoLabel: {
     fontSize: 15,
     color: Colors.textPrimary,
@@ -191,5 +241,18 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
     marginLeft: 8,
+  },
+  phoneValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+    marginLeft: 8,
+  },
+  phoneText: {
+    fontSize: 15,
+    color: Colors.primary,
+    fontFamily: Fonts.medium,
+    textAlign: 'right',
   },
 })
