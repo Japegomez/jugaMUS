@@ -171,9 +171,8 @@ updates:
       prefix: chore
       include: scope
     cooldown:
+      # github-actions only supports default-days (not semver-minor/patch-days)
       default-days: 3
-      semver-minor-days: 5
-      semver-patch-days: 2
     groups:
       github-actions-patch-minor:
         patterns:
@@ -203,9 +202,8 @@ updates:
       prefix: chore
       include: scope
     cooldown:
+      # github-actions only supports default-days (not semver-minor/patch-days)
       default-days: 3
-      semver-minor-days: 5
-      semver-patch-days: 2
     groups:
       security-patches:
         applies-to: security-updates
