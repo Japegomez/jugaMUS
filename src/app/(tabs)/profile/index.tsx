@@ -16,6 +16,7 @@ import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
+import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { SignOutModal } from '@/components/SignOutModal'
 import { Button } from '@/components/ui/Button'
 import { isRatingPromptSupported } from '@/lib/appRating'
@@ -164,6 +165,13 @@ export default function ProfileScreen() {
         <Text style={[styles.displayName, { fontSize: font(22) }]}>{profile.display_name}</Text>
         {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
       </View>
+
+      {sessionUserId ? (
+        <ProfileStatsCard
+          userId={sessionUserId}
+          onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
+        />
+      ) : null}
 
       <View style={styles.card}>
         <InfoRow label="Teléfono" value={profile.phone_e164 || '—'} />

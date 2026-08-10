@@ -3,6 +3,7 @@ import { ActivityIndicator, Dimensions, ScrollView, StyleSheet, Text, View } fro
 import { BarChart, LineChart } from 'react-native-chart-kit'
 
 import { AdminCloseBar } from '@/components/admin/AdminCloseBar'
+import { StatCard } from '@/components/stats/StatCard'
 import {
   useAnalyticsSummary,
   useMatchesByCity,
@@ -22,15 +23,6 @@ const chartConfig = {
   color: (opacity = 1) => `rgba(26, 95, 74, ${opacity})`,
   labelColor: (opacity = 1) => `rgba(102, 102, 102, ${opacity})`,
   propsForDots: { r: '4', strokeWidth: '2', stroke: Colors.primary },
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  )
 }
 
 export default function AdminAnalyticsScreen() {
@@ -149,23 +141,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-  },
-  statCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    minWidth: '47%',
-    flexGrow: 1,
-  },
-  statValue: {
-    fontSize: 22,
-    fontFamily: Fonts.bold,
-    color: Colors.primary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginTop: 2,
   },
   sectionTitle: {
     fontSize: 16,
