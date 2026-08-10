@@ -11,6 +11,7 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:ci": "jest --ci --coverage --coverageReporters=text-summary --coverageReporters=lcov",
+    "audit:ci": "node scripts/npm-audit-ci.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "prepare": "husky",
     "sync:municipalities": "node scripts/sync-municipalities.mjs"
@@ -23,7 +24,7 @@
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/slider": "5.0.1",
     "@sentry/react-native": "~7.2.0",
-    "@supabase/supabase-js": "^2.110.8",
+    "@supabase/supabase-js": "^2.111.0",
     "@tanstack/react-query": "^5.101.4",
     "expo": "~54.0.36",
     "expo-apple-authentication": "~8.0.8",
@@ -46,7 +47,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-store-review": "~9.0.9",
     "expo-web-browser": "~15.0.11",
-    "posthog-react-native": "^4.61.0",
+    "posthog-react-native": "^4.61.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.83.0",
@@ -80,9 +81,14 @@
   "private": true,
   "overrides": {
     "brace-expansion": "$brace-expansion",
-    "postcss": "8.5.22",
+    "postcss": "8.5.26",
     "tar": "7.5.22",
-    "uuid": "11.1.1"
+    "uuid": "11.1.1",
+    "undici": "6.28.0",
+    "fast-uri": "3.1.5",
+    "nanoid": "3.3.18",
+    "js-yaml@3": "3.15.1",
+    "js-yaml@4": "4.3.1"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
