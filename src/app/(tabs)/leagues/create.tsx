@@ -3,13 +3,19 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useRouter, type Href } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
-import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
-import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
-import { PairCard } from '@/components/tournaments/PairCard'
+import {
+  AddLeaguePairModal,
+  type AddLeaguePairFormValues,
+} from '@/components/leagues/AddLeaguePairModal'
+import {
+  EditLeaguePairModal,
+  type EditLeaguePairFormValues,
+} from '@/components/leagues/EditLeaguePairModal'
+import { LeaguePairCard } from '@/components/leagues/LeaguePairCard'
 import { AddPairButton } from '@/components/ui/AddPairButton'
 import { Button } from '@/components/ui/Button'
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
@@ -17,24 +23,28 @@ import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Input } from '@/components/ui/Input'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
-import { MATCH_VISIBILITY } from '@/constants'
+import {
+  LEAGUE_FORMAT,
+  LEAGUE_FORMAT_LABELS,
+  MATCH_VISIBILITY,
+  type LeagueFormat,
+} from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import {
-  useAddTournamentPair,
-  useCreateTournament,
-  useRemoveTournamentPair,
-  useUpdateTournamentPair,
-} from '@/hooks/useTournaments'
-import { isTournamentPairComplete, type TournamentPairRow } from '@/services/tournaments.service'
+  useAddLeaguePair,
+  useCreateLeague,
+  useRemoveLeaguePair,
+  useUpdateLeaguePair,
+} from '@/hooks/useLeagues'
+import { isLeaguePairComplete, type LeaguePairRow } from '@/services/leagues.service'
 import { acknowledgeAlert, confirmAlert, showAlert } from '@/utils/alert'
 import { showFormFieldsMissingAlert } from '@/utils/formValidation'
 import {
-  AUTO_CANCEL_NO_BRACKET_ALERT,
-  DEFAULT_TOURNAMENT_CITY,
-  DEFAULT_TOURNAMENT_TITLE,
-  parseEntryFeeInput,
-  tournamentPlacePayload,
-} from '@/utils/tournamentForm'
+  AUTO_START_LEAGUE_ALERT,
+  DEFAULT_LEAGUE_CITY,
+  DEFAULT_LEAGUE_TITLE,
+  leaguePlacePayload,
+} from '@/utils/leagueForm'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -43,7 +53,8 @@ const schema = z
   .object({
     title: z.string().trim().max(80, 'El título es demasiado largo').optional().or(z.literal('')),
     description: z.string().trim().max(300).optional().or(z.literal('')),
-    start_at: z.string().min(1, 'Selecciona fecha y hora'),
+    start_at: z.string().min(1, 'Selecciona fecha y hora de inicio'),
+    end_at: z.string().optional().or(z.literal('')),
     city: z
       .string()
       .trim()
@@ -57,52 +68,69 @@ const schema = z
       .optional()
       .or(z.literal('')),
     duration_target_games: z.number().int().min(1).max(6),
+    format: z.enum([
+      LEAGUE_FORMAT.SINGLE_ROUND,
+      LEAGUE_FORMAT.DOUBLE_ROUND,
+      LEAGUE_FORMAT.OPEN_ELO,
+    ]),
     visibility: z.enum([MATCH_VISIBILITY.PUBLIC, MATCH_VISIBILITY.LINK, MATCH_VISIBILITY.PRIVATE]),
     password: z.string().max(100, 'Contraseña demasiado larga').optional().or(z.literal('')),
-    include_third_place: z.boolean(),
-    entry_fee: z
-      .string()
-      .trim()
-      .optional()
-      .or(z.literal(''))
-      .refine(
-        (v) => !v || /^\d+([.,]\d{1,2})?$/.test(v.trim()),
-        'Introduce un importe válido (entero o con hasta 2 decimales)'
-      ),
     notes: z.string().trim().max(300).optional().or(z.literal('')),
   })
   .superRefine((data, ctx) => {
     if (data.visibility === MATCH_VISIBILITY.PRIVATE && !data.password?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Introduce una contraseña para el torneo privado',
+        message: 'Introduce una contraseña para la liga privada',
         path: ['password'],
       })
+    }
+    if (data.format === LEAGUE_FORMAT.OPEN_ELO) {
+      if (!data.end_at?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'La liga abierta requiere fecha de fin',
+          path: ['end_at'],
+        })
+      } else if (new Date(data.end_at).getTime() <= new Date(data.start_at).getTime()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'La fecha de fin debe ser posterior al inicio',
+          path: ['end_at'],
+        })
+      }
     }
   })
 
 type FormValues = z.infer<typeof schema>
+
+function defaultStartAt() {
+  const d = new Date()
+  d.setHours(d.getHours() + 2, 0, 0, 0)
+  return dateToLocalIsoString(d)
+}
+
+function defaultEndAt() {
+  const d = new Date()
+  d.setDate(d.getDate() + 30)
+  d.setHours(23, 0, 0, 0)
+  return dateToLocalIsoString(d)
+}
 
 function createDefaultFormValues(): FormValues {
   return {
     title: '',
     description: '',
     start_at: defaultStartAt(),
+    end_at: defaultEndAt(),
     city: '',
     place_text: '',
     duration_target_games: 3,
+    format: LEAGUE_FORMAT.SINGLE_ROUND,
     visibility: MATCH_VISIBILITY.PUBLIC,
     password: '',
-    include_third_place: false,
-    entry_fee: '0',
     notes: '',
   }
-}
-
-function defaultStartAt() {
-  const d = new Date()
-  d.setHours(d.getHours() + 2, 0, 0, 0)
-  return dateToLocalIsoString(d)
 }
 
 function Chip({
@@ -130,21 +158,20 @@ function Chip({
   )
 }
 
-export default function CreateTournamentScreen() {
+export default function CreateLeagueScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const createTournament = useCreateTournament()
-  const addPair = useAddTournamentPair()
-  const updatePair = useUpdateTournamentPair()
-  const removePair = useRemoveTournamentPair()
+  const createLeague = useCreateLeague()
+  const addPair = useAddLeaguePair()
+  const updatePair = useUpdateLeaguePair()
+  const removePair = useRemoveLeaguePair()
 
   const [step, setStep] = useState<1 | 2>(1)
-  const [tournamentId, setTournamentId] = useState<string | null>(null)
-  const [hasEntryFee, setHasEntryFee] = useState(false)
-  const [pairs, setPairs] = useState<TournamentPairRow[]>([])
+  const [leagueId, setLeagueId] = useState<string | null>(null)
+  const [pairs, setPairs] = useState<LeaguePairRow[]>([])
   const [pairModalOpen, setPairModalOpen] = useState(false)
-  const [editingPair, setEditingPair] = useState<TournamentPairRow | null>(null)
+  const [editingPair, setEditingPair] = useState<LeaguePairRow | null>(null)
 
   const userAlreadyInPair = Boolean(
     userId && pairs.some((p) => p.player_a_user_id === userId || p.player_b_user_id === userId)
@@ -166,8 +193,7 @@ export default function CreateTournamentScreen() {
     useCallback(() => {
       return () => {
         setStep(1)
-        setTournamentId(null)
-        setHasEntryFee(false)
+        setLeagueId(null)
         setPairs([])
         setPairModalOpen(false)
         setEditingPair(null)
@@ -178,43 +204,40 @@ export default function CreateTournamentScreen() {
 
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
+  const formatValue = watch('format')
 
   const onStep1 = async (values: FormValues) => {
     try {
-      let entryFee: number | null = null
-      try {
-        entryFee = parseEntryFeeInput(values.entry_fee)
-      } catch (err) {
-        Alert.alert('Inscripción', err instanceof Error ? err.message : 'Importe no válido')
-        return
-      }
-      const row = await createTournament.mutateAsync({
+      const row = await createLeague.mutateAsync({
         data: {
-          title: values.title?.trim() || DEFAULT_TOURNAMENT_TITLE,
+          title: values.title?.trim() || DEFAULT_LEAGUE_TITLE,
           description: values.description || null,
           notes: values.notes || null,
           start_at: values.start_at,
-          city: values.city?.trim() || DEFAULT_TOURNAMENT_CITY,
-          ...tournamentPlacePayload(values.place_text),
+          end_at:
+            values.format === LEAGUE_FORMAT.OPEN_ELO
+              ? values.end_at || null
+              : values.end_at?.trim()
+                ? values.end_at
+                : null,
+          city: values.city?.trim() || DEFAULT_LEAGUE_CITY,
+          ...leaguePlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
-          creator_joins_as_player: false,
-          include_third_place: values.include_third_place,
-          entry_fee: entryFee,
+          format: values.format,
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
-      setTournamentId(row.id)
-      setHasEntryFee((entryFee ?? 0) > 0)
+      setLeagueId(row.id)
       setStep(2)
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear el torneo')
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la liga')
     }
   }
 
-  const handleAddPair = async (values: AddPairFormValues) => {
-    if (!tournamentId || !userId) return
+  const handleAddPair = async (values: AddLeaguePairFormValues) => {
+    if (!leagueId || !userId) return
 
     const useSelfA = values.playerAIsSelf && !userAlreadyInPair
     const useSelfB = values.playerBIsSelf && !userAlreadyInPair && !useSelfA
@@ -223,22 +246,19 @@ export default function CreateTournamentScreen() {
     const playerBUserId = useSelfB ? userId : null
     const playerBText = useSelfB ? null : values.playerBText.trim() || null
 
-    const hasPlayerA = playerAUserId !== null || playerAText !== null
-    const hasPlayerB = playerBUserId !== null || playerBText !== null
-    if (!hasPlayerA && !hasPlayerB) {
+    if (!playerAUserId && !playerAText && !playerBUserId && !playerBText) {
       Alert.alert('Error', 'Indica al menos un jugador para la pareja')
       throw new Error('pair_players_required')
     }
 
     try {
       const row = await addPair.mutateAsync({
-        tournamentId,
+        leagueId,
         name: values.name.trim() || undefined,
         playerAUserId,
         playerAText,
         playerBUserId,
         playerBText,
-        entryFeePaid: values.entryFeePaid,
       })
       setPairs((prev) => [...prev, row])
       setPairModalOpen(false)
@@ -248,16 +268,15 @@ export default function CreateTournamentScreen() {
     }
   }
 
-  const handleEditPair = async (values: EditPairFormValues) => {
-    if (!editingPair || !tournamentId) return
+  const handleEditPair = async (values: EditLeaguePairFormValues) => {
+    if (!editingPair || !leagueId) return
     try {
       const updated = await updatePair.mutateAsync({
         pairId: editingPair.id,
-        tournamentId,
+        leagueId,
         name: values.name.trim() || undefined,
         playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
         playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
-        entryFeePaid: values.entryFeePaid,
       })
       setPairs((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
       setEditingPair(null)
@@ -267,21 +286,10 @@ export default function CreateTournamentScreen() {
     }
   }
 
-  const confirmDeletePair = async () => {
-    if (!editingPair) return
-    const pairId = editingPair.id
-    const ok = await confirmAlert(
-      'Eliminar pareja',
-      '¿Seguro que quieres eliminar esta pareja del torneo?',
-      { confirmText: 'Eliminar', destructive: true }
-    )
-    if (ok) void runDeletePair(pairId)
-  }
-
   const runDeletePair = async (pairId: string) => {
-    if (!tournamentId) return
+    if (!leagueId) return
     try {
-      await removePair.mutateAsync({ pairId, tournamentId })
+      await removePair.mutateAsync({ pairId, leagueId })
       setPairs((prev) => prev.filter((p) => p.id !== pairId))
       setEditingPair(null)
     } catch (err) {
@@ -290,9 +298,9 @@ export default function CreateTournamentScreen() {
   }
 
   const finish = async () => {
-    if (!tournamentId) return
-    await acknowledgeAlert(AUTO_CANCEL_NO_BRACKET_ALERT.title, AUTO_CANCEL_NO_BRACKET_ALERT.message)
-    router.replace(`/(tabs)/tournaments/${tournamentId}` as Href)
+    if (!leagueId) return
+    await acknowledgeAlert(AUTO_START_LEAGUE_ALERT.title, AUTO_START_LEAGUE_ALERT.message)
+    router.replace(`/(tabs)/leagues/${leagueId}` as Href)
   }
 
   const closeToMyMatches = () => {
@@ -318,8 +326,8 @@ export default function CreateTournamentScreen() {
         style={s.scroll}
         contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         {closeBar}
-        <Text style={s.heading}>Organizar torneo</Text>
-        <Text style={s.step}>Paso 1 de 2 — Datos del torneo</Text>
+        <Text style={s.heading}>Organizar liga</Text>
+        <Text style={s.step}>Paso 1 de 2 — Datos de la liga</Text>
 
         <Controller
           control={control}
@@ -327,7 +335,7 @@ export default function CreateTournamentScreen() {
           render={({ field }) => (
             <Input
               label="Título"
-              placeholder="Torneo"
+              placeholder="Liga"
               value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.title?.message}
@@ -351,29 +359,56 @@ export default function CreateTournamentScreen() {
             />
           )}
         />
+
+        <Text style={s.label}>Formato</Text>
+        <View style={s.chipRow}>
+          {(Object.keys(LEAGUE_FORMAT_LABELS) as LeagueFormat[]).map((fmt) => (
+            <Chip
+              key={fmt}
+              label={LEAGUE_FORMAT_LABELS[fmt]}
+              selected={formatValue === fmt}
+              onPress={() => setValue('format', fmt, { shouldValidate: true })}
+            />
+          ))}
+        </View>
+
         <Controller
           control={control}
           name="start_at"
           render={({ field }) => (
             <DateTimePicker
-              label="Fecha y hora"
+              label="Inicio"
               value={field.value}
               onChange={field.onChange}
-              minDate={new Date()}
               error={errors.start_at?.message}
             />
           )}
         />
+
+        {formatValue === LEAGUE_FORMAT.OPEN_ELO ? (
+          <Controller
+            control={control}
+            name="end_at"
+            render={({ field }) => (
+              <DateTimePicker
+                label="Fin (obligatorio)"
+                value={field.value || defaultEndAt()}
+                onChange={field.onChange}
+                error={errors.end_at?.message}
+              />
+            )}
+          />
+        ) : null}
+
         <Controller
           control={control}
           name="city"
           render={({ field }) => (
             <MunicipalityPicker
-              label="Ciudad o pueblo"
+              label="Ciudad"
               value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.city?.message}
-              placeholder="Ciudad por definir"
             />
           )}
         />
@@ -383,47 +418,38 @@ export default function CreateTournamentScreen() {
           render={({ field }) => (
             <Input
               label="Lugar"
-              placeholder="Lugar por definir"
+              placeholder="Bar, club..."
               value={field.value ?? ''}
               onChangeText={field.onChange}
               error={errors.place_text?.message}
-              autoCapitalize="sentences"
             />
           )}
         />
-        <View style={s.fieldWrap}>
-          <Text style={s.label}>Duración (juegos)</Text>
-          <View style={s.durationRow}>
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <Chip
-                key={n}
-                label={String(n)}
-                selected={durationValue === n}
-                onPress={() => setValue('duration_target_games', n, { shouldValidate: true })}
-              />
-            ))}
-          </View>
+
+        <Text style={s.label}>Juegos a ganar</Text>
+        <View style={s.chipRow}>
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <Chip
+              key={n}
+              label={String(n)}
+              selected={durationValue === n}
+              onPress={() => setValue('duration_target_games', n)}
+            />
+          ))}
         </View>
-        <View style={s.fieldWrap}>
-          <Text style={s.label}>Visibilidad</Text>
-          <View style={s.visRow}>
-            <Chip
-              label="Pública"
-              sublabel="En el listado"
-              selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
-              onPress={() =>
-                setValue('visibility', MATCH_VISIBILITY.PUBLIC, { shouldValidate: true })
-              }
-            />
-            <Chip
-              label="Privada"
-              sublabel="Con contraseña"
-              selected={visibilityValue === MATCH_VISIBILITY.PRIVATE}
-              onPress={() =>
-                setValue('visibility', MATCH_VISIBILITY.PRIVATE, { shouldValidate: true })
-              }
-            />
-          </View>
+
+        <Text style={s.label}>Visibilidad</Text>
+        <View style={s.chipRow}>
+          <Chip
+            label="Pública"
+            selected={visibilityValue === MATCH_VISIBILITY.PUBLIC}
+            onPress={() => setValue('visibility', MATCH_VISIBILITY.PUBLIC)}
+          />
+          <Chip
+            label="Privada"
+            selected={visibilityValue === MATCH_VISIBILITY.PRIVATE}
+            onPress={() => setValue('visibility', MATCH_VISIBILITY.PRIVATE)}
+          />
         </View>
         {visibilityValue === MATCH_VISIBILITY.PRIVATE ? (
           <Controller
@@ -432,74 +458,33 @@ export default function CreateTournamentScreen() {
             render={({ field }) => (
               <Input
                 label="Contraseña"
-                placeholder="Elige una contraseña para acceder"
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 error={errors.password?.message}
                 secureTextEntry
-                showPasswordToggle
-                autoCapitalize="none"
-                autoCorrect={false}
               />
             )}
           />
         ) : null}
-        <View style={s.thirdPlaceWrap}>
-          <View style={s.switchRow}>
-            <View style={s.switchTextWrap}>
-              <Text style={s.label}>3º y 4º puesto</Text>
-              <Text style={s.switchHint}>Crea un partido entre los perdedores de semifinales.</Text>
-            </View>
-            <Controller
-              control={control}
-              name="include_third_place"
-              render={({ field }) => (
-                <Switch
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
-                  thumbColor={Colors.white}
-                  ios_backgroundColor={Colors.switchTrackOff}
-                />
-              )}
-            />
-          </View>
-        </View>
-        <Controller
-          control={control}
-          name="entry_fee"
-          render={({ field }) => (
-            <Input
-              label="Inscripción (€)"
-              placeholder="Ej. 10 o 10,50"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.entry_fee?.message}
-              keyboardType="decimal-pad"
-            />
-          )}
-        />
+
         <Controller
           control={control}
           name="notes"
           render={({ field }) => (
             <Input
-              label="Notas opcionales"
-              placeholder="Premios, normas..."
+              label="Notas"
               value={field.value ?? ''}
               onChangeText={field.onChange}
-              error={errors.notes?.message}
               multiline
-              numberOfLines={3}
-              autoCapitalize="sentences"
+              numberOfLines={2}
             />
           )}
         />
+
         <Button
-          title="Siguiente paso"
+          title="Continuar"
           onPress={handleSubmit(onStep1, showFormFieldsMissingAlert)}
-          loading={createTournament.isPending}
-          style={s.submitBtn}
+          loading={createLeague.isPending}
         />
       </KeyboardAwareScrollView>
     )
@@ -510,46 +495,48 @@ export default function CreateTournamentScreen() {
       style={s.scroll}
       contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       {closeBar}
-      <Text style={s.heading}>Parejas inscritas</Text>
-      <Text style={s.step}>Paso 2 de 2 — Añade las parejas participantes</Text>
+      <Text style={s.heading}>Parejas de la liga</Text>
+      <Text style={s.step}>Paso 2 de 2 — Añade parejas</Text>
       <Text style={s.hint}>
-        Puedes añadir tantas parejas como quieras. Cada pareja puede incluir jugadores registrados o
-        nombres de texto.
+        Completas: {pairs.filter(isLeaguePairComplete).length} / {pairs.length}
       </Text>
 
-      {pairs.length === 0 ? (
-        <Text style={s.empty}>Aún no hay parejas. Pulsa «Añadir pareja».</Text>
-      ) : (
-        pairs.map((p) => (
-          <PairCard
-            key={p.id}
-            pair={p}
-            hasEntryFee={hasEntryFee}
-            subtitle={!isTournamentPairComplete(p) ? 'Falta un jugador' : undefined}
-            onEdit={() => setEditingPair(p)}
-          />
-        ))
-      )}
+      {pairs.map((pair) => (
+        <LeaguePairCard
+          key={pair.id}
+          pair={pair}
+          subtitle={isLeaguePairComplete(pair) ? 'Completa' : 'Incompleta'}
+          onEdit={() => setEditingPair(pair)}
+        />
+      ))}
 
-      <AddPairButton onPress={() => setPairModalOpen(true)} style={s.actionBtn} />
-      <Button title="Guardar torneo" onPress={() => void finish()} style={s.submitBtn} />
+      <AddPairButton onPress={() => setPairModalOpen(true)} />
+      <Button title="Ir a la liga" onPress={() => void finish()} />
 
-      <AddPairModal
+      <AddLeaguePairModal
         visible={pairModalOpen}
         onClose={() => setPairModalOpen(false)}
         onSubmit={handleAddPair}
         loading={addPair.isPending}
+        defaultSelfSlot={userAlreadyInPair ? null : 'a'}
         selfJoinDisabled={userAlreadyInPair}
       />
-
-      <EditPairModal
-        visible={editingPair !== null}
+      <EditLeaguePairModal
+        visible={Boolean(editingPair)}
         pair={editingPair}
         onClose={() => setEditingPair(null)}
         onSubmit={handleEditPair}
-        onDelete={confirmDeletePair}
+        canDelete
         saveLoading={updatePair.isPending}
         deleteLoading={removePair.isPending}
+        onDelete={async () => {
+          if (!editingPair) return
+          const ok = await confirmAlert('Eliminar pareja', '¿Seguro?', {
+            confirmText: 'Eliminar',
+            destructive: true,
+          })
+          if (ok) await runDeletePair(editingPair.id)
+        }}
       />
     </KeyboardAwareScrollView>
   )
@@ -557,47 +544,28 @@ export default function CreateTournamentScreen() {
 
 const chip = StyleSheet.create({
   base: {
-    flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 48,
-    marginHorizontal: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: Colors.surface,
-    alignItems: 'center',
   },
-  selected: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
-  label: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  selected: { borderColor: Colors.primary, backgroundColor: Colors.background },
+  label: { fontSize: 14, fontFamily: Fonts.medium, color: Colors.textPrimary },
   labelSelected: { color: Colors.primary },
-  sublabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2, textAlign: 'center' },
+  sublabel: { fontSize: 11, color: Colors.textSecondary },
   sublabelSelected: { color: Colors.primary },
 })
 
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
-  container: { padding: 20, paddingBottom: 40 },
-  closeBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    marginHorizontal: -4,
-  },
-  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
-  heading: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.textPrimary, marginBottom: 6 },
-  step: { fontSize: 14, color: Colors.primary, fontFamily: Fonts.semiBold, marginBottom: 16 },
-  hint: { fontSize: 14, color: Colors.textSecondary, marginBottom: 16, lineHeight: 20 },
-  empty: { fontSize: 15, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 16 },
-  fieldWrap: { marginBottom: 20 },
-  thirdPlaceWrap: { marginBottom: 8 },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  switchHint: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
-  switchTextWrap: { flex: 1 },
-  label: { fontSize: 14, fontFamily: Fonts.semiBold, marginBottom: 8, color: Colors.textPrimary },
-  durationRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  visRow: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
-  actionBtn: { marginBottom: 10 },
-  submitBtn: { marginTop: 8 },
+  container: { padding: 16, paddingBottom: 48, gap: 12 },
+  closeBar: { flexDirection: 'row', alignItems: 'center' },
+  closeX: { fontSize: 22, color: Colors.textSecondary, padding: 4 },
+  heading: { fontSize: 22, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  step: { fontSize: 14, color: Colors.textSecondary, marginBottom: 4 },
+  hint: { fontSize: 13, color: Colors.textSecondary },
+  label: { fontSize: 14, fontFamily: Fonts.semiBold, color: Colors.textPrimary, marginTop: 4 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 })

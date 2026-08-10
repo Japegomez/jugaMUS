@@ -36,6 +36,16 @@ function participantDisplayName(p: TeamRosterParticipant | null | undefined): st
   return name || null
 }
 
+const PLACEHOLDER_PLAYER_NAMES = new Set(['Jugador', 'Jugador registrado', 'Usuario'])
+
+/** Detects auto-generated pair names that still use placeholder labels. */
+function teamNameHasPlaceholderPlayers(name: string): boolean {
+  return name
+    .split('-')
+    .map((part) => part.trim())
+    .some((part) => PLACEHOLDER_PLAYER_NAMES.has(part))
+}
+
 function registeredOnTeam<T extends TeamRosterParticipant>(
   participants: Array<T | null | undefined>,
   team: string
@@ -112,7 +122,9 @@ export function collectTeamPlayerNames(
   team: string
 ): string[] {
   return collectTeamRosterEntries(match, participants, team).map((entry) =>
-    entry.kind === 'registered' ? participantDisplayName(entry.participant)! : entry.name
+    entry.kind === 'registered'
+      ? participantDisplayName(entry.participant) ?? 'Jugador registrado'
+      : entry.name
   )
 }
 
@@ -128,11 +140,16 @@ export function resolveTeamName(
   participants: TeamRosterParticipant[] = []
 ): string {
   const stored = team === TEAM.B ? match.team_b_name : match.team_a_name
+  const derived = formatTeamNameFromPlayers(collectTeamPlayerNames(match, participants, team))
+
   if (!isUnspecifiedTeamName(stored, team)) {
-    return stored.trim()
+    const trimmed = stored.trim()
+    if (derived && teamNameHasPlaceholderPlayers(trimmed)) {
+      return derived
+    }
+    return trimmed
   }
 
-  const derived = formatTeamNameFromPlayers(collectTeamPlayerNames(match, participants, team))
   if (derived) return derived
 
   return team === TEAM.B ? DEFAULT_TEAM_B_NAME : DEFAULT_TEAM_A_NAME

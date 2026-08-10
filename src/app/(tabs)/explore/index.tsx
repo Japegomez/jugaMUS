@@ -29,14 +29,25 @@ import {
   parseIsoToDate,
 } from '@/components/ui/dateTimePickerUtils'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
-import { MATCH_STATUS, TOURNAMENT_STATUS, type ExploreContentType } from '@/constants'
-import { useInfinitePublicMatches, usePublicTournamentsExplore } from '@/hooks/useMatches'
+import {
+  LEAGUE_STATUS,
+  MATCH_STATUS,
+  TOURNAMENT_STATUS,
+  type ExploreContentType,
+} from '@/constants'
+import {
+  useInfinitePublicMatches,
+  usePublicLeaguesExplore,
+  usePublicTournamentsExplore,
+} from '@/hooks/useMatches'
 import type {
   PublicMatchExplorerRow,
   PublicMatchesListFilters,
   VisibilityFilter,
 } from '@/services/matches.service'
+import type { LeagueRow, PublicLeaguesListFilters } from '@/services/leagues.service'
 import type { PublicTournamentsListFilters, TournamentRow } from '@/services/tournaments.service'
+import { leagueFormatDisplay } from '@/utils/leagueDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -97,6 +108,25 @@ function tournamentStatusTone(tournament: TournamentRow): StatusDotTone {
   return 'upcoming'
 }
 
+function leagueStatusLabel(league: LeagueRow) {
+  switch (league.status) {
+    case LEAGUE_STATUS.REGISTRATION:
+      return 'Inscripción abierta'
+    case LEAGUE_STATUS.IN_PROGRESS:
+      return 'En curso'
+    case LEAGUE_STATUS.FINISHED:
+      return 'Finalizada'
+    default:
+      return league.status
+  }
+}
+
+function leagueStatusTone(league: LeagueRow): StatusDotTone {
+  if (league.status === LEAGUE_STATUS.IN_PROGRESS) return 'active'
+  if (league.status === LEAGUE_STATUS.REGISTRATION) return 'upcoming'
+  return 'upcoming'
+}
+
 function ExploreMatchRow({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
   const tone = matchStatusTone(row.status)
   return (
@@ -152,6 +182,37 @@ function ExploreTournamentRow({ row, onPress }: { row: TournamentRow; onPress: (
         <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
         <Text style={styles.rowExtra}>
           {row.status === TOURNAMENT_STATUS.REGISTRATION ? 'Cuadro pendiente' : 'Ver cuadro'}
+        </Text>
+      </View>
+    </Pressable>
+  )
+}
+
+function ExploreLeagueRow({ row, onPress }: { row: LeagueRow; onPress: () => void }) {
+  const tone = leagueStatusTone(row)
+  return (
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Liga: ${row.title}`}>
+      <StatusDot tone={tone} />
+      <View style={styles.rowBody}>
+        <Text style={styles.rowKind}>Liga · {leagueFormatDisplay(row.format)}</Text>
+        <Text style={styles.rowTitle} numberOfLines={2}>
+          {row.title}
+        </Text>
+        <Text style={styles.rowMeta}>
+          {formatCityAndPlace(row.city, row.place_defined, row.place_text)}
+        </Text>
+      </View>
+      <View style={styles.rowTrailing}>
+        <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
+          {leagueStatusLabel(row)}
+        </Text>
+        <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
+        <Text style={styles.rowExtra}>
+          {row.status === LEAGUE_STATUS.REGISTRATION ? 'Sin iniciar' : 'Ver clasificación'}
         </Text>
       </View>
     </Pressable>
@@ -217,6 +278,28 @@ export default function ExploreScreen() {
     refetch: refetchTournaments,
   } = usePublicTournamentsExplore(tournamentFilters)
 
+  const leagueFilters: PublicLeaguesListFilters = useMemo(
+    () => ({
+      search: filters.search,
+      city: filters.city,
+      status: filters.status,
+      hideCelebrated: filters.hideCelebrated,
+      startAfter: filters.startAfter,
+      startBefore: filters.startBefore,
+      minFreeSlots: filters.minFreeSlots,
+      contentType: filters.contentType,
+      visibility: filters.visibility ?? 'all',
+    }),
+    [filters]
+  )
+
+  const {
+    data: leagues,
+    isLoading: leaguesLoading,
+    isRefetching: leaguesRefetching,
+    refetch: refetchLeagues,
+  } = usePublicLeaguesExplore(leagueFilters)
+
   const matchRows = useMemo(() => data?.pages.flatMap((p) => p.rows) ?? [], [data?.pages])
 
   const exploreItems = useMemo((): ExploreItem[] => {
@@ -232,16 +315,23 @@ export default function ExploreScreen() {
       start_at: row.start_at,
       row,
     }))
-    const merged = [...matchItems, ...tournamentItems].sort(
+    const leagueItems: ExploreItem[] = (leagues ?? []).map((row) => ({
+      kind: 'league',
+      id: row.id,
+      start_at: row.start_at,
+      row,
+    }))
+    const merged = [...matchItems, ...tournamentItems, ...leagueItems].sort(
       (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
     )
     return filterExploreItemsForCelebrated(merged, filters.hideCelebrated)
-  }, [matchRows, tournaments, filters.hideCelebrated])
+  }, [matchRows, tournaments, leagues, filters.hideCelebrated])
 
   const refetchAll = useCallback(() => {
     void refetch()
     void refetchTournaments()
-  }, [refetch, refetchTournaments])
+    void refetchLeagues()
+  }, [refetch, refetchTournaments, refetchLeagues])
 
   const openFilterModal = useCallback(() => {
     setDraftCity(filters.city)
@@ -323,7 +413,7 @@ export default function ExploreScreen() {
 
   const listHeader = (
     <View style={styles.listHeader}>
-      <ScreenHeader title="Descubrir" subtitle="Partidas y torneos" />
+      <ScreenHeader title="Descubrir" subtitle="Partidas, torneos y ligas" />
 
       <TextInput
         style={styles.search}
@@ -351,8 +441,12 @@ export default function ExploreScreen() {
     </View>
   )
 
-  const showMatches = filters.contentType !== 'tournaments'
-  const showTournaments = filters.contentType !== 'matches'
+  const showMatches =
+    filters.contentType !== 'tournaments' && filters.contentType !== 'leagues'
+  const showTournaments =
+    filters.contentType !== 'matches' && filters.contentType !== 'leagues'
+  const showLeagues =
+    filters.contentType !== 'matches' && filters.contentType !== 'tournaments'
 
   const listFooter = isFetchingNextPage ? (
     <View style={styles.footerLoad}>
@@ -368,12 +462,13 @@ export default function ExploreScreen() {
 
   if (
     (showMatches && isLoading && !data) ||
-    (showTournaments && tournamentsLoading && !tournaments)
+    (showTournaments && tournamentsLoading && !tournaments) ||
+    (showLeagues && leaguesLoading && !leagues)
   ) {
     return (
       <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 24) }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingHint}>Cargando partidas y torneos…</Text>
+        <Text style={styles.loadingHint}>Cargando partidas, torneos y ligas…</Text>
       </View>
     )
   }
@@ -409,10 +504,15 @@ export default function ExploreScreen() {
               row={item.row}
               onPress={() => router.push(`/(tabs)/matches/${item.id}`)}
             />
-          ) : (
+          ) : item.kind === 'tournament' ? (
             <ExploreTournamentRow
               row={item.row}
               onPress={() => router.push(`/(tabs)/tournaments/${item.id}`)}
+            />
+          ) : (
+            <ExploreLeagueRow
+              row={item.row}
+              onPress={() => router.push(`/(tabs)/leagues/${item.id}`)}
             />
           )
         }
@@ -421,7 +521,9 @@ export default function ExploreScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 88 }]}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.35}
-        refreshing={(isRefetching && !isFetchingNextPage) || tournamentsRefetching}
+        refreshing={
+          (isRefetching && !isFetchingNextPage) || tournamentsRefetching || leaguesRefetching
+        }
         onRefresh={refetchAll}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
@@ -431,7 +533,9 @@ export default function ExploreScreen() {
                 ? 'No hay partidas que coincidan con tu búsqueda y filtros.'
                 : filters.contentType === 'tournaments'
                   ? 'No hay torneos que coincidan con tu búsqueda y filtros.'
-                  : 'No hay partidas ni torneos que coincidan con tu búsqueda y filtros.'}{' '}
+                  : filters.contentType === 'leagues'
+                    ? 'No hay ligas que coincidan con tu búsqueda y filtros.'
+                    : 'No hay partidas, torneos ni ligas que coincidan con tu búsqueda y filtros.'}{' '}
               Prueba a ampliar fechas o quitar filtros.
             </Text>
             <Button
@@ -472,6 +576,7 @@ export default function ExploreScreen() {
                     { id: 'all', label: 'Todo', value: 'all' as ExploreContentType },
                     { id: 'm', label: 'Partidas', value: 'matches' as ExploreContentType },
                     { id: 't', label: 'Torneos', value: 'tournaments' as ExploreContentType },
+                    { id: 'l', label: 'Ligas', value: 'leagues' as ExploreContentType },
                   ] as const
                 ).map((opt) => {
                   const selected = draftContentType === opt.value

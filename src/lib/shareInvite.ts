@@ -1,6 +1,6 @@
 import { Linking, Platform, Share } from 'react-native'
 
-export type InviteShareKind = 'match' | 'tournament'
+export type InviteShareKind = 'match' | 'tournament' | 'league'
 
 export type InviteShareMessageInput = {
   kind: InviteShareKind
@@ -10,7 +10,8 @@ export type InviteShareMessageInput = {
 }
 
 export function buildInviteShareMessage(input: InviteShareMessageInput): string {
-  const label = input.kind === 'match' ? 'partida' : 'torneo'
+  const label =
+    input.kind === 'match' ? 'partida' : input.kind === 'tournament' ? 'torneo' : 'liga'
   const lines = [`¡Únete a esta ${label} en jugaMUS!`, input.title.trim()]
   if (input.meta?.trim()) {
     lines.push(input.meta.trim())

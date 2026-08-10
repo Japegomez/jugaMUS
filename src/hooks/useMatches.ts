@@ -28,6 +28,10 @@ import {
   listPublicTournamentsFiltered,
   type PublicTournamentsListFilters,
 } from '@/services/tournaments.service'
+import {
+  listPublicLeaguesFiltered,
+  type PublicLeaguesListFilters,
+} from '@/services/leagues.service'
 import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import {
@@ -68,10 +72,26 @@ export function invalidateMyMatchesDashboard(queryClient: QueryClient, userId?: 
 
 export const PUBLIC_MATCHES_EXPLORE_ROOT = 'public-matches-explore' as const
 export const PUBLIC_TOURNAMENTS_EXPLORE_ROOT = 'public-tournaments-explore' as const
+export const PUBLIC_LEAGUES_EXPLORE_ROOT = 'public-leagues-explore' as const
 
 export function publicTournamentsExploreQueryKey(filters: PublicTournamentsListFilters) {
   return [
     PUBLIC_TOURNAMENTS_EXPLORE_ROOT,
+    filters.contentType,
+    filters.search.trim(),
+    filters.city.trim(),
+    filters.status ?? '',
+    filters.hideCelebrated,
+    filters.startAfter ?? '',
+    filters.startBefore ?? '',
+    filters.minFreeSlots,
+    filters.visibility ?? 'all',
+  ] as const
+}
+
+export function publicLeaguesExploreQueryKey(filters: PublicLeaguesListFilters) {
+  return [
+    PUBLIC_LEAGUES_EXPLORE_ROOT,
     filters.contentType,
     filters.search.trim(),
     filters.city.trim(),
@@ -98,9 +118,17 @@ function invalidatePublicTournamentsExplore(queryClient: QueryClient) {
   })
 }
 
+function invalidatePublicLeaguesExplore(queryClient: QueryClient) {
+  queryClient.invalidateQueries({
+    queryKey: [PUBLIC_LEAGUES_EXPLORE_ROOT],
+    exact: false,
+  })
+}
+
 export function invalidatePublicExplore(queryClient: QueryClient) {
   invalidatePublicMatchesExplore(queryClient)
   invalidatePublicTournamentsExplore(queryClient)
+  invalidatePublicLeaguesExplore(queryClient)
 }
 
 export function publicMatchesExploreQueryKey(filters: PublicMatchesListFilters) {
@@ -179,7 +207,7 @@ export function useInfinitePublicMatches(filters: PublicMatchesListFilters) {
       if (lastPage.total <= 0 || loaded >= lastPage.total) return undefined
       return loaded
     },
-    enabled: filters.contentType !== 'tournaments',
+    enabled: filters.contentType !== 'tournaments' && filters.contentType !== 'leagues',
     staleTime: QUERY_STALE_TIME,
   })
 }
@@ -188,7 +216,16 @@ export function usePublicTournamentsExplore(filters: PublicTournamentsListFilter
   return useQuery({
     queryKey: publicTournamentsExploreQueryKey(filters),
     queryFn: () => listPublicTournamentsFiltered(filters),
-    enabled: filters.contentType !== 'matches',
+    enabled: filters.contentType !== 'matches' && filters.contentType !== 'leagues',
+    ...TAB_SCREEN_QUERY_OPTIONS,
+  })
+}
+
+export function usePublicLeaguesExplore(filters: PublicLeaguesListFilters) {
+  return useQuery({
+    queryKey: publicLeaguesExploreQueryKey(filters),
+    queryFn: () => listPublicLeaguesFiltered(filters),
+    enabled: filters.contentType !== 'matches' && filters.contentType !== 'tournaments',
     ...TAB_SCREEN_QUERY_OPTIONS,
   })
 }
@@ -326,6 +363,8 @@ export function useStartMatch() {
               ),
               tournamentsUpcoming: prev.tournamentsUpcoming ?? [],
               tournamentsInProgress: prev.tournamentsInProgress ?? [],
+              leaguesUpcoming: prev.leaguesUpcoming ?? [],
+              leaguesInProgress: prev.leaguesInProgress ?? [],
             }
           }
         )
@@ -340,6 +379,11 @@ export function useStartMatch() {
       }
       if (updated.tournament_id) {
         invalidateTournamentQueries(queryClient, updated.tournament_id)
+      }
+      if (updated.league_id) {
+        queryClient.invalidateQueries({ queryKey: ['league', updated.league_id] })
+        queryClient.invalidateQueries({ queryKey: ['league-standings', updated.league_id] })
+        queryClient.invalidateQueries({ queryKey: ['league-matches', updated.league_id] })
       }
       invalidatePublicExplore(queryClient)
     },

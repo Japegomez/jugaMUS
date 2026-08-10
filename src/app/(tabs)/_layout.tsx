@@ -74,6 +74,9 @@ export default function TabsLayout() {
       <Tabs.Screen name="tournaments/create" options={{ href: null }} />
       <Tabs.Screen name="tournaments/[id]" options={{ href: null }} />
       <Tabs.Screen name="tournaments/edit/[id]" options={{ href: null }} />
+      <Tabs.Screen name="leagues/create" options={{ href: null }} />
+      <Tabs.Screen name="leagues/[id]" options={{ href: null }} />
+      <Tabs.Screen name="leagues/edit/[id]" options={{ href: null }} />
       <Tabs.Screen name="profile/index" options={{ title: 'Perfil', ...VISIBLE_TAB_OPTIONS }} />
       <Tabs.Screen name="profile/[userId]" options={{ href: null }} />
       <Tabs.Screen name="profile/edit" options={{ href: null }} />

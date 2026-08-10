@@ -2,33 +2,38 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
-import type { TournamentPairRow } from '@/services/tournaments.service'
-import { displayPairName, pairMemberLabels } from '@/services/tournaments.service'
+import {
+  displayLeaguePairName,
+  leaguePairMemberLabels,
+  type LeaguePairRow,
+} from '@/services/leagues.service'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
-type PairCardProps = {
-  pair: TournamentPairRow
-  /** When false/undefined, hide paid/pending inscription status (free tournaments). */
-  hasEntryFee?: boolean
+type LeaguePairCardProps = {
+  pair: LeaguePairRow
   subtitle?: string
+  eloLabel?: string
   joinLabel?: string
   onJoin?: () => void
   joinLoading?: boolean
   onEdit?: () => void
+  challengeLabel?: string
+  onChallenge?: () => void
 }
 
-export function PairCard({
+export function LeaguePairCard({
   pair,
-  hasEntryFee = false,
   subtitle,
+  eloLabel,
   joinLabel,
   onJoin,
   joinLoading,
   onEdit,
-}: PairCardProps) {
-  const members = pairMemberLabels(pair)
-  const entryFeePaid = pair.entry_fee_paid === true
+  challengeLabel,
+  onChallenge,
+}: LeaguePairCardProps) {
+  const members = leaguePairMemberLabels(pair)
 
   return (
     <View style={styles.card}>
@@ -39,7 +44,7 @@ export function PairCard({
           ) : (
             <Text style={styles.empty}>Sin jugadores</Text>
           )}
-          <Text style={styles.name}>{displayPairName(pair)}</Text>
+          <Text style={styles.name}>{displayLeaguePairName(pair)}</Text>
         </View>
         {onEdit ? (
           <IconButton
@@ -50,11 +55,7 @@ export function PairCard({
           />
         ) : null}
       </View>
-      {hasEntryFee ? (
-        <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
-          {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
-        </Text>
-      ) : null}
+      {eloLabel ? <Text style={styles.elo}>{eloLabel}</Text> : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.actions}>
         {onJoin && joinLabel ? (
@@ -63,6 +64,14 @@ export function PairCard({
             variant="outline"
             onPress={onJoin}
             loading={joinLoading}
+            style={styles.actionBtn}
+          />
+        ) : null}
+        {onChallenge && challengeLabel ? (
+          <Button
+            title={challengeLabel}
+            variant="primary"
+            onPress={onChallenge}
             style={styles.actionBtn}
           />
         ) : null}
@@ -86,10 +95,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary, marginTop: 6 },
   members: { fontSize: 14, color: Colors.textSecondary },
   empty: { fontSize: 14, color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' },
-  feeStatus: { fontSize: 13, fontFamily: Fonts.semiBold, marginTop: 6 },
-  feePaid: { color: Colors.primary },
-  feePending: { color: Colors.textSecondary },
-  subtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 6 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  actionBtn: { flexGrow: 1, flexBasis: '40%', minWidth: 100 },
+  elo: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.primary, marginTop: 6 },
+  subtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 4 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  actionBtn: { flexGrow: 1, minWidth: 100 },
 })

@@ -27,7 +27,34 @@ export const TOURNAMENT_STATUS = {
   CANCELLED: 'cancelled',
 } as const
 
-export type ExploreContentType = 'all' | 'matches' | 'tournaments'
+export const LEAGUE_STATUS = {
+  REGISTRATION: 'registration',
+  IN_PROGRESS: 'in_progress',
+  FINISHED: 'finished',
+  CANCELLED: 'cancelled',
+} as const
+
+export const LEAGUE_FORMAT = {
+  SINGLE_ROUND: 'single_round',
+  DOUBLE_ROUND: 'double_round',
+  OPEN_ELO: 'open_elo',
+} as const
+
+export type LeagueFormat = (typeof LEAGUE_FORMAT)[keyof typeof LEAGUE_FORMAT]
+
+export const LEAGUE_FORMAT_LABELS: Record<LeagueFormat, string> = {
+  single_round: 'Solo ida',
+  double_round: 'Ida y vuelta',
+  open_elo: 'Liga abierta',
+}
+
+export const DEFAULT_ELO_INITIAL = 1000
+export const DEFAULT_ELO_K_FACTOR = 32
+
+/** Ligas: refresco frecuente (datos compartidos entre dispositivos). */
+export const LEAGUE_QUERY_STALE_TIME = 30 * 1000 // 30 segundos
+
+export type ExploreContentType = 'all' | 'matches' | 'tournaments' | 'leagues'
 
 export const BRACKET_ROUND_LABELS: Record<number, string> = {
   2: 'Final',

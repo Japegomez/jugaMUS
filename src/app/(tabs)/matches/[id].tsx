@@ -45,6 +45,7 @@ import {
   useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
+import { useLeague } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import {
@@ -527,6 +528,8 @@ export default function MatchDetailScreen() {
 
   const tournamentId = match?.tournament_id ?? null
   const { data: tournamentMeta } = useTournament(tournamentId ?? '')
+  const leagueId = match?.league_id ?? null
+  const { data: leagueMeta } = useLeague(leagueId ?? '')
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
@@ -995,6 +998,15 @@ export default function MatchDetailScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Ir al torneo: ${tournamentMeta.title}`}>
                 <Text style={s.tournamentBadgeText}>🏆 Ir al torneo</Text>
+              </Pressable>
+            ) : null}
+            {match.league_id && leagueMeta ? (
+              <Pressable
+                onPress={() => router.push(`/(tabs)/leagues/${match.league_id}` as Href)}
+                style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`Ir a la liga: ${leagueMeta.title}`}>
+                <Text style={s.tournamentBadgeText}>🏅 Ir a la liga</Text>
               </Pressable>
             ) : null}
           </View>

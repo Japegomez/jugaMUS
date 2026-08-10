@@ -17,6 +17,7 @@ import { BracketCanvas } from '@/components/tournaments/BracketCanvas'
 import { CancelTournamentModal } from '@/components/tournaments/CancelTournamentModal'
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
+import { AddPairButton } from '@/components/ui/AddPairButton'
 import { Button } from '@/components/ui/Button'
 import { ShareInviteButton } from '@/components/ShareInviteButton'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
@@ -446,7 +447,6 @@ export default function TournamentDetailScreen() {
                           ? 'Falta un jugador'
                           : undefined
                       }
-                      editLabel={canEditPair ? 'Editar' : undefined}
                       onEdit={canEditPair ? () => setEditingPair(p) : undefined}
                       joinLabel={canJoin ? 'Unirme' : undefined}
                       onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
@@ -460,11 +460,7 @@ export default function TournamentDetailScreen() {
             <View style={s.actions}>
               {inRegistration ? (
                 <>
-                  <Button
-                    title="Añadir pareja"
-                    variant="outline"
-                    onPress={() => setPairModalOpen(true)}
-                  />
+                  <AddPairButton onPress={() => setPairModalOpen(true)} />
                   {isCreator ? (
                     <Button
                       title="Organizar cuadro"
