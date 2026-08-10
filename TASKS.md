@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 02/08/2026 (minor v1.5.0 — partida pasada con resultado, orden parejas, locales Android)
+> Actualizado: 10/08/2026 (Dependabot → `develop` + `SECURITY.md`; majors Expo vía `npx expo upgrade`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -265,10 +265,13 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
 - [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
 - [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
-- [x] **Dependabot Expo-safe** — grupo runtime limitado a libs independientes; ignora patch/minor en stack Expo/RN. PR #84 cerrada (conflictos + bumps incompatibles SDK 54).
+- [x] **Dependabot Expo-safe** — ignora majors + patch/minor del stack Expo/RN; grupos prod/dev + security; PRs a `develop`; cooldown; assignee `Japegomez`; `exclude-paths: vendor/**`.
 - [x] **Fix deps Expo SDK 54 en `main`** — `async-storage` 2.2.0, `expo-splash-screen` ~31.0.13 (PR #85/#86).
 - [x] **Tags de release en `main`** — job `release-tag` en `eas.yml`: `v{app.json version}-{YYYYMMDD.HHmm}` UTC antes de EAS build. Visibles en GitHub → Tags.
-- [x] **Pendiente manual (GitHub):** Settings → Code security → Dependabot **security updates** (opción 3) + Push protection; ruleset `status check` en `develop`/`main` (check `quality / Quality`).
+- [x] **GitHub Advanced Security** — Dependabot security updates + secret scanning push protection enabled.
+- [x] **`SECURITY.md`** — política de reporte privado (GitHub Advisories + `japenago@gmail.com`).
+- [x] **Ruleset `status check`** — activo solo en **`main`** (check `quality / Quality`, sin force-push, vía PR). **No** en `develop`: permite push directo desde Cursor / local.
+- [ ] **Upgrade Expo SDK** — cuando toque subir de SDK: `npx expo upgrade`, changelog del SDK, `npx expo-doctor`, QA builds nativos / EAS. Dependabot no propone estos bumps.
 
 ---
 
@@ -622,3 +625,4 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
   - `CRON_SECRET` / `EDGE_CRON_SECRET` configurados (Supabase Edge Functions + GitHub) según `.env.example` / docs.
+- [x] **`SECURITY.md` (ago. 2026)** — reporte privado de vulnerabilidades; ver también Dependabot en CI/CD hardening.
