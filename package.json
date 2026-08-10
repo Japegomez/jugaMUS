@@ -1,6 +1,6 @@
 {
   "name": "jugamus",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -32,6 +32,7 @@
     "expo-auth-session": "~7.0.11",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
+    "expo-contacts": "~15.0.11",
     "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
