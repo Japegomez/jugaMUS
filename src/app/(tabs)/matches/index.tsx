@@ -15,11 +15,13 @@ import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
-import { TOURNAMENT_STATUS } from '@/constants'
+import { LEAGUE_STATUS, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
 import type { MyMatchesDashboard } from '@/services/matches.service'
+import type { UserLeagueSummary } from '@/services/leagues.service'
 import type { UserTournamentSummary } from '@/services/tournaments.service'
+import { leagueFormatDisplay } from '@/utils/leagueDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -109,17 +111,27 @@ function tournamentStatusLabel(t: UserTournamentSummary): string {
   return 'Inscripción abierta'
 }
 
+function leagueStatusLabel(l: UserLeagueSummary): string {
+  if (l.status === LEAGUE_STATUS.IN_PROGRESS) return 'En curso'
+  if (l.fixtures_generated_at) return 'Inscripción'
+  return 'Inscripción abierta'
+}
+
 function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
   const awaitingIds = new Set(data.awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = data.inProgress.filter((m) => !awaitingIds.has(m.id))
   const tournamentsUpcoming = data.tournamentsUpcoming ?? []
   const tournamentsInProgress = data.tournamentsInProgress ?? []
+  const leaguesUpcoming = data.leaguesUpcoming ?? []
+  const leaguesInProgress = data.leaguesInProgress ?? []
   const hasAny =
     data.upcoming.length > 0 ||
     inProgressDeduped.length > 0 ||
     data.awaitingResultValidation.length > 0 ||
     tournamentsUpcoming.length > 0 ||
-    tournamentsInProgress.length > 0
+    tournamentsInProgress.length > 0 ||
+    leaguesUpcoming.length > 0 ||
+    leaguesInProgress.length > 0
 
   const items: MatchesListItem[] = []
   if (!hasAny) {
@@ -175,6 +187,20 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
       hintTone: t.isOrganizer ? ('info' as const) : undefined,
     })),
+    ...leaguesInProgress.map((l) => ({
+      key: `league-${l.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/leagues/${l.id}`,
+      accessibilityKind: 'Liga',
+      kindLabel: `Liga · ${leagueFormatDisplay(l.format)}`,
+      title: l.title,
+      location: matchLocation(l),
+      startAt: l.start_at,
+      tone: 'active' as const,
+      statusLabel: leagueStatusLabel(l),
+      hint: l.isOrganizer ? 'Organizas esta liga' : undefined,
+      hintTone: l.isOrganizer ? ('info' as const) : undefined,
+    })),
   ].sort((a, b) => {
     if (a.kind !== 'row' || b.kind !== 'row') return 0
     return new Date(a.startAt).getTime() - new Date(b.startAt).getTime()
@@ -206,6 +232,20 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       statusLabel: tournamentStatusLabel(t),
       hint: t.isOrganizer ? 'Organizas este torneo' : undefined,
       hintTone: t.isOrganizer ? ('info' as const) : undefined,
+    })),
+    ...leaguesUpcoming.map((l) => ({
+      key: `league-${l.id}`,
+      kind: 'row' as const,
+      href: `/(tabs)/leagues/${l.id}`,
+      accessibilityKind: 'Liga',
+      kindLabel: `Liga · ${leagueFormatDisplay(l.format)}`,
+      title: l.title,
+      location: matchLocation(l),
+      startAt: l.start_at,
+      tone: 'upcoming' as const,
+      statusLabel: leagueStatusLabel(l),
+      hint: l.isOrganizer ? 'Organizas esta liga' : undefined,
+      hintTone: l.isOrganizer ? ('info' as const) : undefined,
     })),
   ].sort((a, b) => {
     if (a.kind !== 'row' || b.kind !== 'row') return 0

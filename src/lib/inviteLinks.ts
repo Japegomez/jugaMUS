@@ -14,3 +14,7 @@ export function buildMatchHttpsInviteUrl(matchId: string): string {
 export function buildTournamentHttpsInviteUrl(tournamentId: string): string {
   return `https://${getInviteHost()}/t/${tournamentId}`
 }
+
+export function buildLeagueHttpsInviteUrl(leagueId: string): string {
+  return `https://${getInviteHost()}/l/${leagueId}`
+}

@@ -65,6 +65,29 @@ describe('matchTeamNames', () => {
     ).toBe('Los Nuestros')
   })
 
+  it('replaces stored placeholder pair name with participant display names', () => {
+    expect(
+      resolveTeamName(
+        { ...baseMatch, team_a_name: 'Jugador - Pepe', team_a_player_2: 'Pepe' },
+        TEAM.A,
+        [participant(TEAM.A, 'María')]
+      )
+    ).toBe('María - Pepe')
+  })
+
+  it('replaces stored Jugador-Jugador pair name when both players are registered', () => {
+    expect(
+      resolveTeamName(
+        { ...baseMatch, team_a_name: 'Jugador - Jugador' },
+        TEAM.A,
+        [
+          participant(TEAM.A, 'Ana', '2026-01-01T10:00:00Z'),
+          participant(TEAM.A, 'Luis', '2026-01-01T11:00:00Z'),
+        ]
+      )
+    ).toBe('Ana - Luis')
+  })
+
   it('falls back to Equipo A/B when no players', () => {
     expect(resolveTeamName(baseMatch, TEAM.A, [])).toBe(DEFAULT_TEAM_A_NAME)
     expect(resolveTeamName(baseMatch, TEAM.B, [])).toBe(DEFAULT_TEAM_B_NAME)

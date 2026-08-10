@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -15,11 +15,19 @@ export default function LeaderboardScreen() {
   const [city, setCity] = useState('')
   const { data, isPending, isError, refetch } = useLeaderboard(city || null)
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/profile' as Href)
+  }, [router])
+
   return (
     <View style={[styles.root, { paddingTop: screenTopPadding(insets.top) }]}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityRole="button"
           hitSlop={8}
           style={styles.closeWrap}>
