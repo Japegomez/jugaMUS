@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -26,16 +26,7 @@ import { openCreateContactForm } from '@/utils/contacts'
 import { formatPhone } from '@/utils/formatters'
 import { buildMatchDetailHref } from '@/utils/navigation'
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
-  )
-}
-
-function PhoneContactRow({ displayName, phoneE164 }: { displayName: string; phoneE164: string }) {
+function PhoneUnderName({ displayName, phoneE164 }: { displayName: string; phoneE164: string }) {
   const [busy, setBusy] = useState(false)
 
   const handlePress = async () => {
@@ -59,12 +50,9 @@ function PhoneContactRow({ displayName, phoneE164 }: { displayName: string; phon
       disabled={busy}
       accessibilityRole="button"
       accessibilityLabel={`Crear contacto con ${displayName}`}
-      style={({ pressed }) => [styles.infoRow, pressed && styles.phoneRowPressed]}>
-      <Text style={styles.infoLabel}>Teléfono</Text>
-      <View style={styles.phoneValue}>
-        <Text style={styles.phoneText}>{formatPhone(phoneE164)}</Text>
-        <Ionicons name="person-add-outline" size={18} color={Colors.primary} />
-      </View>
+      style={({ pressed }) => [styles.phoneUnderNameRow, pressed && styles.phoneRowPressed]}>
+      <Text style={styles.phoneUnderNameText}>{formatPhone(phoneE164)}</Text>
+      <Ionicons name="person-add-outline" size={14} color={Colors.primary} />
     </Pressable>
   )
 }
@@ -84,11 +72,19 @@ export default function UserProfileScreen() {
     }
   }, [userId, sessionUserId, router])
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [router])
+
   if (!userId) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Perfil no válido.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={styles.backBtn} />
+        <Button title="Volver" onPress={goBack} style={styles.backBtn} />
       </View>
     )
   }
@@ -113,14 +109,14 @@ export default function UserProfileScreen() {
     return (
       <View style={[styles.centered, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityRole="button"
           accessibilityLabel="Cerrar"
           style={styles.closeWrap}>
           <Text style={styles.close}>✕</Text>
         </Pressable>
         <Text style={styles.errorText}>No se pudo cargar el perfil o no tienes acceso.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={styles.backBtn} />
+        <Button title="Volver" onPress={goBack} style={styles.backBtn} />
       </View>
     )
   }
@@ -131,7 +127,7 @@ export default function UserProfileScreen() {
     <View style={[styles.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">
           <Text style={styles.close}>✕</Text>
@@ -145,6 +141,9 @@ export default function UserProfileScreen() {
         <View style={styles.header}>
           <AvatarCircle uri={profile.photo_url} name={profile.display_name} />
           <Text style={styles.displayName}>{profile.display_name}</Text>
+          {phone ? (
+            <PhoneUnderName displayName={profile.display_name} phoneE164={phone} />
+          ) : null}
           {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
 
@@ -152,16 +151,9 @@ export default function UserProfileScreen() {
           <ProfileStatsCard
             userId={userId}
             onPressDetails={() => router.push(`/(tabs)/profile/stats/${userId}` as Href)}
+            onPressRanking={() => router.push('/(tabs)/leaderboard' as Href)}
           />
         ) : null}
-
-        <View style={styles.card}>
-          {phone ? (
-            <PhoneContactRow displayName={profile.display_name} phoneE164={phone} />
-          ) : (
-            <InfoRow label="Teléfono" value="No disponible" />
-          )}
-        </View>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Historial</Text>
@@ -220,6 +212,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textSecondary,
   },
+  phoneUnderNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  phoneUnderNameText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondary,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
@@ -235,37 +237,5 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginTop: 6,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
   phoneRowPressed: { opacity: 0.7 },
-  infoLabel: {
-    fontSize: 15,
-    color: Colors.textPrimary,
-    flex: 1,
-    paddingRight: 12,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    flexShrink: 1,
-    textAlign: 'right',
-    marginLeft: 8,
-  },
-  phoneValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexShrink: 1,
-    marginLeft: 8,
-  },
-  phoneText: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontFamily: Fonts.medium,
-    textAlign: 'right',
-  },
 })

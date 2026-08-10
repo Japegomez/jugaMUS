@@ -295,9 +295,13 @@ export default function CreateTournamentScreen() {
     router.replace(`/(tabs)/tournaments/${tournamentId}` as Href)
   }
 
-  const closeToMyMatches = () => {
+  const closeToMyMatches = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
     router.replace('/(tabs)/matches' as Href)
-  }
+  }, [router])
 
   const closeBar = (
     <View style={s.closeBar}>

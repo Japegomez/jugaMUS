@@ -155,6 +155,14 @@ export default function CreateMatchScreen() {
   const recordMatchResult = useRecordMatchResultDirect()
   const [pastResult, setPastResult] = useState<MatchScoreValues | null>(null)
 
+  const closeToPrevious = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [router])
+
   const {
     control,
     handleSubmit,
@@ -318,7 +326,7 @@ export default function CreateMatchScreen() {
       <View style={s.closeBar}>
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => router.replace('/(tabs)/matches' as Href)}
+          onPress={closeToPrevious}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">

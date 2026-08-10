@@ -9,6 +9,7 @@ import {
   Text,
   View,
 } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { requestAppStoreRating } from '@/lib/storeReview'
@@ -17,6 +18,8 @@ import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
+import { BadgeUnlockPopup } from '@/components/stats/BadgeUnlockPopup'
+import { useBadgeUnlocks } from '@/hooks/useBadgeUnlocks'
 import { SignOutModal } from '@/components/SignOutModal'
 import { Button } from '@/components/ui/Button'
 import { isRatingPromptSupported } from '@/lib/appRating'
@@ -28,6 +31,7 @@ import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { formatPhone } from '@/utils/formatters'
 import { buildMatchDetailHref } from '@/utils/navigation'
 import {
   buildNotifUpdates,
@@ -58,6 +62,7 @@ export default function ProfileScreen() {
   const { data: profile, isPending: profilePending, isError } = useProfile(sessionUserId)
   const { data: userMatches, isPending: matchesPending } = useUserMatches(sessionUserId)
   const updateProfile = useUpdateProfile()
+  const { unlockedBadge, dismiss } = useBadgeUnlocks()
   const [signingOut, setSigningOut] = useState(false)
   const [savingField, setSavingField] = useState<keyof NotifField | null>(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -157,13 +162,25 @@ export default function ProfileScreen() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <AvatarCircle
-          uri={profile.photo_url}
-          name={profile.display_name}
-          size={space(96)}
-          initialsStyle={{ fontSize: font(36) }}
-        />
+        <View style={styles.avatarWrap}>
+          <AvatarCircle
+            uri={profile.photo_url}
+            name={profile.display_name}
+            size={space(96)}
+            initialsStyle={{ fontSize: font(36) }}
+          />
+          <Pressable
+            onPress={() => router.push('/(tabs)/profile/edit' as Href)}
+            accessibilityRole="button"
+            accessibilityLabel="Editar perfil"
+            style={({ pressed }) => [styles.avatarPencil, pressed && styles.avatarPencilPressed]}>
+            <Ionicons name="pencil" size={14} color={Colors.white} />
+          </Pressable>
+        </View>
         <Text style={[styles.displayName, { fontSize: font(22) }]}>{profile.display_name}</Text>
+        {profile.phone_e164 ? (
+          <Text style={styles.phoneUnderName}>{formatPhone(profile.phone_e164)}</Text>
+        ) : null}
         {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
       </View>
 
@@ -171,11 +188,20 @@ export default function ProfileScreen() {
         <ProfileStatsCard
           userId={sessionUserId}
           onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
+          onPressRanking={() => router.push('/(tabs)/leaderboard' as Href)}
         />
       ) : null}
 
       <View style={styles.card}>
-        <InfoRow label="Teléfono" value={profile.phone_e164 || '—'} />
+        <Text style={styles.cardTitle}>Historial</Text>
+        <MatchHistoryList
+          matches={userMatches}
+          loading={matchesPending}
+          emptyMessage="Aún no has participado en ninguna partida"
+          onMatchPress={(matchId) =>
+            router.push(buildMatchDetailHref(matchId, { from: 'profile' }))
+          }
+        />
       </View>
 
       <View style={styles.card}>
@@ -253,18 +279,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Historial</Text>
-        <MatchHistoryList
-          matches={userMatches}
-          loading={matchesPending}
-          emptyMessage="Aún no has participado en ninguna partida"
-          onMatchPress={(matchId) =>
-            router.push(buildMatchDetailHref(matchId, { from: 'profile' }))
-          }
-        />
-      </View>
-
       {isRatingPromptSupported() ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Ayuda</Text>
@@ -338,16 +352,9 @@ export default function ProfileScreen() {
         loading={deletingAccount}
         onConfirm={onDeleteAccount}
       />
-    </ScrollView>
-  )
-}
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
-    </View>
+      <BadgeUnlockPopup badge={unlockedBadge} onClose={dismiss} />
+    </ScrollView>
   )
 }
 
@@ -460,6 +467,25 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 8,
   },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatarPencil: {
+    position: 'absolute',
+    right: 2,
+    bottom: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  avatarPencilPressed: {
+    opacity: 0.85,
+  },
   avatar: {
     width: 96,
     height: 96,
@@ -483,6 +509,11 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     color: Colors.textPrimary,
     marginTop: 4,
+  },
+  phoneUnderName: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.textSecondary,
   },
   city: {
     fontSize: 15,

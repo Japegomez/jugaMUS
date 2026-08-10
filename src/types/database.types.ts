@@ -521,6 +521,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          badge_showcase: string[]
           city: string | null
           created_at: string
           display_name: string
@@ -542,6 +543,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          badge_showcase?: string[]
           city?: string | null
           created_at?: string
           display_name: string
@@ -563,6 +565,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          badge_showcase?: string[]
           city?: string | null
           created_at?: string
           display_name?: string
@@ -1641,6 +1644,7 @@ export type Database = {
       get_own_profile: {
         Args: never
         Returns: {
+          badge_showcase: string[]
           city: string | null
           created_at: string
           display_name: string
@@ -1702,6 +1706,10 @@ export type Database = {
         Args: { p_city?: string; p_limit?: number }
         Returns: Json
       }
+      get_player_ranking: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_match_player_insights: {
         Args: { p_match_id: string; p_viewer_id?: string }
         Returns: Json
@@ -1726,6 +1734,8 @@ export type Database = {
           display_name: string
           id: string
           phone_e164: string
+          photo_url: string
+          badge_showcase: string[]
         }[]
       }
       list_user_viewable_matches: {

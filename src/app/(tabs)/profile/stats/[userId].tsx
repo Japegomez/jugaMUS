@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -24,11 +25,19 @@ export default function PlayerStatsScreen() {
   const insets = useSafeAreaInsets()
   const { data, isPending, isError, refetch } = usePlayerStats(userId)
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/profile' as Href)
+  }, [router])
+
   return (
     <View style={[styles.root, { paddingTop: screenTopPadding(insets.top) }]}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           accessibilityRole="button"
           hitSlop={8}
           style={styles.closeWrap}>
@@ -67,8 +76,8 @@ export default function PlayerStatsScreen() {
                 ]}
               />
               <View style={styles.block}>
-                <Text style={styles.blockLabel}>Forma reciente</Text>
-                <FormBadges form={data.last_form} />
+                <Text style={styles.blockLabel}>Partidas recientes</Text>
+                <FormBadges form={data.last_form} showTimeline />
               </View>
               <WinRateBar winRate={data.win_rate} wins={data.wins} losses={data.losses} />
             </View>
@@ -117,13 +126,6 @@ export default function PlayerStatsScreen() {
               <Text style={styles.cardTitle}>Logros</Text>
               <BadgeList badges={data.badges} />
             </View>
-
-            <Pressable
-              onPress={() => router.push('/(tabs)/leaderboard' as Href)}
-              style={styles.leaderboardBtn}
-              accessibilityRole="button">
-              <Text style={styles.leaderboardText}>Ver ranking ELO</Text>
-            </Pressable>
           </>
         ) : null}
       </ScrollView>
@@ -188,18 +190,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.danger,
     textAlign: 'center',
-  },
-  leaderboardBtn: {
-    marginTop: 4,
-    marginBottom: 8,
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: Colors.primary,
-  },
-  leaderboardText: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 15,
-    color: Colors.white,
   },
 })

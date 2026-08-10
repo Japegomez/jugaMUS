@@ -67,7 +67,7 @@ import {
 } from '@/utils/leagueDisplay'
 import { formatCityAndPlace } from '@/utils/location'
 import { matchStatusDisplay } from '@/utils/matchDisplay'
-import { firstSearchParam, isSafeTabsHref, buildMatchDetailHref } from '@/utils/navigation'
+
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -168,47 +168,18 @@ function MatchesByRound({
 }
 
 export default function LeagueDetailScreen() {
-  const { id, returnMatchId, returnFrom, returnProfileUserId, returnTo } = useLocalSearchParams<{
-    id: string
-    returnMatchId?: string
-    returnFrom?: string
-    returnProfileUserId?: string
-    returnTo?: string
-  }>()
+  const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const returnMatchIdParam = firstSearchParam(returnMatchId)
-  const returnFromParam = firstSearchParam(returnFrom)
-  const returnProfileUserIdParam = firstSearchParam(returnProfileUserId)
-  const returnToParam = firstSearchParam(returnTo)
 
   const closeLeagueDetail = useCallback(() => {
-    if (returnMatchIdParam) {
-      router.replace(
-        buildMatchDetailHref(returnMatchIdParam, {
-          from: returnFromParam,
-          profileUserId: returnProfileUserIdParam,
-        })
-      )
-      return
-    }
-    if (returnToParam && isSafeTabsHref(returnToParam)) {
-      router.replace(returnToParam as Href)
-      return
-    }
     if (router.canGoBack()) {
       router.back()
       return
     }
     router.replace('/(tabs)/matches' as Href)
-  }, [
-    router,
-    returnMatchIdParam,
-    returnFromParam,
-    returnProfileUserIdParam,
-    returnToParam,
-  ])
+  }, [router])
 
   const {
     data: league,

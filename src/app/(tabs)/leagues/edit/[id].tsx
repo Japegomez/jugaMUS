@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
+import { useCallback } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -100,6 +101,18 @@ export default function EditLeagueScreen() {
   const visibilityValue = watch('visibility')
   const formatValue = watch('format')
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    if (id) {
+      router.replace(`/(tabs)/leagues/${id}` as Href)
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [id, router])
+
   if (isLoading || !league) {
     return (
       <View style={[s.centered, { paddingTop: screenTopPadding(insets.top, 8) }]}>
@@ -112,7 +125,7 @@ export default function EditLeagueScreen() {
     return (
       <View style={[s.centered, { paddingTop: screenTopPadding(insets.top, 8) }]}>
         <Text style={s.meta}>Solo se puede editar durante la inscripción.</Text>
-        <Button title="Volver" onPress={() => router.replace(`/(tabs)/leagues/${id}` as Href)} />
+        <Button title="Volver" onPress={goBack} />
       </View>
     )
   }
@@ -143,7 +156,7 @@ export default function EditLeagueScreen() {
             ? values.password
             : undefined,
       })
-      router.replace(`/(tabs)/leagues/${id}` as Href)
+      goBack()
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar')
     }
@@ -156,7 +169,7 @@ export default function EditLeagueScreen() {
       <View style={s.closeBar}>
         <View style={{ flex: 1 }} />
         <Pressable
-          onPress={() => router.replace(`/(tabs)/leagues/${id}` as Href)}
+          onPress={goBack}
           accessibilityRole="button">
           <Text style={s.closeX}>✕</Text>
         </Pressable>

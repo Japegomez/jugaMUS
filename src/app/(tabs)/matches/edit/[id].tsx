@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
@@ -242,13 +242,17 @@ export default function EditMatchScreen() {
     }
   }
 
-  const closeToMatch = () => {
-    if (!id) {
+  const closeToMatch = useCallback(() => {
+    if (router.canGoBack()) {
       router.back()
       return
     }
-    router.replace(`/(tabs)/matches/${id}` as Href)
-  }
+    if (id) {
+      router.replace(`/(tabs)/matches/${id}` as Href)
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [router, id])
 
   if (isLoading) {
     return (

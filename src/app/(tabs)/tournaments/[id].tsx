@@ -26,7 +26,7 @@ import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
-import { firstSearchParam, isSafeTabsHref, buildMatchDetailHref } from '@/utils/navigation'
+
 import { formatEntryFee } from '@/utils/tournamentForm'
 import {
   useAddTournamentPair,
@@ -81,47 +81,18 @@ function isBracketPlayableNode(node: BracketNodeRow): boolean {
 }
 
 export default function TournamentDetailScreen() {
-  const { id, returnMatchId, returnFrom, returnProfileUserId, returnTo } = useLocalSearchParams<{
-    id: string
-    returnMatchId?: string
-    returnFrom?: string
-    returnProfileUserId?: string
-    returnTo?: string
-  }>()
+  const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const returnMatchIdParam = firstSearchParam(returnMatchId)
-  const returnFromParam = firstSearchParam(returnFrom)
-  const returnProfileUserIdParam = firstSearchParam(returnProfileUserId)
-  const returnToParam = firstSearchParam(returnTo)
 
   const closeTournamentDetail = useCallback(() => {
-    if (returnMatchIdParam) {
-      router.replace(
-        buildMatchDetailHref(returnMatchIdParam, {
-          from: returnFromParam,
-          profileUserId: returnProfileUserIdParam,
-        })
-      )
-      return
-    }
-    if (returnToParam && isSafeTabsHref(returnToParam)) {
-      router.replace(returnToParam as Href)
-      return
-    }
     if (router.canGoBack()) {
       router.back()
       return
     }
     router.replace('/(tabs)/matches' as Href)
-  }, [
-    router,
-    returnMatchIdParam,
-    returnFromParam,
-    returnProfileUserIdParam,
-    returnToParam,
-  ])
+  }, [router])
 
   const {
     data: tournament,

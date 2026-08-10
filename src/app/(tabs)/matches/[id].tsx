@@ -48,10 +48,6 @@ import {
 } from '@/hooks/useMatches'
 import { useLeague } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
-import {
-  buildProfileHref,
-  firstSearchParam,
-} from '@/utils/navigation'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import {
   freeTeamSlots,
@@ -497,50 +493,34 @@ export default function MatchDetailScreen() {
     openResult,
     gamesA,
     gamesB,
-    from,
-    profileUserId,
   } = useLocalSearchParams<{
     id: string
     openResult?: string
     gamesA?: string
     gamesB?: string
-    from?: string
-    profileUserId?: string
   }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
-  const fromParam = firstSearchParam(from)
-  const profileUserIdParam = firstSearchParam(profileUserId)
 
   const closeMatchDetail = useCallback(() => {
     clearPendingMatchResultFromScoreboard(id)
-    if (fromParam === 'profile') {
-      router.replace(buildProfileHref(profileUserIdParam))
-      return
-    }
     if (router.canGoBack()) {
       router.back()
       return
     }
     router.replace('/(tabs)/matches' as Href)
-  }, [router, id, fromParam, profileUserIdParam])
+  }, [router, id])
 
   const openParentCompetition = useCallback(
     (kind: 'league' | 'tournament', competitionId: string) => {
-      const params = {
-        id: competitionId,
-        returnMatchId: id,
-        ...(fromParam ? { returnFrom: fromParam } : {}),
-        ...(profileUserIdParam ? { returnProfileUserId: profileUserIdParam } : {}),
-      }
       if (kind === 'league') {
-        router.push({ pathname: '/(tabs)/leagues/[id]', params })
+        router.push({ pathname: '/(tabs)/leagues/[id]', params: { id: competitionId } })
       } else {
-        router.push({ pathname: '/(tabs)/tournaments/[id]', params })
+        router.push({ pathname: '/(tabs)/tournaments/[id]', params: { id: competitionId } })
       }
     },
-    [router, id, fromParam, profileUserIdParam]
+    [router]
   )
 
   const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)

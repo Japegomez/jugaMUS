@@ -5,9 +5,21 @@ import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
 const MEDAL = {
-  gold: { emoji: '🥇', label: 'Oro', color: '#B8860B' },
-  silver: { emoji: '🥈', label: 'Plata', color: '#8A8A8A' },
-  bronze: { emoji: '🥉', label: 'Bronce', color: '#A0622E' },
+  gold: { emoji: '🥇', label: 'Oro', color: '#B8860B', bg: '#FFF8E1' },
+  silver: { emoji: '🥈', label: 'Plata', color: '#8A8A8A', bg: '#F5F5F5' },
+  bronze: { emoji: '🥉', label: 'Bronce', color: '#A0622E', bg: '#FFF0E8' },
+} as const
+
+const PODIUM_HEIGHTS = {
+  gold: 116,
+  silver: 96,
+  bronze: 78,
+} as const
+
+const PODIUM_HEIGHTS_COMPACT = {
+  gold: 88,
+  silver: 72,
+  bronze: 58,
 } as const
 
 const SOURCE_LABEL: Record<PodiumSource, string> = {
@@ -46,6 +58,62 @@ function SourceChip({ source }: { source: PodiumSource }) {
   return (
     <View style={[styles.sourceChip, source === 'league' && styles.sourceChipLeague]}>
       <Text style={styles.sourceChipText}>{SOURCE_LABEL[source]}</Text>
+    </View>
+  )
+}
+
+function PodiumStep({
+  kind,
+  count,
+  compact,
+}: {
+  kind: keyof typeof MEDAL
+  count: number
+  compact?: boolean
+}) {
+  const meta = MEDAL[kind]
+  const heights = compact ? PODIUM_HEIGHTS_COMPACT : PODIUM_HEIGHTS
+  const height = heights[kind]
+  const stepWidth = compact ? 72 : 90
+
+  return (
+    <View style={[styles.podiumStep, { width: stepWidth }]}>
+      <View
+        style={[
+          styles.podiumBase,
+          { height, backgroundColor: meta.bg, borderColor: meta.color },
+          compact && styles.podiumBaseCompact,
+        ]}>
+        <Text style={[styles.podiumEmoji, compact && styles.podiumEmojiCompact]}>
+          {meta.emoji}
+        </Text>
+        <Text style={[styles.podiumCount, { color: meta.color }, compact && styles.podiumCountCompact]}>
+          {count}
+        </Text>
+      </View>
+      <Text style={[styles.podiumLabel, compact && styles.podiumLabelCompact]}>{meta.label}</Text>
+    </View>
+  )
+}
+
+export function VisualPodium({
+  podium,
+  compact,
+}: {
+  podium: Podium
+  compact?: boolean
+}) {
+  const gold = podium.gold.length
+  const silver = podium.silver.length
+  const bronze = podium.bronze.length
+
+  return (
+    <View style={[styles.podiumWrap, compact && styles.podiumWrapCompact]}>
+      <View style={styles.podiumRow}>
+        <PodiumStep kind="silver" count={silver} compact={compact} />
+        <PodiumStep kind="gold" count={gold} compact={compact} />
+        <PodiumStep kind="bronze" count={bronze} compact={compact} />
+      </View>
     </View>
   )
 }
@@ -141,13 +209,7 @@ export function PodiumSection({
 
   return (
     <View style={styles.wrap}>
-      {showMedalCounts ? (
-        <View style={styles.medalsRowExpanded}>
-          <MedalBadge kind="gold" count={podium.gold.length} />
-          <MedalBadge kind="silver" count={podium.silver.length} />
-          <MedalBadge kind="bronze" count={podium.bronze.length} />
-        </View>
-      ) : null}
+      {showMedalCounts ? <VisualPodium podium={podium} /> : null}
       <PodiumList kind="gold" entries={podium.gold} onPressEntry={onPressEntry} />
       <PodiumList kind="silver" entries={podium.silver} onPressEntry={onPressEntry} />
       <PodiumList kind="bronze" entries={podium.bronze} onPressEntry={onPressEntry} />
@@ -166,12 +228,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     gap: 8,
-  },
-  medalsRowExpanded: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: 8,
-    paddingBottom: 4,
   },
   medalBadge: {
     alignItems: 'center',
@@ -195,6 +251,66 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textSecondary,
   },
+  // ── Visual podium ──
+  podiumWrap: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  podiumWrapCompact: {
+    paddingVertical: 4,
+  },
+  podiumRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  podiumStep: {
+    alignItems: 'center',
+    width: 90,
+  },
+  podiumBase: {
+    width: '100%',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 1.5,
+    borderBottomWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 2,
+    paddingTop: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 4,
+  },
+  podiumBaseCompact: {
+    borderWidth: 1,
+    paddingTop: 7,
+    paddingBottom: 4,
+  },
+  podiumEmoji: {
+    fontSize: 26,
+  },
+  podiumEmojiCompact: {
+    fontSize: 20,
+  },
+  podiumCount: {
+    fontFamily: Fonts.bold,
+    fontSize: 22,
+  },
+  podiumCountCompact: {
+    fontSize: 16,
+  },
+  podiumLabel: {
+    marginTop: 4,
+    fontFamily: Fonts.medium,
+    fontSize: 11,
+    color: Colors.textSecondary,
+  },
+  podiumLabelCompact: {
+    marginTop: 2,
+    fontSize: 10,
+  },
+  // ── Lists ──
   section: {
     gap: 4,
   },
