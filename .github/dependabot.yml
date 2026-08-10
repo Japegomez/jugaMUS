@@ -2,35 +2,50 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
       time: '09:00'
       timezone: Europe/Madrid
     open-pull-requests-limit: 3
+    assignees:
+      - Japegomez
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    cooldown:
+      default-days: 3
+      semver-minor-days: 5
+      semver-patch-days: 2
+    exclude-paths:
+      - vendor/**
     groups:
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
       npm-dev-patch-minor:
         dependency-type: development
         update-types:
           - minor
           - patch
-      npm-runtime-patch-minor:
-        patterns:
-          - '@supabase/*'
-          - '@tanstack/*'
-          - '@hookform/resolvers'
-          - 'react-hook-form'
-          - 'posthog-react-native'
-          - 'zod'
-          - 'zustand'
+      npm-prod-patch-minor:
+        dependency-type: production
         update-types:
           - minor
           - patch
     ignore:
-      # Block all semver-major bumps (Expo SDK, RN, TypeScript, etc.) — upgrade manually
+      # Block all semver-major bumps (Expo SDK, RN, TypeScript, etc.) — use `npx expo upgrade` / manual
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
-      # Expo SDK pins these — use npx expo install on SDK upgrades
+      # Expo SDK pins these — use `npx expo install` / `npx expo upgrade` on SDK upgrades
       - dependency-name: 'react'
         update-types:
           - 'version-update:semver-minor'
@@ -70,13 +85,33 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    target-branch: develop
     schedule:
       interval: weekly
       day: monday
       time: '09:00'
       timezone: Europe/Madrid
     open-pull-requests-limit: 1
+    assignees:
+      - Japegomez
+    labels:
+      - dependencies
+      - github_actions
+    commit-message:
+      prefix: chore
+      include: scope
+    cooldown:
+      default-days: 3
+      semver-minor-days: 5
+      semver-patch-days: 2
     groups:
+      security-patches:
+        applies-to: security-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
       github-actions-patch-minor:
         patterns:
           - '*'
