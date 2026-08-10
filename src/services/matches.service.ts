@@ -16,6 +16,10 @@ import {
   getUserTournamentsDashboard,
   type UserTournamentSummary,
 } from '@/services/tournaments.service'
+import {
+  getUserLeaguesDashboard,
+  type UserLeagueSummary,
+} from '@/services/leagues.service'
 import { resolveMatchOutcome, type MatchOutcome } from '@/utils/matchDisplay'
 
 /** `timestamptz` must receive an explicit instant; bare local strings are parsed as UTC on Supabase. */
@@ -72,6 +76,11 @@ export type MatchRow = {
   tournament_pair_b_id: string | null
   tournament_winner_pair_id: string | null
   tournament_is_bye: boolean
+  league_id: string | null
+  league_pair_a_id: string | null
+  league_pair_b_id: string | null
+  league_round_number: number | null
+  league_is_second_leg: boolean
   created_at: string
   updated_at: string
 }
@@ -1096,6 +1105,9 @@ export type MyMatchesDashboard = {
   /** Torneos donde el usuario organiza o participa (inscripción / en curso). */
   tournamentsUpcoming: UserTournamentSummary[]
   tournamentsInProgress: UserTournamentSummary[]
+  /** Ligas donde el usuario organiza o participa (inscripción / en curso). */
+  leaguesUpcoming: UserLeagueSummary[]
+  leaguesInProgress: UserLeagueSummary[]
 }
 
 /**
@@ -1178,10 +1190,11 @@ async function listAwaitingResultValidationClientFallback(
  * and matches where the user must approve or dispute a submitted result.
  */
 export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDashboard> {
-  const [awaitingRes, matchSummaries, tournaments] = await Promise.all([
+  const [awaitingRes, matchSummaries, tournaments, leagues] = await Promise.all([
     supabase.rpc('list_matches_awaiting_my_result_action'),
     listUserMatchSummariesForDashboard(userId),
     getUserTournamentsDashboard(userId),
+    getUserLeaguesDashboard(userId),
   ])
 
   let awaitingResultValidation: AwaitingResultMatchRow[]
@@ -1218,6 +1231,8 @@ export async function getMyMatchesDashboard(userId: string): Promise<MyMatchesDa
     awaitingResultValidation: awaitingWithPlaces,
     tournamentsUpcoming: tournaments.upcoming,
     tournamentsInProgress: tournaments.inProgress,
+    leaguesUpcoming: leagues.upcoming,
+    leaguesInProgress: leagues.inProgress,
   }
 }
 

@@ -17,6 +17,7 @@ import { BracketCanvas } from '@/components/tournaments/BracketCanvas'
 import { CancelTournamentModal } from '@/components/tournaments/CancelTournamentModal'
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
+import { AddPairButton } from '@/components/ui/AddPairButton'
 import { Button } from '@/components/ui/Button'
 import { ShareInviteButton } from '@/components/ShareInviteButton'
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
@@ -25,6 +26,7 @@ import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
+
 import { formatEntryFee } from '@/utils/tournamentForm'
 import {
   useAddTournamentPair,
@@ -83,6 +85,14 @@ export default function TournamentDetailScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
+
+  const closeTournamentDetail = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [router])
 
   const {
     data: tournament,
@@ -149,7 +159,7 @@ export default function TournamentDetailScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.error}>No se pudo cargar el torneo.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeTournamentDetail} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -292,7 +302,7 @@ export default function TournamentDetailScreen() {
     <View style={[s.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={s.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={closeTournamentDetail}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">
           <Text style={s.close}>✕</Text>
@@ -446,7 +456,6 @@ export default function TournamentDetailScreen() {
                           ? 'Falta un jugador'
                           : undefined
                       }
-                      editLabel={canEditPair ? 'Editar' : undefined}
                       onEdit={canEditPair ? () => setEditingPair(p) : undefined}
                       joinLabel={canJoin ? 'Unirme' : undefined}
                       onJoin={canJoin ? () => void handleJoinPair(p.id, openSlot!) : undefined}
@@ -460,9 +469,8 @@ export default function TournamentDetailScreen() {
             <View style={s.actions}>
               {inRegistration ? (
                 <>
-                  <Button
-                    title="Añadir pareja"
-                    variant="outline"
+                  <AddPairButton
+                    hasPairs={tournament.pairs.length > 0}
                     onPress={() => setPairModalOpen(true)}
                   />
                   {isCreator ? (
@@ -510,6 +518,9 @@ export default function TournamentDetailScreen() {
         onClose={() => setPairModalOpen(false)}
         onSubmit={handleAddPair}
         loading={addPair.isPending}
+        defaultSelfSlot={
+          userId && userIsInTournamentPair(tournament.pairs, userId) ? null : 'a'
+        }
         selfJoinDisabled={Boolean(userId && userIsInTournamentPair(tournament.pairs, userId))}
       />
 

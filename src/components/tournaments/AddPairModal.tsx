@@ -32,7 +32,7 @@ type AddPairModalProps = {
   onClose: () => void
   onSubmit: (values: AddPairFormValues) => void | Promise<void>
   loading?: boolean
-  /** When true, slot A defaults to "soy yo" and cannot add second self */
+  /** When set, that slot defaults to "soy yo" on open (unless self join is disabled). */
   defaultSelfSlot?: 'a' | 'b' | null
   /** When true, «Soy yo» is disabled (player already in another pair). */
   selfJoinDisabled?: boolean
@@ -49,23 +49,44 @@ export function AddPairModal({
   title = 'Añadir pareja',
 }: AddPairModalProps) {
   const [name, setName] = useState('')
-  const [playerAIsSelf, setPlayerAIsSelf] = useState(defaultSelfSlot === 'a')
+  const [playerAIsSelf, setPlayerAIsSelf] = useState(false)
   const [playerAText, setPlayerAText] = useState('')
-  const [playerBIsSelf, setPlayerBIsSelf] = useState(defaultSelfSlot === 'b')
+  const [playerBIsSelf, setPlayerBIsSelf] = useState(false)
   const [playerBText, setPlayerBText] = useState('')
   const [entryFeePaid, setEntryFeePaid] = useState(false)
 
-  const reset = () => {
+  // Resetear el formulario cuando el modal abre o cambian las reglas de auto-join.
+  // Patrón "adjust state during render" (evita setState dentro de effect).
+  const [lastOpenKey, setLastOpenKey] = useState<string | null>(null)
+  const openKey = visible ? `${defaultSelfSlot ?? ''}|${selfJoinDisabled ? '1' : '0'}` : null
+  if (openKey !== lastOpenKey) {
+    setLastOpenKey(openKey)
+    if (visible) {
+      setName('')
+      setPlayerAText('')
+      setPlayerBText('')
+      setEntryFeePaid(false)
+      if (selfJoinDisabled) {
+        setPlayerAIsSelf(false)
+        setPlayerBIsSelf(false)
+      } else {
+        setPlayerAIsSelf(defaultSelfSlot === 'a')
+        setPlayerBIsSelf(defaultSelfSlot === 'b')
+      }
+    }
+  }
+
+  const resetForm = () => {
     setName('')
-    setPlayerAIsSelf(defaultSelfSlot === 'a')
     setPlayerAText('')
-    setPlayerBIsSelf(defaultSelfSlot === 'b')
     setPlayerBText('')
     setEntryFeePaid(false)
+    setPlayerAIsSelf(false)
+    setPlayerBIsSelf(false)
   }
 
   const handleClose = () => {
-    reset()
+    resetForm()
     onClose()
   }
 
@@ -73,14 +94,13 @@ export function AddPairModal({
     try {
       await onSubmit({
         name,
-        playerAIsSelf,
+        playerAIsSelf: selfJoinDisabled ? false : playerAIsSelf,
         playerAText,
-        playerBIsSelf,
+        playerBIsSelf: selfJoinDisabled ? false : playerBIsSelf,
         playerBText,
         entryFeePaid,
       })
-      // Solo limpiamos el formulario si el alta se ha completado con éxito.
-      reset()
+      resetForm()
     } catch {
       // OnSubmit se encarga de mostrar el error (si aplica). No reiniciamos aquí para que el usuario pueda corregir.
     }
@@ -119,7 +139,7 @@ export function AddPairModal({
                       setPlayerBIsSelf(false)
                     }
                   }}
-                  disabled={defaultSelfSlot === 'a' || selfJoinDisabled}
+                  disabled={selfJoinDisabled}
                   trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
                   thumbColor={Colors.white}
                   ios_backgroundColor={Colors.switchTrackOff}
@@ -149,7 +169,7 @@ export function AddPairModal({
                       setPlayerAIsSelf(false)
                     }
                   }}
-                  disabled={defaultSelfSlot === 'b' || selfJoinDisabled}
+                  disabled={selfJoinDisabled}
                   trackColor={{ true: Colors.primary, false: Colors.switchTrackOff }}
                   thumbColor={Colors.white}
                   ios_backgroundColor={Colors.switchTrackOff}

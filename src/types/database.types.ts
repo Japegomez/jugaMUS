@@ -242,6 +242,11 @@ export type Database = {
           team_b_player_1: string | null
           team_b_player_2: string | null
           title: string
+          league_id: string | null
+          league_is_second_leg: boolean
+          league_pair_a_id: string | null
+          league_pair_b_id: string | null
+          league_round_number: number | null
           tournament_bracket_position: number | null
           tournament_id: string | null
           tournament_is_bye: boolean
@@ -260,6 +265,11 @@ export type Database = {
           description?: string | null
           duration_target_games: number
           id?: string
+          league_id?: string | null
+          league_is_second_leg?: boolean
+          league_pair_a_id?: string | null
+          league_pair_b_id?: string | null
+          league_round_number?: number | null
           location_privacy?: string
           password_hash?: string | null
           place_defined?: boolean
@@ -291,6 +301,11 @@ export type Database = {
           description?: string | null
           duration_target_games?: number
           id?: string
+          league_id?: string | null
+          league_is_second_leg?: boolean
+          league_pair_a_id?: string | null
+          league_pair_b_id?: string | null
+          league_round_number?: number | null
           location_privacy?: string
           password_hash?: string | null
           place_defined?: boolean
@@ -328,6 +343,27 @@ export type Database = {
             columns: ['creator_id']
             isOneToOne: false
             referencedRelation: 'profiles_public'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matches_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matches_league_pair_a_id_fkey'
+            columns: ['league_pair_a_id']
+            isOneToOne: false
+            referencedRelation: 'league_pairs'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'matches_league_pair_b_id_fkey'
+            columns: ['league_pair_b_id']
+            isOneToOne: false
+            referencedRelation: 'league_pairs'
             referencedColumns: ['id']
           },
           {
@@ -485,6 +521,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          badge_showcase: string[]
           city: string | null
           created_at: string
           display_name: string
@@ -506,6 +543,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          badge_showcase?: string[]
           city?: string | null
           created_at?: string
           display_name: string
@@ -527,6 +565,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          badge_showcase?: string[]
           city?: string | null
           created_at?: string
           display_name?: string
@@ -707,6 +746,281 @@ export type Database = {
             columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'profiles_public'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      league_challenges: {
+        Row: {
+          challenged_pair_id: string
+          challenger_pair_id: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          league_id: string
+          match_id: string | null
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          challenged_pair_id: string
+          challenger_pair_id: string
+          created_at?: string
+          created_by_user_id: string
+          id?: string
+          league_id: string
+          match_id?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          challenged_pair_id?: string
+          challenger_pair_id?: string
+          created_at?: string
+          created_by_user_id?: string
+          id?: string
+          league_id?: string
+          match_id?: string | null
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'league_challenges_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      league_pairs: {
+        Row: {
+          created_at: string
+          created_by_user_id: string
+          current_elo: number
+          id: string
+          joined_at: string
+          league_id: string
+          name: string
+          name_is_custom: boolean
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_id: string
+          current_elo?: number
+          id?: string
+          joined_at?: string
+          league_id: string
+          name: string
+          name_is_custom?: boolean
+          player_a_text?: string | null
+          player_a_user_id?: string | null
+          player_b_text?: string | null
+          player_b_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_id?: string
+          current_elo?: number
+          id?: string
+          joined_at?: string
+          league_id?: string
+          name?: string
+          name_is_custom?: boolean
+          player_a_text?: string | null
+          player_a_user_id?: string | null
+          player_b_text?: string | null
+          player_b_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'league_pairs_created_by_user_id_fkey'
+            columns: ['created_by_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_pairs_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_pairs_player_a_user_id_fkey'
+            columns: ['player_a_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_pairs_player_b_user_id_fkey'
+            columns: ['player_b_user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      league_password_grants: {
+        Row: {
+          granted_at: string
+          league_id: string
+          user_id: string
+        }
+        Insert: {
+          granted_at?: string
+          league_id: string
+          user_id: string
+        }
+        Update: {
+          granted_at?: string
+          league_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'league_password_grants_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      league_rating_history: {
+        Row: {
+          created_at: string
+          elo_after: number
+          elo_before: number
+          elo_delta: number
+          id: string
+          league_id: string
+          match_id: string
+          pair_id: string
+        }
+        Insert: {
+          created_at?: string
+          elo_after: number
+          elo_before: number
+          elo_delta: number
+          id?: string
+          league_id: string
+          match_id: string
+          pair_id: string
+        }
+        Update: {
+          created_at?: string
+          elo_after?: number
+          elo_before?: number
+          elo_delta?: number
+          id?: string
+          league_id?: string
+          match_id?: string
+          pair_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'league_rating_history_league_id_fkey'
+            columns: ['league_id']
+            isOneToOne: false
+            referencedRelation: 'leagues'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'league_rating_history_pair_id_fkey'
+            columns: ['pair_id']
+            isOneToOne: false
+            referencedRelation: 'league_pairs'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      leagues: {
+        Row: {
+          city: string
+          created_at: string
+          creator_id: string
+          description: string | null
+          duration_target_games: number
+          elo_initial: number
+          elo_k_factor: number
+          end_at: string | null
+          fixtures_generated_at: string | null
+          format: string
+          id: string
+          location_privacy: string
+          notes: string | null
+          password_hash: string | null
+          place_defined: boolean
+          place_text: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          duration_target_games: number
+          elo_initial?: number
+          elo_k_factor?: number
+          end_at?: string | null
+          fixtures_generated_at?: string | null
+          format: string
+          id?: string
+          location_privacy?: string
+          notes?: string | null
+          password_hash?: string | null
+          place_defined?: boolean
+          place_text?: string | null
+          start_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          duration_target_games?: number
+          elo_initial?: number
+          elo_k_factor?: number
+          end_at?: string | null
+          fixtures_generated_at?: string | null
+          format?: string
+          id?: string
+          location_privacy?: string
+          notes?: string | null
+          password_hash?: string | null
+          place_defined?: boolean
+          place_text?: string | null
+          start_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'leagues_creator_id_fkey'
+            columns: ['creator_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
             referencedColumns: ['id']
           },
         ]
@@ -916,6 +1230,45 @@ export type Database = {
       }
     }
     Functions: {
+      accept_league_challenge: {
+        Args: { p_challenge_id: string }
+        Returns: {
+          challenged_pair_id: string
+          challenger_pair_id: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          league_id: string
+          match_id: string | null
+          responded_at: string | null
+          status: string
+        }
+      }
+      add_league_pair: {
+        Args: {
+          p_league_id: string
+          p_name?: string
+          p_player_a_text?: string
+          p_player_a_user_id?: string
+          p_player_b_text?: string
+          p_player_b_user_id?: string
+        }
+        Returns: {
+          created_at: string
+          created_by_user_id: string
+          current_elo: number
+          id: string
+          joined_at: string
+          league_id: string
+          name: string
+          name_is_custom: boolean
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          updated_at: string
+        }
+      }
       add_tournament_pair: {
         Args: {
           p_entry_fee_paid?: boolean
@@ -985,6 +1338,7 @@ export type Database = {
         Args: { p_match_id: string }
         Returns: undefined
       }
+      auth_can_read_league: { Args: { p_league_id: string }; Returns: boolean }
       auth_can_read_match: { Args: { p_match_id: string }; Returns: boolean }
       auth_can_read_tournament: {
         Args: { p_tournament_id: string }
@@ -994,6 +1348,32 @@ export type Database = {
       auth_is_confirmed_in_match: {
         Args: { p_match_id: string }
         Returns: boolean
+      }
+      cancel_league: {
+        Args: { p_league_id: string }
+        Returns: {
+          city: string
+          created_at: string
+          creator_id: string
+          description: string | null
+          duration_target_games: number
+          elo_initial: number
+          elo_k_factor: number
+          end_at: string | null
+          fixtures_generated_at: string | null
+          format: string
+          id: string
+          location_privacy: string
+          notes: string | null
+          password_hash: string | null
+          place_defined: boolean
+          place_text: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
       }
       cancel_tournament: {
         Args: { p_tournament_id: string }
@@ -1025,6 +1405,172 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_league: {
+        Args: {
+          p_city: string
+          p_description?: string
+          p_duration_target_games: number
+          p_elo_initial?: number
+          p_elo_k_factor?: number
+          p_end_at?: string
+          p_format: string
+          p_location_privacy?: string
+          p_notes?: string
+          p_place_defined?: boolean
+          p_place_text?: string
+          p_start_at: string
+          p_title: string
+          p_visibility?: string
+        }
+        Returns: {
+          city: string
+          created_at: string
+          creator_id: string
+          description: string | null
+          duration_target_games: number
+          elo_initial: number
+          elo_k_factor: number
+          end_at: string | null
+          fixtures_generated_at: string | null
+          format: string
+          id: string
+          location_privacy: string
+          notes: string | null
+          password_hash: string | null
+          place_defined: boolean
+          place_text: string | null
+          start_at: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+        }
+      }
+      create_league_challenge: {
+        Args: { p_challenged_pair_id: string; p_league_id: string }
+        Returns: {
+          challenged_pair_id: string
+          challenger_pair_id: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          league_id: string
+          match_id: string | null
+          responded_at: string | null
+          status: string
+        }
+      }
+      generate_league_fixtures: {
+        Args: { p_league_id: string }
+        Returns: undefined
+      }
+      grant_league_password_access: {
+        Args: { p_league_id: string; p_password: string }
+        Returns: undefined
+      }
+      join_league_pair: {
+        Args: { p_as_text?: string; p_pair_id: string; p_slot: string }
+        Returns: {
+          created_at: string
+          created_by_user_id: string
+          current_elo: number
+          id: string
+          joined_at: string
+          league_id: string
+          name: string
+          name_is_custom: boolean
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          updated_at: string
+        }
+      }
+      list_league_matches: {
+        Args: { p_league_id: string }
+        Returns: {
+          is_second_leg: boolean
+          match_id: string
+          pair_a_id: string | null
+          pair_a_name: string | null
+          pair_b_id: string | null
+          pair_b_name: string | null
+          round_number: number | null
+          start_at: string
+          status: string
+          team_a_games: number | null
+          team_b_games: number | null
+          title: string
+        }[]
+      }
+      list_league_standings: {
+        Args: { p_league_id: string }
+        Returns: {
+          current_elo: number
+          games_against: number
+          games_diff: number
+          games_for: number
+          h2h_wins: number
+          losses: number
+          pair_id: string
+          pair_name: string
+          played: number
+          rank: number
+          wins: number
+        }[]
+      }
+      process_league_lifecycle: { Args: never; Returns: undefined }
+      record_league_match_result_as_referee: {
+        Args: { p_match_id: string; p_team_a_games: number; p_team_b_games: number }
+        Returns: undefined
+      }
+      reject_league_challenge: {
+        Args: { p_challenge_id: string }
+        Returns: {
+          challenged_pair_id: string
+          challenger_pair_id: string
+          created_at: string
+          created_by_user_id: string
+          id: string
+          league_id: string
+          match_id: string | null
+          responded_at: string | null
+          status: string
+        }
+      }
+      remove_league_pair: { Args: { p_pair_id: string }; Returns: undefined }
+      set_league_password: {
+        Args: { p_league_id: string; p_password: string }
+        Returns: undefined
+      }
+      start_open_league: { Args: { p_league_id: string }; Returns: undefined }
+      update_league_pair: {
+        Args: {
+          p_name?: string
+          p_pair_id: string
+          p_player_a_text?: string
+          p_player_b_text?: string
+        }
+        Returns: {
+          created_at: string
+          created_by_user_id: string
+          current_elo: number
+          id: string
+          joined_at: string
+          league_id: string
+          name: string
+          name_is_custom: boolean
+          player_a_text: string | null
+          player_a_user_id: string | null
+          player_b_text: string | null
+          player_b_user_id: string | null
+          updated_at: string
+        }
+      }
+      viewer_can_access_league: {
+        Args: { p_league_id: string }
+        Returns: boolean
       }
       create_tournament: {
         Args: {
@@ -1098,6 +1644,7 @@ export type Database = {
       get_own_profile: {
         Args: never
         Returns: {
+          badge_showcase: string[]
           city: string | null
           created_at: string
           display_name: string
@@ -1159,6 +1706,10 @@ export type Database = {
         Args: { p_city?: string; p_limit?: number }
         Returns: Json
       }
+      get_player_ranking: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_match_player_insights: {
         Args: { p_match_id: string; p_viewer_id?: string }
         Returns: Json
@@ -1183,6 +1734,8 @@ export type Database = {
           display_name: string
           id: string
           phone_e164: string
+          photo_url: string
+          badge_showcase: string[]
         }[]
       }
       list_user_viewable_matches: {

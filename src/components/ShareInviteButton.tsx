@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { Alert, type StyleProp, type ViewStyle } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
-import { buildMatchHttpsInviteUrl, buildTournamentHttpsInviteUrl } from '@/lib/inviteLinks'
+import {
+  buildLeagueHttpsInviteUrl,
+  buildMatchHttpsInviteUrl,
+  buildTournamentHttpsInviteUrl,
+} from '@/lib/inviteLinks'
 import { buildInviteShareMessage, shareInviteViaWhatsApp } from '@/lib/shareInvite'
 
 type ShareInviteButtonProps = {
-  kind: 'match' | 'tournament'
+  kind: 'match' | 'tournament' | 'league'
   id: string
   title: string
   meta?: string
@@ -20,7 +24,11 @@ export function ShareInviteButton({ kind, id, title, meta, style }: ShareInviteB
     setSharing(true)
     try {
       const url =
-        kind === 'match' ? buildMatchHttpsInviteUrl(id) : buildTournamentHttpsInviteUrl(id)
+        kind === 'match'
+          ? buildMatchHttpsInviteUrl(id)
+          : kind === 'tournament'
+            ? buildTournamentHttpsInviteUrl(id)
+            : buildLeagueHttpsInviteUrl(id)
       const message = buildInviteShareMessage({ kind, title, meta, url })
       await shareInviteViaWhatsApp(message)
     } catch (err) {

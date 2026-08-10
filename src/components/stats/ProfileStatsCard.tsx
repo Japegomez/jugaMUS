@@ -1,7 +1,9 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
+import { BadgeShowcaseSection } from '@/components/stats/BadgeShowcaseSection'
 import { ELOBadge } from '@/components/stats/ELOBadge'
-import { PodiumMedalsRow } from '@/components/stats/TournamentPodiumSection'
+import { RankingSection } from '@/components/stats/RankingSection'
+import { VisualPodium } from '@/components/stats/TournamentPodiumSection'
 import { usePlayerStats } from '@/hooks/useStats'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -9,9 +11,11 @@ import { Fonts } from '@/theme/typography'
 export function ProfileStatsCard({
   userId,
   onPressDetails,
+  onPressRanking,
 }: {
   userId: string
   onPressDetails: () => void
+  onPressRanking: () => void
 }) {
   const { data, isPending, isError, refetch } = usePlayerStats(userId)
 
@@ -59,18 +63,23 @@ export function ProfileStatsCard({
       <View style={styles.medalsBlock}>
         <Text style={styles.medalsLabel}>Podio</Text>
         {medalTotal > 0 ? (
-          <PodiumMedalsRow podium={data.podium} />
+          <VisualPodium podium={data.podium} compact />
         ) : (
-          <Text style={styles.medalsEmpty}>Sin medallas aún</Text>
+          <Text style={styles.medalsEmpty}>
+            Gana torneos y ligas para conseguir medallas
+          </Text>
         )}
       </View>
+
+      <RankingSection userId={userId} onPressRanking={onPressRanking} />
+
+      <BadgeShowcaseSection userId={userId} />
 
       <Pressable
         onPress={onPressDetails}
         accessibilityRole="button"
         style={({ pressed }) => [styles.detailsBtn, pressed && styles.detailsBtnPressed]}>
-        <Text style={styles.detailsBtnText}>Ver estadísticas detalladas</Text>
-        <Text style={styles.detailsBtnChevron}>›</Text>
+        <Text style={styles.detailsBtnText}>Ver detalles</Text>
       </Pressable>
     </View>
   )
@@ -141,10 +150,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   detailsBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
     minHeight: 44,
     borderRadius: 10,
     backgroundColor: Colors.primary,
@@ -156,12 +163,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.semiBold,
     fontSize: 15,
     color: Colors.white,
-  },
-  detailsBtnChevron: {
-    fontFamily: Fonts.semiBold,
-    fontSize: 20,
-    color: Colors.white,
-    lineHeight: 20,
   },
   errorText: {
     fontFamily: Fonts.regular,

@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
@@ -85,13 +86,17 @@ export default function EditTournamentScreen() {
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
 
-  const closeToTournament = () => {
-    if (!id) {
+  const closeToTournament = useCallback(() => {
+    if (router.canGoBack()) {
       router.back()
       return
     }
-    router.replace(`/(tabs)/tournaments/${id}` as Href)
-  }
+    if (id) {
+      router.replace(`/(tabs)/tournaments/${id}` as Href)
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [router, id])
 
   if (isLoading || !tournament) {
     return (

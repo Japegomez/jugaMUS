@@ -40,11 +40,18 @@ export function CreateFab({ bottom, right = 20 }: CreateFabProps) {
                 <Text style={styles.menuText}>Crear partida</Text>
               </Pressable>
               <Pressable
-                style={[styles.menuItem, styles.menuItemLast]}
+                style={styles.menuItem}
                 onPress={() => navigate('/(tabs)/tournaments/create')}
                 accessibilityRole="button"
                 accessibilityLabel="Organizar torneo">
                 <Text style={styles.menuText}>Organizar torneo</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.menuItem, styles.menuItemLast]}
+                onPress={() => navigate('/(tabs)/leagues/create')}
+                accessibilityRole="button"
+                accessibilityLabel="Organizar liga">
+                <Text style={styles.menuText}>Organizar liga</Text>
               </Pressable>
             </View>
           </View>

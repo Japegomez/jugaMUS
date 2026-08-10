@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 
 import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import type { TournamentPairRow } from '@/services/tournaments.service'
 import { displayPairName, pairMemberLabels } from '@/services/tournaments.service'
 import { Colors } from '@/theme/colors'
@@ -14,7 +15,6 @@ type PairCardProps = {
   joinLabel?: string
   onJoin?: () => void
   joinLoading?: boolean
-  editLabel?: string
   onEdit?: () => void
 }
 
@@ -25,7 +25,6 @@ export function PairCard({
   joinLabel,
   onJoin,
   joinLoading,
-  editLabel,
   onEdit,
 }: PairCardProps) {
   const members = pairMemberLabels(pair)
@@ -33,12 +32,24 @@ export function PairCard({
 
   return (
     <View style={styles.card}>
-      {members.length > 0 ? (
-        <Text style={styles.members}>{members.join(' · ')}</Text>
-      ) : (
-        <Text style={styles.empty}>Sin jugadores</Text>
-      )}
-      <Text style={styles.name}>{displayPairName(pair)}</Text>
+      <View style={styles.cardTop}>
+        <View style={styles.cardMain}>
+          {members.length > 0 ? (
+            <Text style={styles.members}>{members.join(' · ')}</Text>
+          ) : (
+            <Text style={styles.empty}>Sin jugadores</Text>
+          )}
+          <Text style={styles.name}>{displayPairName(pair)}</Text>
+        </View>
+        {onEdit ? (
+          <IconButton
+            name="create-outline"
+            onPress={onEdit}
+            accessibilityLabel="Editar pareja"
+            style={styles.editBtn}
+          />
+        ) : null}
+      </View>
       {hasEntryFee ? (
         <Text style={[styles.feeStatus, entryFeePaid ? styles.feePaid : styles.feePending]}>
           {entryFeePaid ? 'Inscripción pagada' : 'Inscripción pendiente'}
@@ -46,9 +57,6 @@ export function PairCard({
       ) : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       <View style={styles.actions}>
-        {onEdit && editLabel ? (
-          <Button title={editLabel} variant="secondary" onPress={onEdit} style={styles.actionBtn} />
-        ) : null}
         {onJoin && joinLabel ? (
           <Button
             title={joinLabel}
@@ -72,6 +80,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  cardMain: { flex: 1 },
+  editBtn: { marginTop: -4 },
   name: { fontSize: 16, fontFamily: Fonts.bold, color: Colors.textPrimary, marginTop: 6 },
   members: { fontSize: 14, color: Colors.textSecondary },
   empty: { fontSize: 14, color: Colors.textSecondary, marginTop: 4, fontStyle: 'italic' },

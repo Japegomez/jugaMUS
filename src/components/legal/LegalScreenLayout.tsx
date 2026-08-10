@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
+import { useCallback } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Button } from '@/components/ui/Button'
@@ -19,6 +20,14 @@ export function LegalScreenLayout({ title, children }: Props) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/profile' as Href)
+  }, [router])
+
   return (
     <ScrollView
       contentContainerStyle={[styles.container, { paddingTop: screenTopPadding(insets.top, 24) }]}>
@@ -28,7 +37,7 @@ export function LegalScreenLayout({ title, children }: Props) {
       </View>
       {children}
       <View style={styles.actions}>
-        <Button title="Volver" variant="outline" onPress={() => router.back()} />
+        <Button title="Volver" variant="outline" onPress={goBack} />
       </View>
     </ScrollView>
   )

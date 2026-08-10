@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { AddPairModal, type AddPairFormValues } from '@/components/tournaments/AddPairModal'
 import { EditPairModal, type EditPairFormValues } from '@/components/tournaments/EditPairModal'
 import { PairCard } from '@/components/tournaments/PairCard'
+import { AddPairButton } from '@/components/ui/AddPairButton'
 import { Button } from '@/components/ui/Button'
 import { KeyboardAwareScrollView } from '@/components/ui/KeyboardAwareScrollView'
 import { dateToLocalIsoString } from '@/components/ui/dateTimePickerUtils'
@@ -294,9 +295,13 @@ export default function CreateTournamentScreen() {
     router.replace(`/(tabs)/tournaments/${tournamentId}` as Href)
   }
 
-  const closeToMyMatches = () => {
+  const closeToMyMatches = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
     router.replace('/(tabs)/matches' as Href)
-  }
+  }, [router])
 
   const closeBar = (
     <View style={s.closeBar}>
@@ -517,7 +522,7 @@ export default function CreateTournamentScreen() {
       </Text>
 
       {pairs.length === 0 ? (
-        <Text style={s.empty}>Aún no hay parejas. Pulsa «Añadir pareja».</Text>
+        <Text style={s.empty}>Todavía no hay parejas en este torneo.</Text>
       ) : (
         pairs.map((p) => (
           <PairCard
@@ -525,15 +530,13 @@ export default function CreateTournamentScreen() {
             pair={p}
             hasEntryFee={hasEntryFee}
             subtitle={!isTournamentPairComplete(p) ? 'Falta un jugador' : undefined}
-            editLabel="Editar"
             onEdit={() => setEditingPair(p)}
           />
         ))
       )}
 
-      <Button
-        title="Añadir pareja"
-        variant="outline"
+      <AddPairButton
+        hasPairs={pairs.length > 0}
         onPress={() => setPairModalOpen(true)}
         style={s.actionBtn}
       />
@@ -544,6 +547,7 @@ export default function CreateTournamentScreen() {
         onClose={() => setPairModalOpen(false)}
         onSubmit={handleAddPair}
         loading={addPair.isPending}
+        defaultSelfSlot={userAlreadyInPair ? null : 'a'}
         selfJoinDisabled={userAlreadyInPair}
       />
 

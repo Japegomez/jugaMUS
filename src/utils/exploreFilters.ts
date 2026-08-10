@@ -1,10 +1,12 @@
-import { MATCH_STATUS, TOURNAMENT_STATUS } from '@/constants'
+import { LEAGUE_STATUS, MATCH_STATUS, TOURNAMENT_STATUS } from '@/constants'
 import type { PublicMatchExplorerRow } from '@/services/matches.service'
+import type { LeagueRow } from '@/services/leagues.service'
 import type { TournamentRow } from '@/services/tournaments.service'
 
 export type ExploreItem =
   | { kind: 'match'; id: string; start_at: string; row: PublicMatchExplorerRow }
   | { kind: 'tournament'; id: string; start_at: string; row: TournamentRow }
+  | { kind: 'league'; id: string; start_at: string; row: LeagueRow }
 
 export function filterExploreItemsForCelebrated(
   items: ExploreItem[],
@@ -17,6 +19,9 @@ export function filterExploreItemsForCelebrated(
       const status = item.row.status
       return status !== MATCH_STATUS.FINISHED && status !== MATCH_STATUS.FINISHED_NO_RESULT
     }
-    return item.row.status !== TOURNAMENT_STATUS.FINISHED
+    if (item.kind === 'tournament') {
+      return item.row.status !== TOURNAMENT_STATUS.FINISHED
+    }
+    return item.row.status !== LEAGUE_STATUS.FINISHED
   })
 }
