@@ -28,6 +28,7 @@ import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
+import { buildMatchDetailHref } from '@/utils/navigation'
 import {
   buildNotifUpdates,
   buildReminderTimingUpdates,
@@ -258,7 +259,9 @@ export default function ProfileScreen() {
           matches={userMatches}
           loading={matchesPending}
           emptyMessage="Aún no has participado en ninguna partida"
-          onMatchPress={(matchId) => router.push(`/(tabs)/matches/${matchId}`)}
+          onMatchPress={(matchId) =>
+            router.push(buildMatchDetailHref(matchId, { from: 'profile' }))
+          }
         />
       </View>
 

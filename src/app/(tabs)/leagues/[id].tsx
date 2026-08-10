@@ -67,6 +67,7 @@ import {
 } from '@/utils/leagueDisplay'
 import { formatCityAndPlace } from '@/utils/location'
 import { matchStatusDisplay } from '@/utils/matchDisplay'
+import { firstSearchParam, isSafeTabsHref, buildMatchDetailHref } from '@/utils/navigation'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -167,10 +168,47 @@ function MatchesByRound({
 }
 
 export default function LeagueDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, returnMatchId, returnFrom, returnProfileUserId, returnTo } = useLocalSearchParams<{
+    id: string
+    returnMatchId?: string
+    returnFrom?: string
+    returnProfileUserId?: string
+    returnTo?: string
+  }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
+  const returnMatchIdParam = firstSearchParam(returnMatchId)
+  const returnFromParam = firstSearchParam(returnFrom)
+  const returnProfileUserIdParam = firstSearchParam(returnProfileUserId)
+  const returnToParam = firstSearchParam(returnTo)
+
+  const closeLeagueDetail = useCallback(() => {
+    if (returnMatchIdParam) {
+      router.replace(
+        buildMatchDetailHref(returnMatchIdParam, {
+          from: returnFromParam,
+          profileUserId: returnProfileUserIdParam,
+        })
+      )
+      return
+    }
+    if (returnToParam && isSafeTabsHref(returnToParam)) {
+      router.replace(returnToParam as Href)
+      return
+    }
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [
+    router,
+    returnMatchIdParam,
+    returnFromParam,
+    returnProfileUserIdParam,
+    returnToParam,
+  ])
 
   const {
     data: league,
@@ -234,7 +272,7 @@ export default function LeagueDetailScreen() {
     return (
       <View style={[s.centered, { paddingTop: screenTopPadding(insets.top) }]}>
         <Text style={s.error}>No se pudo cargar la liga</Text>
-        <Button title="Volver" onPress={() => router.back()} />
+        <Button title="Volver" onPress={closeLeagueDetail} />
       </View>
     )
   }
@@ -303,19 +341,25 @@ export default function LeagueDetailScreen() {
   const challengeOpponents = completePairs.filter((p) => p.id !== userPairId)
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
+      <View style={s.topBar}>
+        <Pressable
+          onPress={closeLeagueDetail}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar">
+          <Text style={s.close}>✕</Text>
+        </Pressable>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[s.container, { paddingTop: screenTopPadding(insets.top, 8) }]}
+        contentContainerStyle={s.container}
         refreshControl={
           <RefreshControl
             refreshing={isRefetchingLeague || standingsQ.isRefetching || matchesQ.isRefetching}
             onRefresh={() => void refreshAll()}
           />
         }>
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button">
-          <Text style={s.back}>← Volver</Text>
-        </Pressable>
-
         <Text style={s.title}>{league.title}</Text>
         <View style={s.badgeRow}>
           <View style={[s.badge, { borderColor: status.color }]}>
@@ -603,10 +647,11 @@ export default function LeagueDetailScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
+  topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
+  close: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   container: { padding: 16, paddingBottom: 48 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   error: { color: Colors.danger, marginBottom: 12 },
-  back: { color: Colors.primary, fontFamily: Fonts.medium, marginBottom: 8 },
   title: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.textPrimary },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   badge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },

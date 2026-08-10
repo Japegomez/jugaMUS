@@ -48,6 +48,10 @@ import {
 } from '@/hooks/useMatches'
 import { useLeague } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
+import {
+  buildProfileHref,
+  firstSearchParam,
+} from '@/utils/navigation'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import {
   freeTeamSlots,
@@ -488,20 +492,56 @@ const jm = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
-  const { id, openResult, gamesA, gamesB } = useLocalSearchParams<{
+  const {
+    id,
+    openResult,
+    gamesA,
+    gamesB,
+    from,
+    profileUserId,
+  } = useLocalSearchParams<{
     id: string
     openResult?: string
     gamesA?: string
     gamesB?: string
+    from?: string
+    profileUserId?: string
   }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
+  const fromParam = firstSearchParam(from)
+  const profileUserIdParam = firstSearchParam(profileUserId)
 
-  const closeToMyMatches = useCallback(() => {
+  const closeMatchDetail = useCallback(() => {
     clearPendingMatchResultFromScoreboard(id)
+    if (fromParam === 'profile') {
+      router.replace(buildProfileHref(profileUserIdParam))
+      return
+    }
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
     router.replace('/(tabs)/matches' as Href)
-  }, [router, id])
+  }, [router, id, fromParam, profileUserIdParam])
+
+  const openParentCompetition = useCallback(
+    (kind: 'league' | 'tournament', competitionId: string) => {
+      const params = {
+        id: competitionId,
+        returnMatchId: id,
+        ...(fromParam ? { returnFrom: fromParam } : {}),
+        ...(profileUserIdParam ? { returnProfileUserId: profileUserIdParam } : {}),
+      }
+      if (kind === 'league') {
+        router.push({ pathname: '/(tabs)/leagues/[id]', params })
+      } else {
+        router.push({ pathname: '/(tabs)/tournaments/[id]', params })
+      }
+    },
+    [router, id, fromParam, profileUserIdParam]
+  )
 
   const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)
   const {
@@ -656,7 +696,7 @@ export default function MatchDetailScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No se pudo cargar la partida.</Text>
-        <Button title="Volver" onPress={closeToMyMatches} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeMatchDetail} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -977,7 +1017,7 @@ export default function MatchDetailScreen() {
         <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
           <View style={{ flex: 1 }} />
           <Pressable
-            onPress={closeToMyMatches}
+            onPress={closeMatchDetail}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Cerrar">
@@ -994,7 +1034,7 @@ export default function MatchDetailScreen() {
             </View>
             {match.tournament_id && tournamentMeta ? (
               <Pressable
-                onPress={() => router.push(`/(tabs)/tournaments/${match.tournament_id}` as Href)}
+                onPress={() => openParentCompetition('tournament', match.tournament_id!)}
                 style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
                 accessibilityRole="button"
                 accessibilityLabel={`Ir al torneo: ${tournamentMeta.title}`}>
@@ -1003,7 +1043,7 @@ export default function MatchDetailScreen() {
             ) : null}
             {match.league_id && leagueMeta ? (
               <Pressable
-                onPress={() => router.push(`/(tabs)/leagues/${match.league_id}` as Href)}
+                onPress={() => openParentCompetition('league', match.league_id!)}
                 style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
                 accessibilityRole="button"
                 accessibilityLabel={`Ir a la liga: ${leagueMeta.title}`}>

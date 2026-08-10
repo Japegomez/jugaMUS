@@ -24,6 +24,7 @@ import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
 import { openCreateContactForm } from '@/utils/contacts'
 import { formatPhone } from '@/utils/formatters'
+import { buildMatchDetailHref } from '@/utils/navigation'
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -168,7 +169,11 @@ export default function UserProfileScreen() {
             matches={matches}
             loading={matchesPending}
             emptyMessage="Sin partidas visibles en su historial"
-            onMatchPress={(matchId) => router.push(`/(tabs)/matches/${matchId}` as Href)}
+            onMatchPress={(matchId) =>
+              router.push(
+                buildMatchDetailHref(matchId, { from: 'profile', profileUserId: userId })
+              )
+            }
           />
         </View>
       </ScrollView>

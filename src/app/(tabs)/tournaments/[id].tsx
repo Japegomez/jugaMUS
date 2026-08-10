@@ -26,6 +26,7 @@ import { MATCH_STATUS, MATCH_VISIBILITY, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { confirmAlert, showAlert } from '@/utils/alert'
 import { formatCityAndPlace } from '@/utils/location'
+import { firstSearchParam, isSafeTabsHref, buildMatchDetailHref } from '@/utils/navigation'
 import { formatEntryFee } from '@/utils/tournamentForm'
 import {
   useAddTournamentPair,
@@ -80,10 +81,47 @@ function isBracketPlayableNode(node: BracketNodeRow): boolean {
 }
 
 export default function TournamentDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, returnMatchId, returnFrom, returnProfileUserId, returnTo } = useLocalSearchParams<{
+    id: string
+    returnMatchId?: string
+    returnFrom?: string
+    returnProfileUserId?: string
+    returnTo?: string
+  }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
+  const returnMatchIdParam = firstSearchParam(returnMatchId)
+  const returnFromParam = firstSearchParam(returnFrom)
+  const returnProfileUserIdParam = firstSearchParam(returnProfileUserId)
+  const returnToParam = firstSearchParam(returnTo)
+
+  const closeTournamentDetail = useCallback(() => {
+    if (returnMatchIdParam) {
+      router.replace(
+        buildMatchDetailHref(returnMatchIdParam, {
+          from: returnFromParam,
+          profileUserId: returnProfileUserIdParam,
+        })
+      )
+      return
+    }
+    if (returnToParam && isSafeTabsHref(returnToParam)) {
+      router.replace(returnToParam as Href)
+      return
+    }
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
+  }, [
+    router,
+    returnMatchIdParam,
+    returnFromParam,
+    returnProfileUserIdParam,
+    returnToParam,
+  ])
 
   const {
     data: tournament,
@@ -150,7 +188,7 @@ export default function TournamentDetailScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.error}>No se pudo cargar el torneo.</Text>
-        <Button title="Volver" onPress={() => router.back()} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeTournamentDetail} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -293,7 +331,7 @@ export default function TournamentDetailScreen() {
     <View style={[s.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={s.topBar}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={closeTournamentDetail}
           accessibilityRole="button"
           accessibilityLabel="Cerrar">
           <Text style={s.close}>✕</Text>
