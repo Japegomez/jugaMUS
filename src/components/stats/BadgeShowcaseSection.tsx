@@ -41,6 +41,7 @@ export function BadgeShowcaseSection({ userId }: { userId: string }) {
             await updateProfile.mutateAsync({ badge_showcase: next })
           } catch (err) {
             Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar el logro')
+            throw err
           }
         }}
       />

@@ -28,7 +28,7 @@ export function leagueStatusDisplay(league: {
 }
 
 export function leagueFormatDisplay(format: string): string {
-  if (format in LEAGUE_FORMAT_LABELS) {
+  if (Object.hasOwn(LEAGUE_FORMAT_LABELS, format)) {
     return LEAGUE_FORMAT_LABELS[format as LeagueFormat]
   }
   return format

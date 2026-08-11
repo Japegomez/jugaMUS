@@ -27,12 +27,12 @@ export function ShareInviteButton({ kind, id, title, meta, style }: ShareInviteB
   const handleShare = async () => {
     setSharing(true)
     try {
-      const url =
-        kind === 'match'
-          ? buildMatchHttpsInviteUrl(id)
-          : kind === 'tournament'
-            ? buildTournamentHttpsInviteUrl(id)
-            : buildLeagueHttpsInviteUrl(id)
+      const urlByKind: Record<InviteShareKind, string> = {
+        match: buildMatchHttpsInviteUrl(id),
+        tournament: buildTournamentHttpsInviteUrl(id),
+        league: buildLeagueHttpsInviteUrl(id),
+      }
+      const url = urlByKind[kind]
       const message = buildInviteShareMessage({ kind, title, meta, url })
       await shareInviteViaWhatsApp(message)
     } catch (err) {

@@ -35,6 +35,9 @@ DECLARE
   v_league_bronze INT := 0;
   v_league_part INT := 0;
   v_broke_nine BOOLEAN := FALSE;
+  -- Badges intentionally removed from the catalog but that may still
+  -- exist in historical player_stats rows.
+  v_obsolete_keys TEXT[] := ARRAY['streak_15'];
 BEGIN
   PERFORM public.ensure_player_stats_row(p_user_id);
 
@@ -167,17 +170,21 @@ BEGIN
   IF v_t_won >= 10 THEN v_keys := array_append(v_keys, 'crown_10'); END IF;
   IF v_league_gold >= 3 THEN v_keys := array_append(v_keys, 'league_crown_3'); END IF;
 
-  v_badges := '[]'::jsonb;
+  -- Preserve all previously stored badges except known obsolete keys.
+  v_badges := COALESCE((
+    SELECT jsonb_agg(e)
+    FROM jsonb_array_elements(COALESCE(v_existing, '[]'::jsonb)) e
+    WHERE NOT (e->>'key' = ANY(v_obsolete_keys))
+  ), '[]'::jsonb);
+
+  -- Ensure every currently-earned badge exists in the array.
   FOREACH v_key IN ARRAY v_keys
   LOOP
-    IF EXISTS (
-      SELECT 1 FROM jsonb_array_elements(v_existing) e
+    IF NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(v_badges) e
       WHERE e->>'key' = v_key
     ) THEN
-      v_badges := v_badges || (
-        SELECT e FROM jsonb_array_elements(v_existing) e WHERE e->>'key' = v_key LIMIT 1
-      );
-    ELSE
       v_badges := v_badges || jsonb_build_array(
         jsonb_build_object('key', v_key, 'earned_at', v_now)
       );

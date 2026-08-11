@@ -1519,7 +1519,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.cancel_league(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.process_league_lifecycle() TO authenticated;
 
 -- ── referee result for league matches ─────────────────────────────────────────
 
@@ -1562,6 +1561,9 @@ BEGIN
   RETURNING id INTO v_result_id;
 
   UPDATE public.matches SET status = 'finished' WHERE id = p_match_id;
+
+  -- Recompute player stats aggregates (async queue) after the match becomes finished.
+  PERFORM public.recompute_player_stats_for_match(p_match_id);
 
   PERFORM public.recalculate_league_elo(p_match_id);
   PERFORM public.maybe_finish_league(v_league.id);

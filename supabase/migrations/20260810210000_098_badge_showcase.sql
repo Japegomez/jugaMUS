@@ -14,15 +14,22 @@ FROM (
       (
         SELECT array_agg(k ORDER BY ord)
         FROM (
-          SELECT DISTINCT k, ord
+          SELECT k, ord
           FROM (
-            SELECT value AS k, ordinality AS ord
-            FROM unnest(badge_showcase) WITH ORDINALITY AS u(value, ordinality)
-            WHERE value IS NOT NULL AND length(value) > 0
+            SELECT
+              pg_catalog.btrim(u.value::text) AS k,
+              u.ordinality AS ord,
+              ROW_NUMBER() OVER (
+                PARTITION BY pg_catalog.btrim(u.value::text)
+                ORDER BY u.ordinality
+              ) AS rn
+            FROM pg_catalog.unnest(badge_showcase) WITH ORDINALITY AS u(value, ordinality)
+            WHERE u.value IS NOT NULL AND pg_catalog.length(pg_catalog.btrim(u.value::text)) > 0
           ) t
-          ORDER BY ord
-          LIMIT 3
+          WHERE t.rn = 1
         ) s
+        ORDER BY ord
+        LIMIT 3
       ),
       '{}'::text[]
     ) AS keys
@@ -40,7 +47,7 @@ CREATE OR REPLACE FUNCTION public.validate_badge_showcase()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 BEGIN
   IF NEW.badge_showcase IS NULL THEN
@@ -48,34 +55,34 @@ BEGIN
   END IF;
 
   -- Max 3 slots.
-  IF cardinality(NEW.badge_showcase) > 3 THEN
+  IF pg_catalog.cardinality(NEW.badge_showcase) > 3 THEN
     RAISE EXCEPTION 'badge_showcase_too_many';
   END IF;
 
   -- No empty/blank values.
   IF EXISTS (
     SELECT 1
-    FROM unnest(NEW.badge_showcase) k
-    WHERE k IS NULL OR length(btrim(k)) = 0
+    FROM pg_catalog.unnest(NEW.badge_showcase) k
+    WHERE k IS NULL OR pg_catalog.length(pg_catalog.btrim(k)) = 0
   ) THEN
     RAISE EXCEPTION 'badge_showcase_empty_value';
   END IF;
 
   -- No duplicates.
   IF (
-    SELECT COUNT(DISTINCT k) FROM unnest(NEW.badge_showcase) k
-  ) <> cardinality(NEW.badge_showcase) THEN
+    SELECT pg_catalog.count(DISTINCT k) FROM pg_catalog.unnest(NEW.badge_showcase) k
+  ) <> pg_catalog.cardinality(NEW.badge_showcase) THEN
     RAISE EXCEPTION 'badge_showcase_duplicates';
   END IF;
 
   -- Keys must exist in earned badges.
-  IF cardinality(NEW.badge_showcase) > 0 AND EXISTS (
+  IF pg_catalog.cardinality(NEW.badge_showcase) > 0 AND EXISTS (
     SELECT 1
-    FROM unnest(NEW.badge_showcase) k
+    FROM pg_catalog.unnest(NEW.badge_showcase) k
     WHERE NOT EXISTS (
       SELECT 1
       FROM public.player_stats ps,
-           jsonb_array_elements(ps.badges) b
+           pg_catalog.jsonb_array_elements(ps.badges) b
       WHERE ps.user_id = NEW.id
         AND b->>'key' = k
     )
@@ -109,7 +116,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
   SELECT
     p.id,

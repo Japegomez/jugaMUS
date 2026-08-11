@@ -89,7 +89,7 @@ AS $$
         0
       ) AS win_streak_before
     FROM streak_at_match s
-  ),
+  )
   SELECT EXISTS (
     SELECT 1
     FROM my_wins mw

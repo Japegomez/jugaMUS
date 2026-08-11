@@ -475,8 +475,6 @@ export async function listPublicLeaguesFiltered(
   if (statuses !== null && statuses.length === 0) return []
 
   // Only expose public/safe league columns to the explore endpoint.
-  // `viewer_can_read` is used to additionally restrict private leagues for the
-  // client-side filtering (RLS may also enforce it).
   let query = supabase
     .from('leagues')
     .select(
@@ -499,8 +497,6 @@ export async function listPublicLeaguesFiltered(
         'fixtures_generated_at',
         'elo_initial',
         'elo_k_factor',
-        // Helper to check access to private leagues.
-        'auth_can_read_league(id) as viewer_can_read',
       ].join(',')
     )
     .neq('status', LEAGUE_STATUS.CANCELLED)
@@ -539,14 +535,12 @@ export async function listPublicLeaguesFiltered(
 
   const { data, error } = await query.order('start_at', { ascending: true }).limit(limit)
   if (error) throw new Error(error.message)
-  const rows = (data ?? []) as unknown as (LeagueRow & { viewer_can_read?: boolean })[]
+  const rows = (data ?? []) as unknown as LeagueRow[]
 
-  return rows
-    .filter((row) => row.visibility === 'public' || Boolean(row.viewer_can_read))
-    .map((row) => ({
-      ...row,
-      place_text: row.location_privacy === 'participants_only' ? null : row.place_text,
-    })) as LeagueRow[]
+  return rows.map((row) => ({
+    ...row,
+    place_text: row.location_privacy === 'participants_only' ? null : row.place_text,
+  })) as LeagueRow[]
 }
 
 export async function getUserLeaguesDashboard(userId: string): Promise<{

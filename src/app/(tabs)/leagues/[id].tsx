@@ -249,8 +249,9 @@ export default function LeagueDetailScreen() {
   const userPairId = userId ? findUserLeaguePairId(league.pairs, userId) : null
   const completePairs = league.pairs.filter(isLeaguePairComplete)
   const canStart = isCreator && inRegistration && completePairs.length >= 2
-  const openEnded =
+  const openEnded = Boolean(
     isOpenEloFormat(league.format) && league.end_at && new Date(league.end_at).getTime() > nowMs
+  )
 
   const refreshAll = async () => {
     await refetchLeague()
@@ -318,7 +319,12 @@ export default function LeagueDetailScreen() {
         contentContainerStyle={s.container}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingLeague || standingsQ.isRefetching || matchesQ.isRefetching}
+            refreshing={
+              isRefetchingLeague ||
+              standingsQ.isRefetching ||
+              matchesQ.isRefetching ||
+              challengesQ.isRefetching
+            }
             onRefresh={() => void refreshAll()}
           />
         }>

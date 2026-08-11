@@ -771,7 +771,7 @@ export default function MatchDetailScreen() {
     match.league_id &&
     leagueMeta?.creator_id === userId &&
     allTextPlayers &&
-    isInProgress &&
+    (isInProgress || isPlannedLeagueMatch) &&
     !resultBlocksNewSubmit &&
     !isPersonalMatch
   )

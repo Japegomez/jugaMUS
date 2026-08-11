@@ -109,10 +109,7 @@ function tournamentStatusTone(tournament: TournamentRow): StatusDotTone {
 }
 
 function leagueStatusTone(league: LeagueRow): StatusDotTone {
-  if (league.status === LEAGUE_STATUS.IN_PROGRESS) return 'active'
-  if (league.status === LEAGUE_STATUS.REGISTRATION) return 'upcoming'
-  if (league.status === LEAGUE_STATUS.FINISHED) return 'upcoming' // tono neutro (gris)
-  return 'upcoming'
+  return league.status === LEAGUE_STATUS.IN_PROGRESS ? 'active' : 'upcoming'
 }
 
 function ExploreMatchRow({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
@@ -263,6 +260,7 @@ export default function ExploreScreen() {
     data: tournaments,
     isLoading: tournamentsLoading,
     isError: tournamentsIsError,
+    error: tournamentsError,
     isRefetching: tournamentsRefetching,
     refetch: refetchTournaments,
   } = usePublicTournamentsExplore(tournamentFilters)
@@ -286,6 +284,7 @@ export default function ExploreScreen() {
     data: leagues,
     isLoading: leaguesLoading,
     isError: leaguesIsError,
+    error: leaguesError,
     isRefetching: leaguesRefetching,
     refetch: refetchLeagues,
   } = usePublicLeaguesExplore(leagueFilters)
@@ -465,6 +464,11 @@ export default function ExploreScreen() {
     (showTournaments && tournamentsIsError) ||
     (showLeagues && leaguesIsError)
   ) {
+    const shownError =
+      (showMatches && isError ? error : null) ??
+      (showTournaments && tournamentsIsError ? tournamentsError : null) ??
+      (showLeagues && leaguesIsError ? leaguesError : null)
+
     return (
       <View
         style={[
@@ -473,12 +477,14 @@ export default function ExploreScreen() {
         ]}>
         <Text style={styles.errorTitle}>No se pudo cargar el listado</Text>
         <Text style={styles.errorMsg}>
-          {error instanceof Error ? error.message : 'Error desconocido'}
+          {shownError instanceof Error ? shownError.message : 'Error desconocido'}
         </Text>
-        <Text style={styles.errorHint}>
-          Si acabas de actualizar la app, aplica la migración Supabase `009_list_public_matches` en
-          tu proyecto.
-        </Text>
+        {showMatches && isError ? (
+          <Text style={styles.errorHint}>
+            Si acabas de actualizar la app, aplica la migración Supabase `009_list_public_matches`
+            en tu proyecto.
+          </Text>
+        ) : null}
         <Button title="Reintentar" onPress={() => void refetchAll()} style={{ marginTop: 16 }} />
       </View>
     )

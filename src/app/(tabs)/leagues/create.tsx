@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useFocusEffect } from '@react-navigation/native'
 import { useRouter, type Href } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -188,15 +187,6 @@ export default function CreateLeagueScreen() {
     resolver: zodResolver(schema),
     defaultValues: createDefaultFormValues(),
   })
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        // Keep current step/state while the screen stays mounted.
-        // Full reset happens after successful creation in `finish()`.
-      }
-    }, [reset])
-  )
 
   const durationValue = watch('duration_target_games')
   const visibilityValue = watch('visibility')
