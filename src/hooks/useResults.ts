@@ -9,6 +9,7 @@ import {
   invalidateMyMatchesDashboard,
   invalidatePublicExplore,
 } from '@/hooks/useMatches'
+import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import {
   fetchMatchResultBundle,
@@ -53,6 +54,9 @@ export function useSubmitResult() {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
+      if (row.status === 'confirmed') {
+        invalidatePlayerStatsCaches(queryClient)
+      }
     },
   })
 }
@@ -80,6 +84,7 @@ export function useSubmitConfirmation() {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
+      invalidatePlayerStatsCaches(queryClient)
     },
   })
 }

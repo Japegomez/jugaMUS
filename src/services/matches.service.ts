@@ -518,17 +518,28 @@ export async function getMatch(id: string): Promise<MatchWithParticipants> {
         .single()
       if (nestedError) throw new Error(nestedError.message)
       const rawNested = nested as MatchRow & {
-        participants: Array<ParticipantRow & { profile: ParticipantProfile | null }>
+        // This fallback select intentionally does NOT request phone_e164.
+        // Normalize it back to ParticipantProfile by forcing phone_e164: null.
+        participants: Array<
+          ParticipantRow & { profile: Omit<ParticipantProfile, 'phone_e164'> | null }
+        >
       }
       participants = (rawNested.participants ?? []).map((p) => ({
         ...p,
-        profile: p.profile ?? {
-          id: p.user_id,
-          display_name: 'Usuario',
-          photo_url: null,
-          city: null,
-          phone_e164: null,
-        },
+        profile: p.profile
+          ? {
+              ...p.profile,
+              // This fallback path must not expose phone numbers; keep it null even
+              // if the nested select does not request it.
+              phone_e164: null,
+            }
+          : {
+              id: p.user_id,
+              display_name: 'Usuario',
+              photo_url: null,
+              city: null,
+              phone_e164: null,
+            },
       }))
     }
   } else {
