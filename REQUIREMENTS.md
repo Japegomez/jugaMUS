@@ -36,7 +36,8 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
 - **PostHog producto (jul. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
 - **Torneos — cuadro interactivo (jul. 2026):** cada pareja en tarjeta propia; tap en pareja para registrar resultado y avanzar (modal rápido o ficha de partido). Etiquetas de ronda (cuartos, semifinal, final). Confirmación destructiva al organizar cuadro. Al cancelar torneo se cancelan **todos** los partidos del cuadro (`082`). Fix auto-cancel al poblar la final (`081`). Notificación «Validar resultado» solo si el resultado queda `pending_validation` (`083`).
-- **Versión app (ago. 2026):** **1.5.0** (`app.json`, `package.json`).
+- **Versión app (ago. 2026):** **1.7.0** (`app.json`, `package.json`).
+- **Security hardening ligas/stats (ago. 2026, mig. `106`):** `process_league_lifecycle` solo vía pg_cron (REVOKE a PUBLIC/authenticated). `enqueue_player_stats_recompute` no ejecutable por clientes. `get_player_stats` recalcula ELO/agregados solo para el propio usuario o admin; el resto lee stats cacheadas (mitiga amplificación cross-user).
 - **UI responsive (jul. 2026):** helpers `useResponsiveLayout` / `ScrollableModalBody` para escalado tipográfico y modales con scroll seguro en pantallas pequeñas.
 - **Crear partida — UX (jul.–ago. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ cierra a **Mis partidas** (no `back` a Descubrir). Sin autofocus/teclado al abrir el formulario. Etiquetas de campo en negrita; sin asteriscos ni «(opcional)» en labels de crear/editar. **Empezar partida:** sin modal de confirmación (sí aviso si plantilla incompleta). Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`). **Partida ya jugada (ago. 2026):** si `start_at` es anterior a ahora, el formulario muestra el marcador al final (casillas vacías; nombres de equipo derivados como en ficha); exige plantilla completa; al crear registra resultado directo (`record_match_result_direct`, mig. `085` admite también `finished_no_result`) y abre la partida `finished`. Orden de pareja/equipo en formularios y tarjetas: **integrantes primero, nombre después**.
 - **Locales nativos (ago. 2026):** `locales/es.json` anida claves bajo `ios` (SDK 54+) para no generar `ExtraTranslation` en Android `lintVitalRelease`.
@@ -545,6 +546,10 @@ Supabase (PostgreSQL + Auth + Storage)
   - Join a partidas: solo `planned`, visibilidad `public`/`link`, máx. 4 confirmados
   - Sentry: `sendDefaultPii: false`, replay reducido, filtrado de headers sensibles
   - OAuth release: solo scheme `jugamus://` (Expo Go schemes solo en `__DEV__`)
+- **Hardening ligas/stats (ago. 2026, migración `106`):**
+  - `process_league_lifecycle` / `process_tournament_lifecycle`: REVOKE PUBLIC + authenticated; ejecución vía cron `match-state-transitions`
+  - `enqueue_player_stats_recompute`: REVOKE PUBLIC (solo triggers/cron internos)
+  - `get_player_stats`: refresh-on-read (ELO + agregados) solo si `p_user_id = auth.uid()` o `auth_is_admin()`; resto lee cache
 
 ### Privacidad (RGPD)
 

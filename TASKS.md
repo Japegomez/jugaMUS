@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 10/08/2026 (Dependabot → `develop` + `SECURITY.md`; majors Expo vía `npx expo upgrade`)
+> Actualizado: 11/08/2026 (sync `main` → `develop` + security hardening migración `106`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -626,3 +626,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
   - `CRON_SECRET` / `EDGE_CRON_SECRET` configurados (Supabase Edge Functions + GitHub) según `.env.example` / docs.
 - [x] **`SECURITY.md` (ago. 2026)** — reporte privado de vulnerabilidades; ver también Dependabot en CI/CD hardening.
+- [x] **Security review post-sync `main` → `develop` (ago. 2026, migración `106`):**
+  - `process_league_lifecycle`: REVOKE PUBLIC/authenticated + cron `match-state-transitions` (igual que torneos).
+  - Fix typo REVOKE en migración `104` (`enqueue_player_stats_recompute`) + REVOKE defensivo en `106`.
+  - `get_player_stats`: refresh-on-read (ELO + agregados) solo para `auth.uid()` o admin; resto lee cache.

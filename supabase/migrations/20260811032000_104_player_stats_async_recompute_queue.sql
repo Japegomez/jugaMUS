@@ -31,7 +31,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute_queue(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION public.process_player_stats_recompute_queue(p_limit INT DEFAULT 50)
 RETURNS void
