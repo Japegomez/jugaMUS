@@ -7,10 +7,14 @@ import {
   buildMatchHttpsInviteUrl,
   buildTournamentHttpsInviteUrl,
 } from '@/lib/inviteLinks'
-import { buildInviteShareMessage, shareInviteViaWhatsApp } from '@/lib/shareInvite'
+import {
+  buildInviteShareMessage,
+  shareInviteViaWhatsApp,
+  type InviteShareKind,
+} from '@/lib/shareInvite'
 
 type ShareInviteButtonProps = {
-  kind: 'match' | 'tournament' | 'league'
+  kind: InviteShareKind
   id: string
   title: string
   meta?: string

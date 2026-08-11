@@ -99,7 +99,7 @@ BEGIN
   END IF;
   v_form := to_jsonb(v_form_arr);
 
-  SELECT COUNT(DISTINCT (city || '|' || COALESCE(place_text, '')))::INT
+  SELECT COUNT(DISTINCT (COALESCE(city, '') || '|' || COALESCE(place_text, '')))::INT
   INTO v_venues
   FROM public._player_confirmed_match_rows(p_user_id);
 

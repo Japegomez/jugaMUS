@@ -38,7 +38,8 @@ export function generateRoundRobinFixtures(
 
     for (let i = 0; i < half - 1; i++) {
       const h = rot[i]
-      const a = rot[rot.length - 1 - i]
+      // Evita emparejar de nuevo el elemento fijo que ya se usó contra `away`.
+      const a = rot[rot.length - 2 - i]
       if (!h || !a) continue
       if ((round + i) % 2 === 0) {
         fixtures.push({ pairAId: a, pairBId: h, roundNumber: round, isSecondLeg: false })

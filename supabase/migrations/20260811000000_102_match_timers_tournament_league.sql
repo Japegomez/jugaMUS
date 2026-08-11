@@ -136,7 +136,7 @@ BEGIN
   --    - Torneos: 24h
   --    - Ligas: sin timeout automatico (se excluyen)
   FOR v_match IN
-    SELECT id, title, start_at FROM public.matches
+    SELECT id, title, start_at, tournament_id FROM public.matches
     WHERE status   = 'in_progress'
       AND league_id IS NULL
       AND (

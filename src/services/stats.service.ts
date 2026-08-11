@@ -430,7 +430,7 @@ export const BADGE_LABELS: Record<string, string> = {
 }
 
 export const BADGE_CATALOG: ReadonlyArray<{
-  key: keyof typeof BADGE_LABELS | string
+  key: keyof typeof BADGE_LABELS
   emoji: string
   hint: string
 }> = [

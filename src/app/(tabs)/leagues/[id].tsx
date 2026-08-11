@@ -19,9 +19,7 @@ import {
 import { CancelLeagueModal } from '@/components/leagues/CancelLeagueModal'
 import { ChallengeList } from '@/components/leagues/ChallengeList'
 import { ChallengeModal } from '@/components/leagues/ChallengeModal'
-import {
-  EditLeaguePairModal,
-} from '@/components/leagues/EditLeaguePairModal'
+import { EditLeaguePairModal } from '@/components/leagues/EditLeaguePairModal'
 import { EloRanking } from '@/components/leagues/EloRanking'
 import { LeaguePairCard } from '@/components/leagues/LeaguePairCard'
 import { StandingsTable } from '@/components/leagues/StandingsTable'
@@ -73,13 +71,7 @@ import { screenTopPadding } from '@/theme/layout'
 
 type TabKey = 'standings' | 'matches' | 'pairs'
 
-function LeagueMatchCard({
-  match,
-  onPress,
-}: {
-  match: LeagueMatchRow
-  onPress: () => void
-}) {
+function LeagueMatchCard({ match, onPress }: { match: LeagueMatchRow; onPress: () => void }) {
   const status = matchStatusDisplay({ status: match.status })
   const score =
     match.team_a_games != null && match.team_b_games != null
@@ -154,11 +146,7 @@ function MatchesByRound({
         <View key={g.key} style={s.roundGroup}>
           <Text style={s.roundLabel}>{g.label}</Text>
           {g.matches.map((m) => (
-            <LeagueMatchCard
-              key={m.match_id}
-              match={m}
-              onPress={() => onMatchPress(m.match_id)}
-            />
+            <LeagueMatchCard key={m.match_id} match={m} onPress={() => onMatchPress(m.match_id)} />
           ))}
         </View>
       ))}
@@ -195,18 +183,22 @@ export default function LeagueDetailScreen() {
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
   const [cancelVisible, setCancelVisible] = useState(false)
   const [nowMs, setNowMs] = useState(() => Date.now())
+  const [challengeActionId, setChallengeActionId] = useState<string | null>(null)
 
   const needsPassword = Boolean(
     league &&
-      league.visibility === MATCH_VISIBILITY.PRIVATE &&
-      league.viewer_has_full_access === false
+    league.visibility === MATCH_VISIBILITY.PRIVATE &&
+    league.viewer_has_full_access === false
   )
   const passwordModalVisible = needsPassword && !passwordModalDismissed
   const fullAccess = !needsPassword
 
   const standingsQ = useLeagueStandings(id, fullAccess)
   const matchesQ = useLeagueMatches(id, fullAccess)
-  const challengesQ = useLeagueChallenges(id, fullAccess && Boolean(league && isOpenEloFormat(league.format)))
+  const challengesQ = useLeagueChallenges(
+    id,
+    fullAccess && Boolean(league && isOpenEloFormat(league.format))
+  )
 
   const grantAccess = useGrantLeaguePasswordAccess()
   const addPair = useAddLeaguePair()
@@ -258,9 +250,7 @@ export default function LeagueDetailScreen() {
   const completePairs = league.pairs.filter(isLeaguePairComplete)
   const canStart = isCreator && inRegistration && completePairs.length >= 2
   const openEnded =
-    isOpenEloFormat(league.format) &&
-    league.end_at &&
-    new Date(league.end_at).getTime() > nowMs
+    isOpenEloFormat(league.format) && league.end_at && new Date(league.end_at).getTime() > nowMs
 
   const refreshAll = async () => {
     await refetchLeague()
@@ -453,12 +443,9 @@ export default function LeagueDetailScreen() {
                       challenges={challengesQ.data ?? []}
                       userPairId={userPairId}
                       isOrganizer={isCreator}
-                      actionLoadingId={
-                        acceptChallenge.isPending || rejectChallenge.isPending
-                          ? 'busy'
-                          : null
-                      }
-                      onAccept={(challengeId) =>
+                      actionLoadingId={challengeActionId}
+                      onAccept={(challengeId) => {
+                        setChallengeActionId(challengeId)
                         void acceptChallenge
                           .mutateAsync({ challengeId, leagueId: id })
                           .then((ch) => {
@@ -472,8 +459,10 @@ export default function LeagueDetailScreen() {
                               err instanceof Error ? err.message : 'No se pudo aceptar'
                             )
                           )
-                      }
-                      onReject={(challengeId) =>
+                          .finally(() => setChallengeActionId(null))
+                      }}
+                      onReject={(challengeId) => {
+                        setChallengeActionId(challengeId)
                         void rejectChallenge
                           .mutateAsync({ challengeId, leagueId: id })
                           .catch((err) =>
@@ -482,7 +471,8 @@ export default function LeagueDetailScreen() {
                               err instanceof Error ? err.message : 'No se pudo rechazar'
                             )
                           )
-                      }
+                          .finally(() => setChallengeActionId(null))
+                      }}
                     />
                   </View>
                 ) : null}
@@ -572,12 +562,8 @@ export default function LeagueDetailScreen() {
               pairId: editingPair.id,
               leagueId: id,
               name: values.name.trim() || undefined,
-              playerAText: editingPair.player_a_user_id
-                ? null
-                : values.playerAText.trim() || null,
-              playerBText: editingPair.player_b_user_id
-                ? null
-                : values.playerBText.trim() || null,
+              playerAText: editingPair.player_a_user_id ? null : values.playerAText.trim() || null,
+              playerBText: editingPair.player_b_user_id ? null : values.playerBText.trim() || null,
             })
             setEditingPair(null)
           } catch (err) {
@@ -625,7 +611,12 @@ const s = StyleSheet.create({
   topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
   close: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   container: { padding: 16, paddingBottom: 48 },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
   error: { color: Colors.danger, marginBottom: 12 },
   title: { fontSize: 24, fontFamily: Fonts.bold, color: Colors.textPrimary },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },

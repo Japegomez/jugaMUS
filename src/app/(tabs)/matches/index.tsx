@@ -15,13 +15,12 @@ import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
-import { LEAGUE_STATUS, TOURNAMENT_STATUS } from '@/constants'
+import { TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
 import type { MyMatchesDashboard } from '@/services/matches.service'
-import type { UserLeagueSummary } from '@/services/leagues.service'
 import type { UserTournamentSummary } from '@/services/tournaments.service'
-import { leagueFormatDisplay } from '@/utils/leagueDisplay'
+import { leagueFormatDisplay, leagueStatusDisplay } from '@/utils/leagueDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -111,12 +110,6 @@ function tournamentStatusLabel(t: UserTournamentSummary): string {
   return 'Inscripción abierta'
 }
 
-function leagueStatusLabel(l: UserLeagueSummary): string {
-  if (l.status === LEAGUE_STATUS.IN_PROGRESS) return 'En curso'
-  if (l.fixtures_generated_at) return 'Inscripción'
-  return 'Inscripción abierta'
-}
-
 function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
   const awaitingIds = new Set(data.awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = data.inProgress.filter((m) => !awaitingIds.has(m.id))
@@ -197,7 +190,7 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       location: matchLocation(l),
       startAt: l.start_at,
       tone: 'active' as const,
-      statusLabel: leagueStatusLabel(l),
+      statusLabel: leagueStatusDisplay(l).text,
       hint: l.isOrganizer ? 'Organizas esta liga' : undefined,
       hintTone: l.isOrganizer ? ('info' as const) : undefined,
     })),
@@ -243,7 +236,7 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
       location: matchLocation(l),
       startAt: l.start_at,
       tone: 'upcoming' as const,
-      statusLabel: leagueStatusLabel(l),
+      statusLabel: leagueStatusDisplay(l).text,
       hint: l.isOrganizer ? 'Organizas esta liga' : undefined,
       hintTone: l.isOrganizer ? ('info' as const) : undefined,
     })),

@@ -192,12 +192,8 @@ export default function CreateLeagueScreen() {
   useFocusEffect(
     useCallback(() => {
       return () => {
-        setStep(1)
-        setLeagueId(null)
-        setPairs([])
-        setPairModalOpen(false)
-        setEditingPair(null)
-        reset(createDefaultFormValues())
+        // Keep current step/state while the screen stays mounted.
+        // Full reset happens after successful creation in `finish()`.
       }
     }, [reset])
   )
@@ -214,12 +210,7 @@ export default function CreateLeagueScreen() {
           description: values.description || null,
           notes: values.notes || null,
           start_at: values.start_at,
-          end_at:
-            values.format === LEAGUE_FORMAT.OPEN_ELO
-              ? values.end_at || null
-              : values.end_at?.trim()
-                ? values.end_at
-                : null,
+          end_at: values.format === LEAGUE_FORMAT.OPEN_ELO ? values.end_at?.trim() || null : null,
           city: values.city?.trim() || DEFAULT_LEAGUE_CITY,
           ...leaguePlacePayload(values.place_text),
           duration_target_games: values.duration_target_games,
@@ -300,6 +291,13 @@ export default function CreateLeagueScreen() {
   const finish = async () => {
     if (!leagueId) return
     await acknowledgeAlert(AUTO_START_LEAGUE_ALERT.title, AUTO_START_LEAGUE_ALERT.message)
+    // Full reset after creation flow completion.
+    setStep(1)
+    setLeagueId(null)
+    setPairs([])
+    setPairModalOpen(false)
+    setEditingPair(null)
+    reset(createDefaultFormValues())
     router.replace(`/(tabs)/leagues/${leagueId}` as Href)
   }
 
@@ -371,7 +369,12 @@ export default function CreateLeagueScreen() {
               key={fmt}
               label={LEAGUE_FORMAT_LABELS[fmt]}
               selected={formatValue === fmt}
-              onPress={() => setValue('format', fmt, { shouldValidate: true })}
+              onPress={() => {
+                setValue('format', fmt, { shouldValidate: true })
+                if (fmt === LEAGUE_FORMAT.OPEN_ELO) {
+                  setValue('end_at', defaultEndAt())
+                }
+              }}
             />
           ))}
         </View>
@@ -396,7 +399,7 @@ export default function CreateLeagueScreen() {
             render={({ field }) => (
               <DateTimePicker
                 label="Fin (obligatorio)"
-                value={field.value || defaultEndAt()}
+                value={field.value ?? ''}
                 onChange={field.onChange}
                 error={errors.end_at?.message}
               />

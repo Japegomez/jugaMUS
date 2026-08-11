@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Alert, StyleSheet, Text, View } from 'react-native'
 
 import { BadgeShowcase } from '@/components/stats/BadgeShowcase'
 import { useAuthStore } from '@/hooks/useAuth'
@@ -37,7 +37,11 @@ export function BadgeShowcaseSection({ userId }: { userId: string }) {
         canEdit={isOwn}
         saving={updateProfile.isPending}
         onChange={async (next) => {
-          await updateProfile.mutateAsync({ badge_showcase: next })
+          try {
+            await updateProfile.mutateAsync({ badge_showcase: next })
+          } catch (err) {
+            Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo guardar el logro')
+          }
         }}
       />
     </View>

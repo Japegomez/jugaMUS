@@ -3,22 +3,6 @@
 --   - profile_is_viewable_by_auth / get_public_profile: include league pairs.
 --   - add_league_pair / join_league_pair: use display_name (not 'Jugador') when generating the auto pair name.
 
--- ── profiles SELECT policy for league/tournament pair members ─────────────────
-
-CREATE POLICY profiles_select_pair_member ON public.profiles
-  FOR SELECT TO authenticated USING (
-    EXISTS (
-      SELECT 1 FROM public.league_pairs lp
-      WHERE public.auth_can_read_league(lp.league_id)
-        AND (lp.player_a_user_id = profiles.id OR lp.player_b_user_id = profiles.id)
-    )
-    OR EXISTS (
-      SELECT 1 FROM public.tournament_pairs tp
-      WHERE public.auth_can_read_tournament(tp.tournament_id)
-        AND (tp.player_a_user_id = profiles.id OR tp.player_b_user_id = profiles.id)
-    )
-  );
-
 -- ── profile_is_viewable_by_auth: include league pairs ──────────────────────────
 
 CREATE OR REPLACE FUNCTION public.profile_is_viewable_by_auth(p_profile_id UUID)
@@ -104,7 +88,9 @@ SET search_path = public
 AS $$
   SELECT COALESCE(
     NULLIF(BTRIM(COALESCE(p_text, '')), ''),
-    (SELECT display_name FROM public.profiles WHERE id = p_user_id),
+    (SELECT gp.display_name
+     FROM public.get_public_profile(p_user_id) gp
+     LIMIT 1),
     'Jugador'
   );
 $$;

@@ -20,7 +20,12 @@ export function BadgeUnlockPopup({
   if (!badge) return null
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      accessibilityViewIsModal>
       <View style={styles.backdrop}>
         <View style={styles.confettiWrap} pointerEvents="none">
           <ConfettiCannon
@@ -35,7 +40,7 @@ export function BadgeUnlockPopup({
         </View>
 
         <View style={styles.card}>
-          <View style={styles.emojiWrap}>
+          <View style={styles.emojiWrap} accessibilityElementsHidden importantForAccessibility="no">
             <Text style={styles.emoji}>{badge.emoji}</Text>
           </View>
           <Text style={styles.title}>¡Nuevo logro!</Text>

@@ -168,13 +168,17 @@ UPDATE public.matches m
 SET team_a_name = public.league_pair_display_name(lp)
 FROM public.league_pairs lp
 WHERE m.league_pair_a_id = lp.id
-  AND m.league_id IS NOT NULL;
+  AND m.league_id IS NOT NULL
+  AND m.status IN ('planned', 'in_progress')
+  AND lp.name ~ '(^Jugador(\s|$|-)|-\s*Jugador(\s|$))';
 
 UPDATE public.matches m
 SET team_b_name = public.league_pair_display_name(lp)
 FROM public.league_pairs lp
 WHERE m.league_pair_b_id = lp.id
-  AND m.league_id IS NOT NULL;
+  AND m.league_id IS NOT NULL
+  AND m.status IN ('planned', 'in_progress')
+  AND lp.name ~ '(^Jugador(\s|$|-)|-\s*Jugador(\s|$))';
 
 UPDATE public.matches m
 SET team_a_name = public.tournament_pair_display_name(tp)

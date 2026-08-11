@@ -100,8 +100,34 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+  v_player_updated TIMESTAMPTZ;
+  v_last_confirmed TIMESTAMPTZ;
 BEGIN
   IF p_user_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Si player_stats ya está al día con el último partido confirmado, evita recalcular
+  -- (aproximación de "no recalcular ELO en cada lectura").
+  SELECT ps.updated_at
+  INTO v_player_updated
+  FROM public.player_stats ps
+  WHERE ps.user_id = p_user_id;
+
+  SELECT MAX(m.updated_at)
+  INTO v_last_confirmed
+  FROM public.match_participants mp
+  JOIN public.matches m ON m.id = mp.match_id
+  JOIN public.match_results mr
+    ON mr.match_id = m.id AND mr.status = 'confirmed'
+  WHERE mp.user_id = p_user_id
+    AND mp.state = 'confirmed';
+
+  IF v_player_updated IS NOT NULL
+     AND v_last_confirmed IS NOT NULL
+     AND v_player_updated >= v_last_confirmed
+  THEN
     RETURN;
   END IF;
 
