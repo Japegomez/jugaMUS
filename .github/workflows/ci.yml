@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [develop, main]
 
+# Caller workflow invokes reusable workflow (quality.yml).
+# It must allow the permissions required by the called workflow checkout.
+permissions:
+  contents: read
+
 jobs:
   quality:
     uses: ./.github/workflows/quality.yml
