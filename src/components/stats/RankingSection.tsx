@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { usePlayerRanking, usePlayerStats } from '@/hooks/useStats'
+import { usePlayerRanking } from '@/hooks/useStats'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
@@ -13,13 +13,12 @@ function formatRank(rank: number | null | undefined, total?: number | null): str
 export function RankingSection({
   userId,
   onPressRanking,
+  statsReady,
 }: {
   userId: string
   onPressRanking: () => void
+  statsReady: boolean
 }) {
-  // Esperar a que get_player_stats termine el refresh de ELO antes de leer ranking
-  const statsQuery = usePlayerStats(userId)
-  const statsReady = Boolean(statsQuery.data) && !statsQuery.isFetching
   const { data, isPending, isError } = usePlayerRanking(userId, { enabled: statsReady })
 
   return (

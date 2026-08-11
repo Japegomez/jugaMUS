@@ -20,6 +20,14 @@ export function useBadgeUnlocks() {
   const [current, setCurrent] = useState<UnlockedBadge | null>(null)
 
   useEffect(() => {
+    // Reset badge-tracking when switching accounts so we don't carry over unlocks.
+    knownKeysRef.current = null
+    queueRef.current = []
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCurrent(null)
+  }, [sessionUserId])
+
+  useEffect(() => {
     if (!stats) return
     const keys = stats.badges.map((b: PlayerBadge) => b.key)
 
@@ -37,8 +45,9 @@ export function useBadgeUnlocks() {
       queueRef.current.push({ key, emoji: BADGE_EMOJIS.get(key) ?? '🏅' })
     })
 
-    setCurrent((prev) => prev ?? queueRef.current.shift() ?? null)
-  }, [stats])
+    const nextBadge = current == null ? (queueRef.current.shift() ?? null) : null
+    setCurrent((prev) => prev ?? nextBadge)
+  }, [stats, current])
 
   const dismiss = () => {
     setCurrent(queueRef.current.shift() ?? null)

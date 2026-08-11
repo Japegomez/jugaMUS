@@ -7,7 +7,31 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  WITH outcomes AS (
+  WITH my_wins AS (
+    SELECT
+      m.id AS match_id,
+      m.start_at,
+      opp.user_id AS opp_id
+    FROM public.match_participants me
+    JOIN public.matches m ON m.id = me.match_id
+    JOIN public.match_results mr ON mr.match_id = m.id AND mr.status = 'confirmed'
+    JOIN public.match_participants opp
+      ON opp.match_id = me.match_id
+     AND opp.user_id <> me.user_id
+     AND opp.team <> me.team
+     AND opp.state = 'confirmed'
+    WHERE me.user_id = p_user_id
+      AND me.state = 'confirmed'
+      AND m.status = 'finished'
+      AND COALESCE(m.tournament_is_bye, FALSE) = FALSE
+      AND public._player_won_match(me.team, mr.team_a_games, mr.team_b_games) IS TRUE
+  ),
+  defeated_opponents AS (
+    SELECT DISTINCT
+      mw.opp_id AS user_id
+    FROM my_wins mw
+  ),
+  outcomes AS (
     SELECT
       mp.user_id,
       m.id AS match_id,
@@ -23,6 +47,7 @@ AS $$
       AND m.status = 'finished'
       AND COALESCE(m.tournament_is_bye, FALSE) = FALSE
       AND public._player_won_match(mp.team, mr.team_a_games, mr.team_b_games) IS NOT NULL
+      AND mp.user_id IN (SELECT user_id FROM defeated_opponents)
   ),
   grouped AS (
     SELECT
@@ -64,25 +89,6 @@ AS $$
         0
       ) AS win_streak_before
     FROM streak_at_match s
-  ),
-  my_wins AS (
-    SELECT
-      m.id AS match_id,
-      m.start_at,
-      opp.user_id AS opp_id
-    FROM public.match_participants me
-    JOIN public.matches m ON m.id = me.match_id
-    JOIN public.match_results mr ON mr.match_id = m.id AND mr.status = 'confirmed'
-    JOIN public.match_participants opp
-      ON opp.match_id = me.match_id
-     AND opp.user_id <> me.user_id
-     AND opp.team <> me.team
-     AND opp.state = 'confirmed'
-    WHERE me.user_id = p_user_id
-      AND me.state = 'confirmed'
-      AND m.status = 'finished'
-      AND COALESCE(m.tournament_is_bye, FALSE) = FALSE
-      AND public._player_won_match(me.team, mr.team_a_games, mr.team_b_games) IS TRUE
   )
   SELECT EXISTS (
     SELECT 1
@@ -192,7 +198,7 @@ BEGIN
   END IF;
   v_form := to_jsonb(v_form_arr);
 
-  SELECT COUNT(DISTINCT (city || '|' || COALESCE(place_text, '')))::INT
+  SELECT COUNT(DISTINCT (COALESCE(city, '') || '|' || COALESCE(place_text, '')))::INT
   INTO v_venues
   FROM public._player_confirmed_match_rows(p_user_id);
 

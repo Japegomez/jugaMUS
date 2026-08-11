@@ -46,7 +46,7 @@ import {
   useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
-import { useLeague } from '@/hooks/useLeagues'
+import { useLeague, useRecordLeagueMatchAsReferee } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import {
@@ -119,6 +119,7 @@ function ParticipantCard({
   const router = useRouter()
   const [fullProfile, setFullProfile] = useState<ParticipantProfile | null>(null)
   const [loading, setLoading] = useState(false)
+  const [creatingContact, setCreatingContact] = useState(false)
   const canOpenProfile = Boolean(
     participant.user_id && currentUserId && participant.user_id !== currentUserId
   )
@@ -143,16 +144,22 @@ function ParticipantCard({
   if (!p) return null
 
   const handleCreateContact = async () => {
+    if (creatingContact) return
     const phone = fullProfile?.phone_e164?.trim()
     if (!phone) return
-    const result = await openCreateContactForm({
-      displayName: p.display_name,
-      phoneE164: phone,
-    })
-    if (result === 'unsupported') {
-      Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
-    } else if (result === 'error') {
-      Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+    setCreatingContact(true)
+    try {
+      const result = await openCreateContactForm({
+        displayName: p.display_name,
+        phoneE164: phone,
+      })
+      if (result === 'unsupported') {
+        Alert.alert('Número copiado', 'El teléfono se ha copiado al portapapeles.')
+      } else if (result === 'error') {
+        Alert.alert('Error', 'No se pudo abrir la ficha de contacto.')
+      }
+    } finally {
+      setCreatingContact(false)
     }
   }
 
@@ -185,6 +192,7 @@ function ParticipantCard({
                 accessibilityRole="button"
                 accessibilityLabel={`Crear contacto con ${p.display_name}`}
                 style={({ pressed }) => [card.phoneBtn, pressed && card.phoneBtnPressed]}
+                disabled={creatingContact}
                 hitSlop={8}>
                 <Text style={card.phone}>{formatPhone(fullProfile.phone_e164)}</Text>
                 <Ionicons name="person-add-outline" size={16} color={Colors.primary} />
@@ -488,12 +496,7 @@ const jm = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
-  const {
-    id,
-    openResult,
-    gamesA,
-    gamesB,
-  } = useLocalSearchParams<{
+  const { id, openResult, gamesA, gamesB } = useLocalSearchParams<{
     id: string
     openResult?: string
     gamesA?: string
@@ -546,6 +549,7 @@ export default function MatchDetailScreen() {
   const submitConfirmationMut = useSubmitConfirmation()
   const recordResultDirectMut = useRecordMatchResultDirect()
   const recordRefereeMut = useRecordTournamentMatchAsReferee()
+  const recordLeagueRefereeMut = useRecordLeagueMatchAsReferee()
 
   const tournamentId = match?.tournament_id ?? null
   const { data: tournamentMeta } = useTournament(tournamentId ?? '')
@@ -725,14 +729,17 @@ export default function MatchDetailScreen() {
     myParticipation &&
     !isPersonalMatch &&
     match.status !== MATCH_STATUS.CANCELLED &&
-    (isInProgress ||
-      match.status === MATCH_STATUS.FINISHED_NO_RESULT ||
-      isPlannedLeagueMatch) &&
+    (isInProgress || match.status === MATCH_STATUS.FINISHED_NO_RESULT || isPlannedLeagueMatch) &&
     !resultBlocksNewSubmit
   )
 
   const canRecordDirect = Boolean(
-    userId && isPersonalMatch && isInProgress && !resultBlocksNewSubmit && !match.tournament_id
+    userId &&
+    isPersonalMatch &&
+    isInProgress &&
+    !resultBlocksNewSubmit &&
+    !match.tournament_id &&
+    !match.league_id
   )
 
   // También permitimos llevar la cuenta en partidos de torneos (no durante validación de resultado).
@@ -749,7 +756,7 @@ export default function MatchDetailScreen() {
       match.team_b_player_2?.trim()
     )
 
-  const canRecordAsReferee = Boolean(
+  const canRecordAsTournamentReferee = Boolean(
     userId &&
     match.tournament_id &&
     tournamentMeta?.creator_id === userId &&
@@ -758,6 +765,18 @@ export default function MatchDetailScreen() {
     !resultBlocksNewSubmit &&
     !match.tournament_is_bye
   )
+
+  const canRecordAsLeagueReferee = Boolean(
+    userId &&
+    match.league_id &&
+    leagueMeta?.creator_id === userId &&
+    allTextPlayers &&
+    (isInProgress || isPlannedLeagueMatch) &&
+    !resultBlocksNewSubmit &&
+    !isPersonalMatch
+  )
+
+  const canRecordAsReferee = canRecordAsTournamentReferee || canRecordAsLeagueReferee
 
   const canValidateResult = Boolean(
     userId &&
@@ -927,14 +946,25 @@ export default function MatchDetailScreen() {
   }
 
   const handleRecordAsReferee = async (payload: { teamAGames: number; teamBGames: number }) => {
-    if (!userId || !match.tournament_id) return
+    if (!userId || isPersonalMatch || match.status === MATCH_STATUS.CANCELLED) return
     try {
-      await recordRefereeMut.mutateAsync({
-        matchId: id,
-        tournamentId: match.tournament_id,
-        teamAGames: payload.teamAGames,
-        teamBGames: payload.teamBGames,
-      })
+      if (match.tournament_id) {
+        await recordRefereeMut.mutateAsync({
+          matchId: id,
+          tournamentId: match.tournament_id,
+          teamAGames: payload.teamAGames,
+          teamBGames: payload.teamBGames,
+        })
+      } else if (match.league_id) {
+        await recordLeagueRefereeMut.mutateAsync({
+          matchId: id,
+          leagueId: match.league_id,
+          teamAGames: payload.teamAGames,
+          teamBGames: payload.teamBGames,
+        })
+      } else {
+        return
+      }
       setRecordRefereeVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
@@ -1403,9 +1433,13 @@ export default function MatchDetailScreen() {
         teamAName={teamAName}
         teamBName={teamBName}
         durationTargetGames={match.duration_target_games}
-        hint="Como organizador del torneo, el marcador queda confirmado al guardar."
+        hint={
+          match.league_id
+            ? 'Como organizador de la liga, el marcador queda confirmado al guardar.'
+            : 'Como organizador del torneo, el marcador queda confirmado al guardar.'
+        }
         submitLabel="Confirmar marcador"
-        loading={recordRefereeMut.isPending}
+        loading={match.league_id ? recordLeagueRefereeMut.isPending : recordRefereeMut.isPending}
         onSubmit={handleRecordAsReferee}
       />
 

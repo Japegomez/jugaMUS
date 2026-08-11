@@ -63,15 +63,45 @@ AS $$
     FROM public.league_pairs lp
     WHERE lp.league_id IN (SELECT DISTINCT up.league_id FROM user_pairs up)
   ),
+  h2h AS (
+    SELECT
+      ps.league_id,
+      ps.pair_id,
+      COALESCE(
+        COUNT(*) FILTER (
+          WHERE
+            (c.pair_a = ps.pair_id AND c.team_a_games > c.team_b_games)
+            OR (c.pair_b = ps.pair_id AND c.team_b_games > c.team_a_games)
+        ),
+        0
+      )::INT AS h2h_wins
+    FROM pair_stats ps
+    JOIN confirmed c
+      ON c.league_id = ps.league_id
+     AND (c.pair_a = ps.pair_id OR c.pair_b = ps.pair_id)
+    JOIN pair_stats opp
+      ON opp.league_id = ps.league_id
+     AND opp.pair_id = CASE WHEN c.pair_a = ps.pair_id THEN c.pair_b ELSE c.pair_a END
+     AND opp.wins = ps.wins
+    GROUP BY ps.league_id, ps.pair_id
+  ),
   ranked AS (
     SELECT
       ps.league_id,
       ps.pair_id,
       ROW_NUMBER() OVER (
         PARTITION BY ps.league_id
-        ORDER BY ps.wins DESC, (ps.games_for - ps.games_against) DESC, ps.games_for DESC, ps.pair_id
+        ORDER BY
+          ps.wins DESC,
+          COALESCE(h2h.h2h_wins, 0) DESC,
+          (ps.games_for - ps.games_against) DESC,
+          ps.games_for DESC,
+          ps.pair_id
       )::INT AS rank
     FROM pair_stats ps
+    LEFT JOIN h2h
+      ON h2h.league_id = ps.league_id
+     AND h2h.pair_id = ps.pair_id
   )
   SELECT r.league_id, r.rank
   FROM ranked r
@@ -175,7 +205,7 @@ BEGIN
   END IF;
   v_form := to_jsonb(v_form_arr);
 
-  SELECT COUNT(DISTINCT (city || '|' || COALESCE(place_text, '')))::INT
+  SELECT COUNT(DISTINCT (COALESCE(city, '') || '|' || COALESCE(place_text, '')))::INT
   INTO v_venues
   FROM public._player_confirmed_match_rows(p_user_id);
 

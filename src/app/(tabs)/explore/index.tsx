@@ -47,7 +47,7 @@ import type {
 } from '@/services/matches.service'
 import type { LeagueRow, PublicLeaguesListFilters } from '@/services/leagues.service'
 import type { PublicTournamentsListFilters, TournamentRow } from '@/services/tournaments.service'
-import { leagueFormatDisplay } from '@/utils/leagueDisplay'
+import { leagueFormatDisplay, leagueStatusDisplay } from '@/utils/leagueDisplay'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 import { screenTopPadding } from '@/theme/layout'
@@ -108,23 +108,8 @@ function tournamentStatusTone(tournament: TournamentRow): StatusDotTone {
   return 'upcoming'
 }
 
-function leagueStatusLabel(league: LeagueRow) {
-  switch (league.status) {
-    case LEAGUE_STATUS.REGISTRATION:
-      return 'Inscripción abierta'
-    case LEAGUE_STATUS.IN_PROGRESS:
-      return 'En curso'
-    case LEAGUE_STATUS.FINISHED:
-      return 'Finalizada'
-    default:
-      return league.status
-  }
-}
-
 function leagueStatusTone(league: LeagueRow): StatusDotTone {
-  if (league.status === LEAGUE_STATUS.IN_PROGRESS) return 'active'
-  if (league.status === LEAGUE_STATUS.REGISTRATION) return 'upcoming'
-  return 'upcoming'
+  return league.status === LEAGUE_STATUS.IN_PROGRESS ? 'active' : 'upcoming'
 }
 
 function ExploreMatchRow({ row, onPress }: { row: PublicMatchExplorerRow; onPress: () => void }) {
@@ -208,7 +193,7 @@ function ExploreLeagueRow({ row, onPress }: { row: LeagueRow; onPress: () => voi
       </View>
       <View style={styles.rowTrailing}>
         <Text style={[styles.rowStatus, tone === 'active' && styles.rowStatusActive]}>
-          {leagueStatusLabel(row)}
+          {leagueStatusDisplay(row).text}
         </Text>
         <Text style={styles.rowDate}>{formatDisplay(row.start_at)}</Text>
         <Text style={styles.rowExtra}>
@@ -274,6 +259,8 @@ export default function ExploreScreen() {
   const {
     data: tournaments,
     isLoading: tournamentsLoading,
+    isError: tournamentsIsError,
+    error: tournamentsError,
     isRefetching: tournamentsRefetching,
     refetch: refetchTournaments,
   } = usePublicTournamentsExplore(tournamentFilters)
@@ -296,6 +283,8 @@ export default function ExploreScreen() {
   const {
     data: leagues,
     isLoading: leaguesLoading,
+    isError: leaguesIsError,
+    error: leaguesError,
     isRefetching: leaguesRefetching,
     refetch: refetchLeagues,
   } = usePublicLeaguesExplore(leagueFilters)
@@ -441,12 +430,9 @@ export default function ExploreScreen() {
     </View>
   )
 
-  const showMatches =
-    filters.contentType !== 'tournaments' && filters.contentType !== 'leagues'
-  const showTournaments =
-    filters.contentType !== 'matches' && filters.contentType !== 'leagues'
-  const showLeagues =
-    filters.contentType !== 'matches' && filters.contentType !== 'tournaments'
+  const showMatches = filters.contentType !== 'tournaments' && filters.contentType !== 'leagues'
+  const showTournaments = filters.contentType !== 'matches' && filters.contentType !== 'leagues'
+  const showLeagues = filters.contentType !== 'matches' && filters.contentType !== 'tournaments'
 
   const listFooter = isFetchingNextPage ? (
     <View style={styles.footerLoad}>
@@ -473,7 +459,16 @@ export default function ExploreScreen() {
     )
   }
 
-  if (isError) {
+  if (
+    (showMatches && isError) ||
+    (showTournaments && tournamentsIsError) ||
+    (showLeagues && leaguesIsError)
+  ) {
+    const shownError =
+      (showMatches && isError ? error : null) ??
+      (showTournaments && tournamentsIsError ? tournamentsError : null) ??
+      (showLeagues && leaguesIsError ? leaguesError : null)
+
     return (
       <View
         style={[
@@ -482,13 +477,15 @@ export default function ExploreScreen() {
         ]}>
         <Text style={styles.errorTitle}>No se pudo cargar el listado</Text>
         <Text style={styles.errorMsg}>
-          {error instanceof Error ? error.message : 'Error desconocido'}
+          {shownError instanceof Error ? shownError.message : 'Error desconocido'}
         </Text>
-        <Text style={styles.errorHint}>
-          Si acabas de actualizar la app, aplica la migración Supabase `009_list_public_matches` en
-          tu proyecto.
-        </Text>
-        <Button title="Reintentar" onPress={() => void refetch()} style={{ marginTop: 16 }} />
+        {showMatches && isError ? (
+          <Text style={styles.errorHint}>
+            Si acabas de actualizar la app, aplica la migración Supabase `009_list_public_matches`
+            en tu proyecto.
+          </Text>
+        ) : null}
+        <Button title="Reintentar" onPress={() => void refetchAll()} style={{ marginTop: 16 }} />
       </View>
     )
   }

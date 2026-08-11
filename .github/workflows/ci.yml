@@ -8,7 +8,8 @@ on:
 
 # Caller workflows that only invoke reusable jobs need an empty permissions block.
 # The called workflow (quality.yml) declares its own token scope.
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
   quality:

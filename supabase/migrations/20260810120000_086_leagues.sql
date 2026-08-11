@@ -344,22 +344,22 @@ ALTER TABLE public.league_password_grants ENABLE ROW LEVEL SECURITY;
 CREATE POLICY leagues_select ON public.leagues
   FOR SELECT TO authenticated
   USING (
-    visibility IN ('public', 'private')
+    -- Solo visibilidad pública para listados públicos.
+    visibility = 'public'
     OR creator_id = auth.uid()
-    OR visibility = 'link'
     OR EXISTS (
-      SELECT 1 FROM public.league_pairs lp
-      WHERE lp.league_id = leagues.id
-        AND (
-          lp.player_a_user_id = auth.uid()
-          OR lp.player_b_user_id = auth.uid()
-          OR lp.created_by_user_id = auth.uid()
-        )
+      SELECT 1
+      FROM public.league_pairs lp
+      WHERE lp.league_id = id
+        AND (lp.player_a_user_id = auth.uid() OR lp.player_b_user_id = auth.uid())
     )
     OR EXISTS (
-      SELECT 1 FROM public.league_password_grants g
-      WHERE g.league_id = leagues.id AND g.user_id = auth.uid()
+      SELECT 1
+      FROM public.league_password_grants lpg
+      WHERE lpg.league_id = id
+        AND lpg.user_id = auth.uid()
     )
+    OR public.auth_is_admin()
   );
 
 CREATE POLICY leagues_insert ON public.leagues
@@ -822,8 +822,8 @@ BEGIN
 
   IF v_league.creator_id <> auth.uid()
      AND v_pair.created_by_user_id <> auth.uid()
-     AND v_pair.player_a_user_id <> auth.uid()
-     AND v_pair.player_b_user_id <> auth.uid()
+     AND v_pair.player_a_user_id IS DISTINCT FROM auth.uid()
+     AND v_pair.player_b_user_id IS DISTINCT FROM auth.uid()
   THEN
     RAISE EXCEPTION 'forbidden';
   END IF;
@@ -883,129 +883,6 @@ GRANT EXECUTE ON FUNCTION public.add_league_pair(UUID, TEXT, UUID, TEXT, UUID, T
 GRANT EXECUTE ON FUNCTION public.join_league_pair(UUID, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_league_pair(UUID, TEXT, TEXT, TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.remove_league_pair(UUID) TO authenticated;
-
--- ── generate_league_fixtures (circle method) ──────────────────────────────────
-
-CREATE OR REPLACE FUNCTION public.generate_league_fixtures(p_league_id UUID)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_league public.leagues%ROWTYPE;
-  v_pair_ids UUID[];
-  v_n INT;
-  v_rounds INT;
-  v_round INT;
-  v_i INT;
-  v_home UUID;
-  v_away UUID;
-  v_fixed UUID;
-  v_rot UUID[];
-  v_tmp UUID;
-  v_half INT;
-BEGIN
-  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
-
-  SELECT * INTO v_league FROM public.leagues WHERE id = p_league_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'league_not_found'; END IF;
-  IF v_league.creator_id <> auth.uid() THEN RAISE EXCEPTION 'not_creator'; END IF;
-  IF v_league.status <> 'registration' THEN RAISE EXCEPTION 'invalid_status'; END IF;
-  IF v_league.format NOT IN ('single_round', 'double_round') THEN
-    RAISE EXCEPTION 'fixtures_only_for_round_robin';
-  END IF;
-  IF v_league.fixtures_generated_at IS NOT NULL THEN
-    RAISE EXCEPTION 'fixtures_already_generated';
-  END IF;
-
-  SELECT ARRAY_AGG(id ORDER BY created_at)
-  INTO v_pair_ids
-  FROM public.league_pairs
-  WHERE league_id = p_league_id
-    AND public.league_pair_is_complete(league_pairs);
-
-  v_n := COALESCE(array_length(v_pair_ids, 1), 0);
-  IF v_n < 2 THEN RAISE EXCEPTION 'need_at_least_two_complete_pairs'; END IF;
-
-  -- Circle method: pad with NULL bye if odd
-  IF v_n % 2 = 1 THEN
-    v_pair_ids := v_pair_ids || ARRAY[NULL::UUID];
-    v_n := v_n + 1;
-  END IF;
-
-  v_rounds := v_n - 1;
-  v_half := v_n / 2;
-  v_fixed := v_pair_ids[1];
-  v_rot := v_pair_ids[2:v_n];
-
-  FOR v_round IN 1..v_rounds LOOP
-    -- Pair fixed with last of rot, then 1 with n-1, etc.
-    v_home := v_fixed;
-    v_away := v_rot[array_length(v_rot, 1)];
-    IF v_home IS NOT NULL AND v_away IS NOT NULL THEN
-      IF v_round % 2 = 0 THEN
-        PERFORM public.create_league_match(v_league, v_away, v_home, v_round, FALSE);
-      ELSE
-        PERFORM public.create_league_match(v_league, v_home, v_away, v_round, FALSE);
-      END IF;
-    END IF;
-
-    FOR v_i IN 1..(v_half - 1) LOOP
-      v_home := v_rot[v_i];
-      v_away := v_rot[array_length(v_rot, 1) - v_i];
-      IF v_home IS NOT NULL AND v_away IS NOT NULL THEN
-        IF (v_round + v_i) % 2 = 0 THEN
-          PERFORM public.create_league_match(v_league, v_away, v_home, v_round, FALSE);
-        ELSE
-          PERFORM public.create_league_match(v_league, v_home, v_away, v_round, FALSE);
-        END IF;
-      END IF;
-    END LOOP;
-
-    -- Rotate: last of rot moves to front
-    v_tmp := v_rot[array_length(v_rot, 1)];
-    v_rot := ARRAY[v_tmp] || v_rot[1:array_length(v_rot, 1) - 1];
-  END LOOP;
-
-  IF v_league.format = 'double_round' THEN
-    -- Second leg: reverse home/away for every first-leg match
-    INSERT INTO public.matches (
-      title, start_at, city, place_defined, place_text,
-      duration_target_games, visibility, location_privacy,
-      creator_id, status,
-      league_id, league_pair_a_id, league_pair_b_id,
-      league_round_number, league_is_second_leg,
-      team_a_name, team_b_name
-    )
-    SELECT
-      v_league.title || ' — J' || (m.league_round_number + v_rounds)::TEXT || ' (vuelta)',
-      v_league.start_at, v_league.city, v_league.place_defined, v_league.place_text,
-      v_league.duration_target_games, v_league.visibility, v_league.location_privacy,
-      v_league.creator_id, 'planned',
-      p_league_id, m.league_pair_b_id, m.league_pair_a_id,
-      m.league_round_number + v_rounds, TRUE,
-      m.team_b_name, m.team_a_name
-    FROM public.matches m
-    WHERE m.league_id = p_league_id
-      AND COALESCE(m.league_is_second_leg, FALSE) = FALSE;
-
-    -- Populate rosters for second-leg matches
-    FOR v_i IN
-      SELECT id, league_pair_a_id, league_pair_b_id
-      FROM public.matches
-      WHERE league_id = p_league_id AND league_is_second_leg = TRUE
-    LOOP
-      PERFORM public.populate_match_roster_from_league_pair(v_i.id, v_i.league_pair_a_id, 'A');
-      PERFORM public.populate_match_roster_from_league_pair(v_i.id, v_i.league_pair_b_id, 'B');
-    END LOOP;
-  END IF;
-
-  UPDATE public.leagues
-  SET status = 'in_progress', fixtures_generated_at = NOW()
-  WHERE id = p_league_id;
-END;
-$$;
 
 -- Fix: FOR loop variable type for second-leg roster population
 CREATE OR REPLACE FUNCTION public.generate_league_fixtures(p_league_id UUID)
@@ -1642,7 +1519,6 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.cancel_league(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.process_league_lifecycle() TO authenticated;
 
 -- ── referee result for league matches ─────────────────────────────────────────
 
@@ -1685,6 +1561,9 @@ BEGIN
   RETURNING id INTO v_result_id;
 
   UPDATE public.matches SET status = 'finished' WHERE id = p_match_id;
+
+  -- Recompute player stats aggregates (async queue) after the match becomes finished.
+  PERFORM public.recompute_player_stats_for_match(p_match_id);
 
   PERFORM public.recalculate_league_elo(p_match_id);
   PERFORM public.maybe_finish_league(v_league.id);

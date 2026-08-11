@@ -18,6 +18,7 @@ export function ProfileStatsCard({
   onPressRanking: () => void
 }) {
   const { data, isPending, isError, refetch } = usePlayerStats(userId)
+  const statsReady = Boolean(data) && !isPending
 
   if (isPending) {
     return (
@@ -65,13 +66,11 @@ export function ProfileStatsCard({
         {medalTotal > 0 ? (
           <VisualPodium podium={data.podium} compact />
         ) : (
-          <Text style={styles.medalsEmpty}>
-            Gana torneos y ligas para conseguir medallas
-          </Text>
+          <Text style={styles.medalsEmpty}>Gana torneos y ligas para conseguir medallas</Text>
         )}
       </View>
 
-      <RankingSection userId={userId} onPressRanking={onPressRanking} />
+      <RankingSection userId={userId} onPressRanking={onPressRanking} statsReady={statsReady} />
 
       <BadgeShowcaseSection userId={userId} />
 

@@ -237,7 +237,12 @@ export async function updateLeague(
     payload.end_at = startAtToTimestamptzIso(data.end_at)
   }
 
-  const { data: row, error } = await supabase.from('leagues').update(payload).eq('id', id).select().single()
+  const { data: row, error } = await supabase
+    .from('leagues')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single()
 
   if (error) throw new Error(error.message)
 
@@ -469,7 +474,32 @@ export async function listPublicLeaguesFiltered(
   const statuses = leagueStatusesFromExploreFilter(filters.status)
   if (statuses !== null && statuses.length === 0) return []
 
-  let query = supabase.from('leagues').select('*').neq('status', LEAGUE_STATUS.CANCELLED)
+  // Only expose public/safe league columns to the explore endpoint.
+  let query = supabase
+    .from('leagues')
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'notes',
+        'start_at',
+        'end_at',
+        'city',
+        'place_defined',
+        'place_text',
+        'duration_target_games',
+        'visibility',
+        'location_privacy',
+        'format',
+        'status',
+        'creator_id',
+        'fixtures_generated_at',
+        'elo_initial',
+        'elo_k_factor',
+      ].join(',')
+    )
+    .neq('status', LEAGUE_STATUS.CANCELLED)
 
   const visibility = filters.visibility ?? 'all'
   if (visibility === 'public') {
@@ -505,7 +535,12 @@ export async function listPublicLeaguesFiltered(
 
   const { data, error } = await query.order('start_at', { ascending: true }).limit(limit)
   if (error) throw new Error(error.message)
-  return (data ?? []) as LeagueRow[]
+  const rows = (data ?? []) as unknown as LeagueRow[]
+
+  return rows.map((row) => ({
+    ...row,
+    place_text: row.location_privacy === 'participants_only' ? null : row.place_text,
+  })) as LeagueRow[]
 }
 
 export async function getUserLeaguesDashboard(userId: string): Promise<{

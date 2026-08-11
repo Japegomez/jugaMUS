@@ -1243,6 +1243,12 @@ export type Database = {
           responded_at: string | null
           status: string
         }
+        SetofOptions: {
+          from: '*'
+          to: 'league_challenges'
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       add_league_pair: {
         Args: {
@@ -1267,6 +1273,12 @@ export type Database = {
           player_b_text: string | null
           player_b_user_id: string | null
           updated_at: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'league_pairs'
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       add_tournament_pair: {
@@ -1374,6 +1386,12 @@ export type Database = {
           updated_at: string
           visibility: string
         }
+        SetofOptions: {
+          from: '*'
+          to: 'leagues'
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       cancel_tournament: {
         Args: { p_tournament_id: string }
@@ -1446,6 +1464,12 @@ export type Database = {
           updated_at: string
           visibility: string
         }
+        SetofOptions: {
+          from: '*'
+          to: 'leagues'
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_league_challenge: {
         Args: { p_challenged_pair_id: string; p_league_id: string }
@@ -1459,6 +1483,12 @@ export type Database = {
           match_id: string | null
           responded_at: string | null
           status: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'league_challenges'
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       generate_league_fixtures: {
@@ -1485,6 +1515,12 @@ export type Database = {
           player_b_text: string | null
           player_b_user_id: string | null
           updated_at: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'league_pairs'
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       list_league_matches: {
@@ -1538,6 +1574,12 @@ export type Database = {
           responded_at: string | null
           status: string
         }
+        SetofOptions: {
+          from: '*'
+          to: 'league_challenges'
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       remove_league_pair: { Args: { p_pair_id: string }; Returns: undefined }
       set_league_password: {
@@ -1566,6 +1608,12 @@ export type Database = {
           player_b_text: string | null
           player_b_user_id: string | null
           updated_at: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'league_pairs'
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       viewer_can_access_league: {

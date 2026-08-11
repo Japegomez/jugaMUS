@@ -41,7 +41,7 @@ Out of scope:
 - Social engineering / physical attacks
 - Denial of service against third-party providers
 - Issues only present on rooted/jailbroken devices or modified clients
-- Vulnerabilities in dependencies already fixed in a newer release we have not yet shipped (Dependabot / security updates handle tracking)
+- Vulnerabilities that only affect unsupported versions (see "Supported versions" above) — e.g. older store builds no longer distributed
 
 ## What to expect
 
@@ -60,7 +60,7 @@ Please give us reasonable time to investigate and ship a fix before any public d
 This repository uses:
 
 - **Dependabot** alerts and version updates (see `.github/dependabot.yml`)
-- **`npm audit`** in CI (`quality` workflow, high severity and above), with an allowlist only for unpatched `image-size` advisories transitive via Metro/Expo SDK 54 (`scripts/npm-audit-ci.mjs`)
+- **`npm audit`** in CI (`quality` workflow, high severity and above), with an allowlist that only skips specific GHSA advisories for the `image-size` package (transitive via Metro/Expo SDK 54); the same GHSA id on any other package still blocks the build (`scripts/npm-audit-ci.mjs`)
 
 Security-related dependency fixes may land on the default branch (`main`); routine version updates are reviewed via Dependabot PRs.
 
