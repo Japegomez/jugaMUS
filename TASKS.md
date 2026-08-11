@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 10/08/2026 (Dependabot → `develop` + `SECURITY.md`; majors Expo vía `npx expo upgrade`)
+> Actualizado: 11/08/2026 (hotfix v1.7.1: suite TDD + coverage gates)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -14,6 +14,7 @@
 | Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                                |
 | Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                              |
 | Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama             |
+| Fase 6 - Ligas y stats | Completada | Ligas round-robin/Elo, stats, badges, leaderboard, contacto nativo; v1.7.0       |
 | UI — Ultra Limpio      | Completada | Rediseño visual                                                                  |
 | UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                       |
 | UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1   |
@@ -23,6 +24,8 @@
 | Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                       |
 | Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                    |
 | Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
+| Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
+| Hotfix tests TDD       | Completada | Characterization tests + coverage gates + docs; v1.7.1                           |
 
 ---
 
@@ -85,11 +88,11 @@
 - [x] Cerrar sesión desde pantalla de perfil
 - [x] Confirmación modal al cerrar sesión (`SignOutModal`: Confirmar / Cancelar)
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
-  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
+  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`, `105`).
   - CORS: allowlist producción + loopback `localhost`/`127.0.0.1` (cualquier puerto) para Expo web local.
-  - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
+  - Anonimización: partidas, **ligas y torneos** se conservan; creador/participante/parejas/retos/grants pasan al sentinel **Usuario eliminado** o texto «Usuario eliminado» (`00000000-0000-4000-8000-000000000001`).
   - UI: `DeleteAccountModal` + botón en perfil; `deleteAccount()` en `useAuth`.
-  - PR #21 mergeado en `develop`.
+  - PR #21 mergeado en `develop`; fix FKs ligas/torneos mig. `105` (ago. 2026).
 
 ### F2 - Perfil de usuario
 
@@ -261,7 +264,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### CI/CD hardening (checklist Nana — jun. 2026)
 
-- [x] **Cobertura Jest con umbral 1%** — `coverageThreshold` en `jest.config.js`; artefacto `coverage/` en `quality.yml`.
+- [x] **Cobertura Jest con umbral ≥60% líneas** — `coverageThreshold` en `jest.config.js` sobre `src/{utils,lib,services,hooks}`; artefacto `coverage/` en `quality.yml`.
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
 - [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
 - [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
@@ -518,6 +521,29 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] `locales/es.json`: claves nativas bajo `ios` (fix Android `ExtraTranslation` / `lintVitalRelease`)
 - [x] Versión app → **1.5.0** (`app.json`, `package.json`)
 
+### Release 1.7 — contactos, stats, ligas (ago. 2026)
+
+- [x] Contacto nativo desde teléfono en perfil ajeno (`expo-contacts` / copia en web) — PRs #139 / #147
+- [x] Stats de jugador: ELO, H2H, forma, rivales, compañeros, sedes, podios — mig. `086`+ / PRs #142 / #148
+- [x] Badges/logros + showcase (hasta 3) + popup al desbloquear — mig. `094`–`099`
+- [x] Leaderboard global/ciudad (tab Clasificación) — mig. `100`
+- [x] Ligas: round-robin / open Elo, clasificación, retos, privadas, explore — mig. `086`+ / PRs #143 / #150
+- [x] Admin acceso a privados (partidas/torneos/ligas) — mig. `101`
+- [x] CI: `GITHUB_TOKEN` mínimo privilegio en workflows — PR #149
+- [x] Delete-account: anonimizar FKs de ligas/torneos — mig. `105` (evita 500 `leagues_creator_id_fkey`)
+- [x] Security: lifecycle ligas solo cron + gate refresh stats — mig. `106`
+- [x] Dependabot #140/#141 + versión app → **1.7.0**
+- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`) en `develop`
+
+### Hotfix v1.7.1 — tests TDD (ago. 2026)
+
+- [x] Characterization tests: 9 services, hooks principales, utils/lib gaps (~420 tests)
+- [x] Jest: coverage collectFrom services/hooks/utils/lib; umbrales ≥60% líneas; `docs/testing.md`
+- [x] Pre-commit: `jest --findRelatedTests` vía lint-staged
+- [x] TDD estricto documentado hacia adelante (rojo → verde → refactor)
+- [x] Versión app → **1.7.1** (`app.json`, `package.json`)
+- [x] Commit + PR `hotfix/v1.7.1` → `main` (revisor/asignado Japegomez)
+
 ---
 
 ## UI — Rediseño Ultra Limpio (may. 2026)
@@ -621,8 +647,15 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
 - [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
 - [x] README del proyecto — existe `README.md` (visión, stack, funcionalidades, enlaces a tiendas y docs)
-- [ ] Tests unitarios de validaciones (E.164, reglas de partida)
+- [x] Tests unitarios de lógica crítica (ago. 2026)
+  - Characterization tests: services (9), hooks principales, utils/lib gaps; `docs/testing.md`.
+  - Jest coverage gates (≥60% lines) + pre-commit `jest --findRelatedTests` vía lint-staged.
+  - TDD estricto obligatorio hacia adelante para features/bugfixes.
 - [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
   - `CRON_SECRET` / `EDGE_CRON_SECRET` configurados (Supabase Edge Functions + GitHub) según `.env.example` / docs.
 - [x] **`SECURITY.md` (ago. 2026)** — reporte privado de vulnerabilidades; ver también Dependabot en CI/CD hardening.
+- [x] **Security review post-sync `main` → `develop` (ago. 2026, migración `106`):**
+  - `process_league_lifecycle`: REVOKE PUBLIC/authenticated + cron `match-state-transitions` (igual que torneos).
+  - Fix typo REVOKE en migración `104` (`enqueue_player_stats_recompute`) + REVOKE defensivo en `106`.
+  - `get_player_stats`: refresh-on-read (ELO + agregados) solo para `auth.uid()` o admin; resto lee cache.

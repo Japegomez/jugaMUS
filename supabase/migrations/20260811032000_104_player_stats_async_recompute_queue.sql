@@ -31,7 +31,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute_queue(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION public.process_player_stats_recompute_queue(p_limit INT DEFAULT 50)
 RETURNS void
@@ -101,7 +101,14 @@ $$;
 REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM PUBLIC;
 
 -- Cron job: process a small batch every minute.
-SELECT cron.unschedule('process-player-stats-recompute-queue');
+DO $$
+BEGIN
+  PERFORM cron.unschedule('process-player-stats-recompute-queue');
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL; -- job may not exist yet on first apply
+END;
+$$;
 SELECT cron.schedule(
   'process-player-stats-recompute-queue',
   '* * * * *',
