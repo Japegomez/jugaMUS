@@ -13,6 +13,7 @@
 
 -- ── 1. Lock down process_league_lifecycle (mirror process_tournament_lifecycle) ────
 REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM anon;
 REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM authenticated;
 
 -- Schedule it alongside the existing match-state-transitions cron job (every minute).
@@ -29,7 +30,24 @@ SELECT cron.schedule(
 
 -- ── 2. Defensive REVOKE for enqueue_player_stats_recompute (migration 104 typo) ─────
 REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM anon;
 REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM authenticated;
+REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM anon;
+REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM authenticated;
+REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM anon;
+REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM authenticated;
+
+-- Internal helpers used by get_player_stats refresh path — not client RPCs.
+-- Without this, anon/authenticated could call refresh_player_stats directly and
+-- bypass the self/admin gate inside get_player_stats.
+REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM anon;
+REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM authenticated;
+REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM anon;
+REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM authenticated;
 
 -- ── 3. Gate refresh_player_stats to self/admin inside get_player_stats ─────────────
 -- Only the user themselves (or an admin) triggers the expensive full-history recompute.
