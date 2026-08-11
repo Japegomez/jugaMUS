@@ -6,9 +6,10 @@ on:
   pull_request:
     branches: [develop, main]
 
-# Caller workflows that only invoke reusable jobs need an empty permissions block.
-# The called workflow (quality.yml) declares its own token scope.
-permissions: {}
+# Caller workflow invokes reusable workflow (quality.yml).
+# It must allow the permissions required by the called workflow checkout.
+permissions:
+  contents: read
 
 jobs:
   quality:
