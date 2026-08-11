@@ -11,6 +11,7 @@ import {
 } from '@/hooks/useMatches'
 import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
+import { invalidateLeagueQueries } from '@/hooks/useLeagues'
 import {
   fetchMatchResultBundle,
   submitConfirmation,
@@ -41,12 +42,18 @@ export function useSubmitResult() {
       queryClient.invalidateQueries({
         queryKey: matchResultQueryKey(variables.matchId, sessionUserId),
       })
-      const cached = queryClient.getQueryData<{ tournament_id?: string | null }>(
+      const cached = queryClient.getQueryData<{ tournament_id?: string | null; league_id?: string | null }>(
         matchQueryKey(variables.matchId)
       )
       const tournamentId = cached?.tournament_id ?? null
+      const leagueId = cached?.league_id ?? null
       if (tournamentId && row.status === 'confirmed') {
         invalidateTournamentQueries(queryClient, tournamentId)
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+        invalidatePublicExplore(queryClient)
+      }
+      if (leagueId && row.status === 'confirmed') {
+        invalidateLeagueQueries(queryClient, leagueId)
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
         invalidatePublicExplore(queryClient)
       }
@@ -54,9 +61,7 @@ export function useSubmitResult() {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
-      if (row.status === 'confirmed') {
-        invalidatePlayerStatsCaches(queryClient)
-      }
+      invalidatePlayerStatsCaches(queryClient)
     },
   })
 }
@@ -72,11 +77,16 @@ export function useSubmitConfirmation() {
       queryClient.invalidateQueries({
         queryKey: matchResultQueryKey(variables.matchId, sessionUserId),
       })
-      const cached = queryClient.getQueryData<{ tournament_id?: string | null }>(
+      const cached = queryClient.getQueryData<{ tournament_id?: string | null; league_id?: string | null }>(
         matchQueryKey(variables.matchId)
       )
       if (cached?.tournament_id) {
         invalidateTournamentQueries(queryClient, cached.tournament_id)
+        invalidateMyMatchesDashboard(queryClient, sessionUserId)
+        invalidatePublicExplore(queryClient)
+      }
+      if (cached?.league_id) {
+        invalidateLeagueQueries(queryClient, cached.league_id)
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
         invalidatePublicExplore(queryClient)
       }

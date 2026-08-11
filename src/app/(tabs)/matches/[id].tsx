@@ -46,6 +46,7 @@ import {
   useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
+import { useLeague, useRecordLeagueMatchAsReferee } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
 import {
@@ -505,10 +506,25 @@ export default function MatchDetailScreen() {
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
 
-  const closeToMyMatches = useCallback(() => {
+  const closeMatchDetail = useCallback(() => {
     clearPendingMatchResultFromScoreboard(id)
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
     router.replace('/(tabs)/matches' as Href)
   }, [router, id])
+
+  const openParentCompetition = useCallback(
+    (kind: 'league' | 'tournament', competitionId: string) => {
+      if (kind === 'league') {
+        router.push({ pathname: '/(tabs)/leagues/[id]', params: { id: competitionId } })
+      } else {
+        router.push({ pathname: '/(tabs)/tournaments/[id]', params: { id: competitionId } })
+      }
+    },
+    [router]
+  )
 
   const { data: match, isLoading, isError, refetch: refetchMatch } = useMatch(id)
   const {
@@ -533,9 +549,12 @@ export default function MatchDetailScreen() {
   const submitConfirmationMut = useSubmitConfirmation()
   const recordResultDirectMut = useRecordMatchResultDirect()
   const recordRefereeMut = useRecordTournamentMatchAsReferee()
+  const recordLeagueRefereeMut = useRecordLeagueMatchAsReferee()
 
   const tournamentId = match?.tournament_id ?? null
   const { data: tournamentMeta } = useTournament(tournamentId ?? '')
+  const leagueId = match?.league_id ?? null
+  const { data: leagueMeta } = useLeague(leagueId ?? '')
 
   const [joinModalVisible, setJoinModalVisible] = useState(false)
   const [submitResultVisible, setSubmitResultVisible] = useState(false)
@@ -661,7 +680,7 @@ export default function MatchDetailScreen() {
     return (
       <View style={s.centered}>
         <Text style={s.errorText}>No se pudo cargar la partida.</Text>
-        <Button title="Volver" onPress={closeToMyMatches} style={{ marginTop: 16 }} />
+        <Button title="Volver" onPress={closeMatchDetail} style={{ marginTop: 16 }} />
       </View>
     )
   }
@@ -701,23 +720,31 @@ export default function MatchDetailScreen() {
   )
   const isPersonalMatch = !match.tournament_id && isCreator && otherRegistered.length === 0
 
+  // Las partidas de liga round-robin se quedan "planned" hasta que se juegan;
+  // el backend las auto-inicia al recibir el resultado.
+  const isPlannedLeagueMatch = isPlanned && Boolean(match.league_id)
+
   const canSubmitResult = Boolean(
     userId &&
     myParticipation &&
     !isPersonalMatch &&
     match.status !== MATCH_STATUS.CANCELLED &&
-    (match.status === MATCH_STATUS.IN_PROGRESS ||
-      match.status === MATCH_STATUS.FINISHED_NO_RESULT) &&
+    (isInProgress || match.status === MATCH_STATUS.FINISHED_NO_RESULT || isPlannedLeagueMatch) &&
     !resultBlocksNewSubmit
   )
 
   const canRecordDirect = Boolean(
-    userId && isPersonalMatch && isInProgress && !resultBlocksNewSubmit && !match.tournament_id
+    userId &&
+    isPersonalMatch &&
+    isInProgress &&
+    !resultBlocksNewSubmit &&
+    !match.tournament_id &&
+    !match.league_id
   )
 
   // También permitimos llevar la cuenta en partidos de torneos (no durante validación de resultado).
   const canOpenScoreboard = Boolean(
-    userId && isParticipant && isInProgress && !resultBlocksNewSubmit
+    userId && isParticipant && (isInProgress || isPlannedLeagueMatch) && !resultBlocksNewSubmit
   )
 
   const allTextPlayers =
@@ -729,7 +756,7 @@ export default function MatchDetailScreen() {
       match.team_b_player_2?.trim()
     )
 
-  const canRecordAsReferee = Boolean(
+  const canRecordAsTournamentReferee = Boolean(
     userId &&
     match.tournament_id &&
     tournamentMeta?.creator_id === userId &&
@@ -738,6 +765,18 @@ export default function MatchDetailScreen() {
     !resultBlocksNewSubmit &&
     !match.tournament_is_bye
   )
+
+  const canRecordAsLeagueReferee = Boolean(
+    userId &&
+    match.league_id &&
+    leagueMeta?.creator_id === userId &&
+    allTextPlayers &&
+    (isInProgress || isPlannedLeagueMatch) &&
+    !resultBlocksNewSubmit &&
+    !isPersonalMatch
+  )
+
+  const canRecordAsReferee = canRecordAsTournamentReferee || canRecordAsLeagueReferee
 
   const canValidateResult = Boolean(
     userId &&
@@ -907,14 +946,25 @@ export default function MatchDetailScreen() {
   }
 
   const handleRecordAsReferee = async (payload: { teamAGames: number; teamBGames: number }) => {
-    if (!userId || !match.tournament_id) return
+    if (!userId || isPersonalMatch || match.status === MATCH_STATUS.CANCELLED) return
     try {
-      await recordRefereeMut.mutateAsync({
-        matchId: id,
-        tournamentId: match.tournament_id,
-        teamAGames: payload.teamAGames,
-        teamBGames: payload.teamBGames,
-      })
+      if (match.tournament_id) {
+        await recordRefereeMut.mutateAsync({
+          matchId: id,
+          tournamentId: match.tournament_id,
+          teamAGames: payload.teamAGames,
+          teamBGames: payload.teamBGames,
+        })
+      } else if (match.league_id) {
+        await recordLeagueRefereeMut.mutateAsync({
+          matchId: id,
+          leagueId: match.league_id,
+          teamAGames: payload.teamAGames,
+          teamBGames: payload.teamBGames,
+        })
+      } else {
+        return
+      }
       setRecordRefereeVisible(false)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo registrar el resultado')
@@ -982,7 +1032,7 @@ export default function MatchDetailScreen() {
         <View style={[s.closeBar, { paddingTop: screenTopPadding(insets.top, 8) }]}>
           <View style={{ flex: 1 }} />
           <Pressable
-            onPress={closeToMyMatches}
+            onPress={closeMatchDetail}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel="Cerrar">
@@ -999,11 +1049,20 @@ export default function MatchDetailScreen() {
             </View>
             {match.tournament_id && tournamentMeta ? (
               <Pressable
-                onPress={() => router.push(`/(tabs)/tournaments/${match.tournament_id}` as Href)}
+                onPress={() => openParentCompetition('tournament', match.tournament_id!)}
                 style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
                 accessibilityRole="button"
                 accessibilityLabel={`Ir al torneo: ${tournamentMeta.title}`}>
                 <Text style={s.tournamentBadgeText}>🏆 Ir al torneo</Text>
+              </Pressable>
+            ) : null}
+            {match.league_id && leagueMeta ? (
+              <Pressable
+                onPress={() => openParentCompetition('league', match.league_id!)}
+                style={({ pressed }) => [s.tournamentBadge, pressed && s.tournamentBadgePressed]}
+                accessibilityRole="button"
+                accessibilityLabel={`Ir a la liga: ${leagueMeta.title}`}>
+                <Text style={s.tournamentBadgeText}>🏅 Ir a la liga</Text>
               </Pressable>
             ) : null}
           </View>
@@ -1374,9 +1433,13 @@ export default function MatchDetailScreen() {
         teamAName={teamAName}
         teamBName={teamBName}
         durationTargetGames={match.duration_target_games}
-        hint="Como organizador del torneo, el marcador queda confirmado al guardar."
+        hint={
+          match.league_id
+            ? 'Como organizador de la liga, el marcador queda confirmado al guardar.'
+            : 'Como organizador del torneo, el marcador queda confirmado al guardar.'
+        }
         submitLabel="Confirmar marcador"
-        loading={recordRefereeMut.isPending}
+        loading={match.league_id ? recordLeagueRefereeMut.isPending : recordRefereeMut.isPending}
         onSubmit={handleRecordAsReferee}
       />
 

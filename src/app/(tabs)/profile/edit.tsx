@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as ImagePicker from 'expo-image-picker'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import { Controller, useForm } from 'react-hook-form'
 import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -86,6 +86,14 @@ export default function EditProfileScreen() {
     }
   }
 
+  const goBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+    router.replace('/(tabs)/profile' as Href)
+  }, [router])
+
   const onSubmit = async (values: EditProfileValues) => {
     try {
       // Upload avatar first if user picked a new one
@@ -99,7 +107,7 @@ export default function EditProfileScreen() {
         city: values.city || null,
       })
 
-      router.back()
+      goBack()
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Error al guardar el perfil'
       Alert.alert('Error', message)
@@ -221,7 +229,7 @@ export default function EditProfileScreen() {
         title="Cancelar"
         variant="outline"
         disabled={isSaving}
-        onPress={() => router.back()}
+        onPress={goBack}
       />
     </KeyboardAwareScrollView>
   )

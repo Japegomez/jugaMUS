@@ -1,0 +1,240 @@
+import { useState } from 'react'
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
+
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import type { LeaguePairRow } from '@/services/leagues.service'
+import { Colors } from '@/theme/colors'
+import { Fonts } from '@/theme/typography'
+
+export type EditLeaguePairFormValues = {
+  name: string
+  playerAText: string
+  playerBText: string
+}
+
+type EditLeaguePairModalProps = {
+  visible: boolean
+  pair: LeaguePairRow | null
+  onClose: () => void
+  onSubmit: (values: EditLeaguePairFormValues) => void | Promise<void>
+  onDelete: () => void | Promise<void>
+  canDelete?: boolean
+  saveLoading?: boolean
+  deleteLoading?: boolean
+}
+
+function initialForm(pair: LeaguePairRow): EditLeaguePairFormValues {
+  return {
+    name: pair.name_is_custom ? (pair.name?.trim() ?? '') : '',
+    playerAText: pair.player_a_text?.trim() ?? '',
+    playerBText: pair.player_b_text?.trim() ?? '',
+  }
+}
+
+type EditPairFormProps = {
+  pair: LeaguePairRow
+  onClose: () => void
+  onSubmit: (values: EditLeaguePairFormValues) => void | Promise<void>
+  onDelete: () => void | Promise<void>
+  canDelete: boolean
+  saveLoading?: boolean
+  deleteLoading?: boolean
+}
+
+function EditPairForm({
+  pair,
+  onClose,
+  onSubmit,
+  onDelete,
+  canDelete,
+  saveLoading,
+  deleteLoading,
+}: EditPairFormProps) {
+  const initial = initialForm(pair)
+  const [name, setName] = useState(initial.name)
+  const [playerAText, setPlayerAText] = useState(initial.playerAText)
+  const [playerBText, setPlayerBText] = useState(initial.playerBText)
+
+  const playerALocked = Boolean(pair.player_a_user_id)
+  const playerBLocked = Boolean(pair.player_b_user_id)
+  const playerADisplay =
+    pair.player_a_display_name?.trim() || (playerALocked ? 'Jugador registrado' : '')
+  const playerBDisplay =
+    pair.player_b_display_name?.trim() || (playerBLocked ? 'Jugador registrado' : '')
+
+  const handleSubmit = async () => {
+    if (!playerALocked && pair.player_a_text?.trim() && !playerAText.trim()) {
+      Alert.alert(
+        'Nombre obligatorio',
+        'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+      )
+      return
+    }
+    if (!playerBLocked && pair.player_b_text?.trim() && !playerBText.trim()) {
+      Alert.alert(
+        'Nombre obligatorio',
+        'No puedes quitar jugadores de la pareja. Solo puedes editar el nombre.'
+      )
+      return
+    }
+    try {
+      await onSubmit({ name, playerAText, playerBText })
+    } catch {
+      /* el padre muestra el error; mantenemos el formulario */
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.wrap}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Editar pareja</Text>
+        <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar">
+          <Text style={styles.close}>✕</Text>
+        </Pressable>
+      </View>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets>
+          <View style={styles.slot}>
+            <Text style={styles.slotLabel}>Jugador 1</Text>
+            {playerALocked ? (
+              <View style={styles.locked}>
+                <Text style={styles.lockedName}>{playerADisplay}</Text>
+                <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
+              </View>
+            ) : (
+              <Input
+                label="Nombre (texto)"
+                placeholder="Nombre del jugador"
+                value={playerAText}
+                onChangeText={setPlayerAText}
+                autoCapitalize="words"
+              />
+            )}
+          </View>
+
+          <View style={styles.slot}>
+            <Text style={styles.slotLabel}>Jugador 2</Text>
+            {playerBLocked ? (
+              <View style={styles.locked}>
+                <Text style={styles.lockedName}>{playerBDisplay}</Text>
+                <Text style={styles.lockedHint}>Inscrito con cuenta (no editable)</Text>
+              </View>
+            ) : (
+              <Input
+                label="Nombre (texto)"
+                placeholder="Compañero"
+                value={playerBText}
+                onChangeText={setPlayerBText}
+                autoCapitalize="words"
+              />
+            )}
+          </View>
+
+          <Input
+            label="Nombre de la pareja (opcional)"
+            placeholder="Nombre Jugador1 - Nombre Jugador2"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
+
+          <Button
+            title="Guardar cambios"
+            onPress={() => void handleSubmit()}
+            loading={saveLoading}
+          />
+          {canDelete ? (
+            <Button
+              title="Eliminar pareja"
+              variant="outline"
+              onPress={() => {
+                void onDelete()
+              }}
+              loading={deleteLoading}
+              style={styles.deleteBtn}
+            />
+          ) : null}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  )
+}
+
+export function EditLeaguePairModal({
+  visible,
+  pair,
+  onClose,
+  onSubmit,
+  onDelete,
+  canDelete = true,
+  saveLoading,
+  deleteLoading,
+}: EditLeaguePairModalProps) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}>
+      {visible && pair ? (
+        <EditPairForm
+          key={pair.id}
+          pair={pair}
+          onClose={onClose}
+          onSubmit={onSubmit}
+          onDelete={onDelete}
+          canDelete={canDelete}
+          saveLoading={saveLoading}
+          deleteLoading={deleteLoading}
+        />
+      ) : null}
+    </Modal>
+  )
+}
+
+const styles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: Colors.background },
+  keyboard: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  title: { fontSize: 17, fontFamily: Fonts.bold, color: Colors.textPrimary },
+  close: { fontSize: 18, color: Colors.textSecondary, padding: 4 },
+  body: { padding: 20, paddingBottom: 40 },
+  slot: { marginBottom: 16 },
+  slotLabel: { fontSize: 14, fontFamily: Fonts.bold, color: Colors.primary, marginBottom: 8 },
+  locked: {
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  lockedName: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+  lockedHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
+  deleteBtn: { marginTop: 12 },
+})

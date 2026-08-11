@@ -44,11 +44,15 @@ export default function ScoreboardScreen() {
   const teamBName = match ? resolveTeamName(match, TEAM.B, match.participants) : ''
 
   const closeToMatch = useCallback(() => {
-    if (!id) {
+    if (router.canGoBack()) {
       router.back()
       return
     }
-    router.replace(`/(tabs)/matches/${id}` as Href)
+    if (id) {
+      router.replace(`/(tabs)/matches/${id}` as Href)
+      return
+    }
+    router.replace('/(tabs)/matches' as Href)
   }, [id, router])
 
   const handleGameOverConfirm = useCallback(() => {

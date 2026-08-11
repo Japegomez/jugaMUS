@@ -3,7 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 
 import { QUERY_STALE_TIME } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
-import { getLeaderboard, getMatchInsights, getPlayerStats } from '@/services/stats.service'
+import {
+  getLeaderboard,
+  getMatchInsights,
+  getPlayerRanking,
+  getPlayerStats,
+} from '@/services/stats.service'
 
 export function playerStatsQueryKey(userId: string) {
   return ['player-stats', userId] as const
@@ -17,10 +22,15 @@ export function leaderboardQueryKey(city?: string | null) {
   return ['leaderboard', city?.trim() || 'all'] as const
 }
 
+export function playerRankingQueryKey(userId: string) {
+  return ['player-ranking', userId] as const
+}
+
 export function invalidatePlayerStatsCaches(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ['player-stats'], exact: false })
   queryClient.invalidateQueries({ queryKey: ['match-insights'], exact: false })
   queryClient.invalidateQueries({ queryKey: ['leaderboard'], exact: false })
+  queryClient.invalidateQueries({ queryKey: ['player-ranking'], exact: false })
 }
 
 export function usePlayerStats(userId?: string | null) {
@@ -28,7 +38,9 @@ export function usePlayerStats(userId?: string | null) {
     queryKey: playerStatsQueryKey(userId ?? ''),
     queryFn: () => getPlayerStats(userId!),
     enabled: Boolean(userId),
-    staleTime: QUERY_STALE_TIME,
+    // get_player_stats recalcula ELO + agregados en cada lectura
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 
@@ -47,5 +59,19 @@ export function useLeaderboard(city?: string | null) {
     queryKey: leaderboardQueryKey(city),
     queryFn: () => getLeaderboard(city),
     staleTime: QUERY_STALE_TIME,
+  })
+}
+
+export function usePlayerRanking(
+  userId?: string | null,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true
+  return useQuery({
+    queryKey: playerRankingQueryKey(userId ?? ''),
+    queryFn: () => getPlayerRanking(userId!),
+    enabled: Boolean(userId) && enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
