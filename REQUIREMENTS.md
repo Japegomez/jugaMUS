@@ -6,21 +6,24 @@
 
 ## 1. Visión y Objetivo
 
-App móvil para jugadores de mus en España que permite encontrar contrincantes y organizar partidas puntuales (día/hora/lugar). **No incluye lógica del juego.**
+App móvil para jugadores de mus en España que permite encontrar contrincantes y organizar partidas, torneos y ligas (día/hora/lugar), con estadísticas de jugador. **No incluye lógica del juego.**
 
 ### Decisiones clave
 
 - **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
-- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
+- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. `GITHUB_TOKEN` con mínimo privilegio: `contents: read` por defecto; `contents: write` solo en el job de etiquetado de release (`eas.yml`). Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
 - **Legal / Play (may. 2026):** URLs públicas de privacidad y eliminación de cuenta vía **GitHub Pages** (`docs/` en `main`, carpeta `/docs`). Contacto de soporte / seguridad: `japenago@gmail.com`. Package Android: `com.javiwacho.musapp`; slug EAS `musapp`.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web. **Empezar partida (jul. 2026):** el creador puede pasar una partida `planned` a `in_progress` manualmente (sin modal de confirmación; sí aviso si la plantilla está incompleta); se fija `start_at` al instante actual.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
-- **Eliminación de cuenta (may. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial de partidas se anonimiza**, no se elimina: referencias pasan al perfil interno **Usuario eliminado** (sentinel); las participaciones en plantilla se reasignan al sentinel para que sigan visibles en la UI. CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
+- **Eliminación de cuenta (may.–ago. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial compartido se anonimiza**, no se elimina: referencias de partidas, **ligas y torneos** (creador, parejas, retos, grants) pasan al perfil interno **Usuario eliminado** (sentinel) o a texto «Usuario eliminado» (mig. `023`–`025`, `105`). CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
 - **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422).
 - **Notificaciones en perfil (may./jul. 2026):** preferencias **push** («Todas») y por **evento** en perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla. Eventos: unión; partida/torneo inicio, edición y cancelación (separados); resultado pendiente de validar; resultado pendiente de enviar (aviso ~5 h en curso); recordatorios 24 h y/o 2 h antes (chips multi-selección). `enqueue_notification` y `process-notifications` respetan `notify_push` + `notify_on_*` (migraciones `077`–`079`).
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand.
-- **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida u organizar torneo. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final (y el partido de 3º/4º si está activado). Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos; partidas del cuadro no listadas ni unibles manualmente. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Sincronización multi-dispositivo: Supabase Realtime (`058`) en `matches`, participantes, resultados, torneos y parejas; invalidación React Query en Descubrir, Mis partidas, historial y ficha/cuadro de torneo (sin polling 30 s en detalle). **Edición de parejas (may.–jun. 2026):** organizador o miembros de la pareja pueden editar nombre y plazas texto en inscripción; solo el organizador elimina parejas (`062`). Opcional **3º y 4º puesto** entre perdedores de semifinales (`064`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
+- **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida, torneo o liga. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final (y el partido de 3º/4º si está activado). Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos/ligas; partidas del cuadro o de liga no listadas ni unibles manualmente como partidas sueltas. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Sincronización multi-dispositivo: Supabase Realtime (`058`) en `matches`, participantes, resultados, torneos y parejas; invalidación React Query en Descubrir, Mis partidas, historial y ficha/cuadro de torneo (sin polling 30 s en detalle). **Edición de parejas (may.–jun. 2026):** organizador o miembros de la pareja pueden editar nombre y plazas texto en inscripción; solo el organizador elimina parejas (`062`). Opcional **3º y 4º puesto** entre perdedores de semifinales (`064`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
+- **Ligas (ago. 2026):** formato de liga con parejas mixtas (registradas + texto). Formatos: `single_round` / `double_round` (jornadas round-robin + clasificación) y `open_elo` (retos entre parejas + ranking Elo de pareja). Visibilidad pública/privada con contraseña (mismo patrón que partidas/torneos; grants). FAB «Organizar liga»; pantallas crear/editar/detalle con `StandingsTable`, `EloRanking`, retos y gestión de parejas. Partidos de liga reutilizan `matches` (`league_id`); no aparecen como partidas sueltas en Descubrir (`087`). Finalización al completar enfrentamientos / lifecycle por cron (`089`, `102`, `106`). Badges de puesto en liga (`094`–`095`). Admin puede leer privados sin contraseña (`101`).
+- **Estadísticas de jugador (ago. 2026):** ELO global (default 1200), victorias/derrotas, rachas, forma, rivales, compañeros, sedes, H2H y podios de torneo/liga (`086` player_stats, `089`/`090`, `100`). Pantalla `profile/stats/[userId]` desde tarjeta de perfil; tab **Clasificación** (`leaderboard`) por global/ciudad. Logros (badges) con popup al desbloquear; showcase de hasta 3 en perfil (`094`–`099`). Recomputo async + refresh-on-read acotado (`103`–`104`, `106`).
+- **Contacto nativo (ago. 2026):** desde perfil ajeno, con teléfono visible, abrir ficha «nuevo contacto» del SO (`expo-contacts`); en web se copia el número.
 - **Perfil ajeno (may. 2026):** pantalla de solo lectura `/(tabs)/profile/[userId]` con nombre, ciudad, avatar (foto o iniciales) y teléfono (visible si el visitante comparte partida confirmada con ese usuario, o reglas equivalentes de `get_public_profile`). Historial de partidas del usuario mostrado limitado a las que el visitante puede leer; cada fila abre el detalle de la partida. Acceso desde el nombre/avatar de un participante registrado en la ficha de partida. RPCs `get_viewable_user_profile` y `list_user_viewable_matches` (migración `056`; `photo_url` en `063`).
 - **Marcador en vivo (jul. 2026):** pantalla **Marcador** en partidas `in_progress` (y modo guest sin login); **solo horizontal** (bloqueo con `expo-screen-orientation`; requiere build nativo). Estado persistido **solo en el dispositivo**. Layout: contadores de puntos por pareja (toque +1; botones −1/+1/+5), rondas centrales GRANDE / PEQUEÑA / PARES / JUEGO (toque +2; flechas asignan puntos a pareja; ajuste −1/+1/+5), contador de juegos por pareja. A **40 puntos** suma 1 juego y resetea puntos y rondas; juego manual también resetea puntos. **Deshacer** último cambio (historial en sesión). Al llegar a los juegos para ganar: overlay **in-tree** (no `Modal` de RN, evita crash iOS `UIApplicationInvalidInterfaceOrientation` en landscape) con «{pareja} ganan la partida» y marcador numérico; «Registrar resultado» abre el modal de la ficha con juegos pre-rellenados (intent in-memory por si el remount de orientación pierde query params). Si se cancela el registro, el marcador local queda reiniciado. Sin sync multi-dispositivo hasta enviar resultado oficial. **Tutorial (jul. 2026):** al abrir el marcador se muestra siempre un onboarding de 5 pasos (envites centrales, flechas → pareja, negadas en contadores, deshacer, mensaje de suerte); se puede omitir; el marcador permanece usable bajo el tooltip.
 - **Marcador sin registro (jun. 2026):** desde login, botón **Marcador** → formulario (nombres por defecto «Pareja A» / «Pareja B» + juegos) → mismo marcador horizontal que F12, **sin cuenta ni partida en servidor**. Al terminar, popup con ganador y vuelta al login.
@@ -43,7 +46,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Locales nativos (ago. 2026):** `locales/es.json` anida claves bajo `ios` (SDK 54+) para no generar `ExtraTranslation` en Android `lintVitalRelease`.
 - **Apple Sign In (jun. 2026):** nombre de perfil legible con `fullName` de Apple y backfill para relay emails (`060`–`061`).
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
-- **Audiencia**: híbrida — partidas/torneos públicos y privados con contraseña (aparecen en Descubrir; privadas desbloquean con password)
+- **Audiencia**: híbrida — partidas, torneos y ligas públicas y privadas con contraseña (aparecen en Descubrir; privadas desbloquean con password)
 - **Alcance geográfico MVP**: España completa
 - **Plataformas**: Android e iOS desde el primer lanzamiento
 - **Idioma MVP**: Español. Preparado para i18n en fases posteriores.
@@ -52,23 +55,23 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 
 ## 2. Alcance y Fases de Desarrollo
 
-El desarrollo se organiza en tres fases para que sea viable para un único desarrollador:
+El desarrollo se organiza en fases incrementales para que sea viable para un único desarrollador:
 
-| Fase                    | Contenido                            | Descripción                                                         |
-| ----------------------- | ------------------------------------ | ------------------------------------------------------------------- |
-| **Fase 1 - Core**       | Auth, Perfil, Partidas, Descubrir    | Lo mínimo para que la app sea funcional                             |
-| **Fase 2 - Resultados** | Notificaciones, Resultados, Reportes | Ciclo de vida completo de una partida                               |
-| **Fase 3 - Admin**      | Panel admin, Analíticas, Disputas    | Herramientas de gestión y moderación                                |
-| **Fase 4 - Torneos**    | Cuadros, parejas, avance automático  | Organización de torneos eliminatorios                               |
-| **Fase 5 - Marcador**   | Marcador en vivo local               | Conteo de puntos/juegos durante la partida (sin lógica en servidor) |
+| Fase                       | Contenido                                | Descripción                                                                |
+| -------------------------- | ---------------------------------------- | -------------------------------------------------------------------------- |
+| **Fase 1 - Core**          | Auth, Perfil, Partidas, Descubrir        | Lo mínimo para que la app sea funcional                                    |
+| **Fase 2 - Resultados**    | Notificaciones, Resultados, Reportes     | Ciclo de vida completo de una partida                                      |
+| **Fase 3 - Admin**         | Panel admin, Analíticas, Disputas        | Herramientas de gestión y moderación                                       |
+| **Fase 4 - Torneos**       | Cuadros, parejas, avance automático      | Organización de torneos eliminatorios                                      |
+| **Fase 5 - Marcador**      | Marcador en vivo local                   | Conteo de puntos/juegos durante la partida (sin lógica en servidor)        |
+| **Fase 6 - Ligas y stats** | Ligas, ELO, logros, clasificación global | Ligas round-robin / open Elo, estadísticas de jugador y leaderboard (v1.7) |
 
 ### Fuera del alcance total
 
-- Ligas y clasificaciones
 - Chat interno
 - Geolocalización GPS
 - Modo offline
-- Reputación y valoraciones
+- Reputación y valoraciones entre usuarios (distinto de ELO/logros ya en producto)
 - Integración con redes sociales (salvo invitación WhatsApp HTTPS ya en producto)
 - Verificación de teléfono por SMS
 
@@ -100,7 +103,7 @@ Solo dos roles en el MVP:
 - Recuperación de contraseña para usuarios de email (pantalla `auth/update-password` tras el enlace; login con la nueva contraseña)
 - Gestión de sesiones con JWT y refresh tokens (gestionado por Supabase Auth)
 - Estado de sesión persistente entre cierres de la app
-- Eliminación de cuenta (RGPD): borrado de identidad + anonimización del historial en partidas/resultados
+- Eliminación de cuenta (RGPD): borrado de identidad + anonimización del historial en partidas, ligas y torneos
 
 ### F2 - Perfil de usuario (Fase 1)
 
@@ -114,6 +117,8 @@ Solo dos roles en el MVP:
 - Enlaces a términos y política de privacidad desde el perfil
 - **Perfil de otro usuario (solo lectura):** nombre, ciudad, teléfono según permisos del servidor e historial de partidas visibles; navegación desde participantes registrados en detalle de partida
 - **El teléfono solo es visible para participantes de la misma partida confirmada** (también en perfil ajeno vía RPC)
+- **Guardar contacto (ago. 2026):** con teléfono visible, abrir ficha nativa de nuevo contacto (iOS/Android); en web copiar número
+- Resumen de estadísticas / ELO y acceso a pantalla de stats (Fase 6); showcase de hasta 3 logros en perfil
 - Opción de ocultar ubicación exacta a no participantes
 - Eliminación de cuenta con confirmación modal (`DeleteAccountModal`)
 - Envío de feedback (problemas, sugerencias) desde perfil; botón principal al estilo «Editar perfil»
@@ -153,20 +158,22 @@ Solo dos roles en el MVP:
 
 - Cada usuario tiene acceso a su historial de partidas pasadas
 
-### F5 - Descubrir y filtrar (Fase 1)
+### F5 - Descubrir y filtrar (Fase 1 + 6)
 
-- Listado de partidas públicas ordenado por fecha
-- Filtros: fecha, ciudad/pueblo, plazas libres, visibilidad, estado
+- Listado de partidas, torneos y ligas públicas ordenado por fecha
+- Filtros: tipo (partidas / torneos / ligas), fecha, ciudad/pueblo, plazas libres, visibilidad, estado
 - Búsqueda por texto en el campo título
 - Paginación de 20 elementos por página
 - Cache de respuestas con TanStack Query (5 minutos)
 - Las partidas `visibility: link` no aparecen en el listado general
+- Partidas pertenecientes a torneo o liga no se listan como partidas sueltas
 
 ### F6 - Comunicación (Fase 1)
 
 - Sin chat interno
 - El teléfono del participante solo es visible para los demás participantes de la misma partida confirmada
 - La coordinación se delega a medios externos (WhatsApp, llamada)
+- Opción de crear contacto nativo desde el teléfono visible (perfil ajeno)
 
 ### F7 - Notificaciones y resultados
 
@@ -220,6 +227,25 @@ Solo dos roles en el MVP:
 - Gráficas: serie temporal semanal, barras por ciudad, distribución por estado
 - Ranking de usuarios por número de partidas
 - Acceso solo para administradores
+
+### F10 - Ligas (Fase 6)
+
+- Crear/editar/cancelar liga (organizador): título, ciudad/lugar, visibilidad, formato (`single_round` / `double_round` / `open_elo`)
+- Parejas mixtas (cuentas + texto); nombres de pareja derivados o personalizados
+- Round-robin: generación de jornadas/fixtures; clasificación por puntos
+- Open Elo: retos entre parejas; ranking Elo de pareja; fecha de fin opcional
+- Partidos de liga reutilizan `matches` con `league_id`; mismos flujos de resultado/marcador que partidas normales cuando aplica
+- Privadas con contraseña + grants; admin puede leer sin contraseña
+- Listado en Descubrir (filtro Ligas); invitaciones/compartir según visibilidad
+- Lifecycle y recordatorios vía cron (`process_league_lifecycle`, mig. `102`/`106`)
+
+### F11 - Estadísticas, logros y clasificación (Fase 6)
+
+- Stats por jugador: ELO, W/L, rachas, forma, H2H, compañeros, rivales, sedes, podios torneo/liga
+- Pantalla de estadísticas desde perfil propio o ajeno (`profile/stats/[userId]`)
+- Tab **Clasificación** (`leaderboard`): ranking global y por ciudad
+- Badges/logros con popup al desbloquear; showcase de hasta 3 en perfil
+- Recomputo en cola + refresh-on-read solo para el propio usuario o admin
 
 ---
 
@@ -554,7 +580,7 @@ Supabase (PostgreSQL + Auth + Storage)
 ### Privacidad (RGPD)
 
 - Consentimiento explícito en el registro
-- Derecho de supresión: borrado de cuenta (auth + perfil + avatar + reportes personales). El historial agregado de partidas **se anonimiza** (perfil sentinel «Usuario eliminado»), no se destruye, para no perjudicar a otros jugadores.
+- Derecho de supresión: borrado de cuenta (auth + perfil + avatar + reportes personales). El historial agregado de partidas, **ligas y torneos** **se anonimiza** (perfil sentinel «Usuario eliminado» / texto «Usuario eliminado»), no se destruye, para no perjudicar a otros jugadores (mig. `105`).
 - Minimización de datos: teléfono visible solo para participantes de la misma partida
 - Política de privacidad y términos visibles en la app (registro y perfil)
 - DPA agreements con servicios externos (Supabase, PostHog, Sentry)
@@ -597,7 +623,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH4: Un usuario puede recuperar su contraseña por email, fijar una nueva en `auth/update-password` e iniciar sesión después
 - CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
-- CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas/resultados (perfil sentinel «Usuario eliminado»)
+- CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas, ligas y torneos (perfil sentinel «Usuario eliminado»)
 
 **Perfil**
 
@@ -670,6 +696,27 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_PROF6: El perfil ajeno muestra historial de partidas filtrado por lo que el visitante puede leer; al pulsar una fila se abre el detalle de la partida
 - CA_PROF7: Sin permiso de visibilidad, el perfil ajeno no expone datos (pantalla de error o vacía)
 
+### Fase 6 — Ligas y estadísticas (ago. 2026)
+
+**Ligas**
+
+- CA_LEAGUE1: El organizador puede crear una liga en formato round-robin (ida o ida/vuelta) u open Elo
+- CA_LEAGUE2: En round-robin se generan fixtures y la clasificación refleja resultados confirmados
+- CA_LEAGUE3: En open Elo las parejas pueden retarse y el ranking Elo de pareja se actualiza tras resultados
+- CA_LEAGUE4: Las ligas privadas requieren contraseña para desbloquear la vista (salvo admin)
+- CA_LEAGUE5: Las partidas de liga no aparecen como partidas sueltas en Descubrir
+
+**Estadísticas y clasificación**
+
+- CA_STATS1: Un usuario autenticado puede ver sus estadísticas (ELO, W/L, forma) y las de otro jugador según permisos de perfil
+- CA_STATS2: El leaderboard muestra ranking global y por ciudad
+- CA_STATS3: Al desbloquear un logro se muestra popup; el usuario puede fijar hasta 3 en showcase de perfil
+- CA_STATS4: `get_player_stats` solo recalcula en lectura para el propio usuario o admin; el resto lee cache
+
+**Contacto**
+
+- CA_CONTACT1: Con teléfono visible en perfil ajeno, en iOS/Android se puede abrir la ficha nativa de nuevo contacto
+
 ---
 
 ## 10. Funcionalidades Pospuestas
@@ -678,7 +725,7 @@ Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para 
 
 | Funcionalidad                           | Motivo del aplazamiento                                                                                                                                       |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ligas y clasificaciones                 | Alta complejidad (calendario, brackets, puntuaciones)                                                                                                         |
+| Ligas y clasificaciones                 | ~~Pospuesta~~ **Implementado (v1.7 / Fase 6):** round-robin, open Elo, stats, badges y leaderboard (mig. `086`+)                                              |
 | Chat interno                            | Requiere moderación constante; se delega en WhatsApp                                                                                                          |
 | Geolocalización GPS exacta              | Sacrifica privacidad sin aportar valor suficiente en el MVP                                                                                                   |
 | Autenticación con Apple ID              | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store)                                                                                                  |

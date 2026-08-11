@@ -28,7 +28,7 @@ _Aplicación móvil multiplataforma para la comunidad de jugadores de mus en Esp
 
 ## 📋 Visión del proyecto
 
-**jugaMUS** conecta a jugadores de mus que desean encontrar contrincantes y coordinar partidas puntuales — día, hora y lugar — sin incorporar la lógica del juego en la aplicación. El producto abarca desde la organización informal entre amigos hasta torneos eliminatorios con cuadros visuales, con un enfoque en privacidad, cumplimiento normativo y experiencia de usuario cuidada.
+**jugaMUS** conecta a jugadores de mus que desean encontrar contrincantes y coordinar partidas puntuales — día, hora y lugar — sin incorporar la lógica del juego en la aplicación. El producto abarca desde la organización informal entre amigos hasta torneos eliminatorios, ligas y estadísticas de jugador, con un enfoque en privacidad, cumplimiento normativo y experiencia de usuario cuidada.
 
 La aplicación está **publicada y disponible** en las principales tiendas de aplicaciones — [App Store](https://apps.apple.com/es/app/jugamus/id6775626292) y [Google Play](https://play.google.com/store/apps/details?id=com.javiwacho.musapp) —, con soporte web complementario.
 
@@ -53,7 +53,7 @@ Este marco permitió mantener coherencia entre lo planificado y lo entregado, fa
 
 ### Fases de desarrollo
 
-El alcance se estructuró en **cinco fases incrementales**, cada una con objetivos acotados y entregables verificables:
+El alcance se estructuró en **seis fases incrementales**, cada una con objetivos acotados y entregables verificables:
 
 ```
 Fase 1 ──► Core          Autenticación · Perfil · Partidas · Descubrir
@@ -61,6 +61,7 @@ Fase 2 ──► Resultados    Notificaciones · Validación de marcadores · Re
 Fase 3 ──► Administración Panel de moderación · Analíticas · Auditoría
 Fase 4 ──► Torneos       Cuadros eliminatorios · Parejas · Sincronización en tiempo real
 Fase 5 ──► Marcador      Conteo en vivo local · Acceso sin registro
+Fase 6 ──► Ligas y stats Ligas round-robin / Elo · Estadísticas · Logros · Clasificación
 ```
 
 ---
@@ -159,7 +160,7 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 - Inicio de sesión con **Google**, **Apple ID** y **correo electrónico**
 - Registro con aceptación de términos legales y política de privacidad
 - Recuperación de contraseña y persistencia de sesión entre reinicios
-- **Eliminación de cuenta** conforme al RGPD, con anonimización del historial compartido
+- **Eliminación de cuenta** conforme al RGPD, con anonimización del historial compartido (partidas, ligas y torneos)
 - Cierre de sesión con confirmación explícita
 
 ### 👤 Perfil de usuario
@@ -167,7 +168,9 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 - Datos personales: nombre, teléfono con validación internacional, localidad y foto de perfil
 - Preferencias granulares de **notificaciones push** por tipo de evento
 - Historial personal de partidas con indicadores de victoria y derrota
+- Resumen de **estadísticas / ELO**, logros destacados y pantalla de stats detallada
 - **Perfil ajeno** de solo lectura, con visibilidad condicionada por permisos del servidor
+- **Guardar contacto** nativo desde el teléfono visible (iOS/Android)
 - Envío de **feedback** in-app y valoración periódica en la tienda de aplicaciones
 
 ### 🎲 Partidas
@@ -182,8 +185,8 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 
 ### 🔍 Descubrir
 
-- Listado de partidas y torneos públicos con ordenación por proximidad temporal
-- Filtros por ciudad, fecha, plazas libres, visibilidad y estado
+- Listado de partidas, torneos y **ligas** públicas con ordenación por proximidad temporal
+- Filtros por tipo, ciudad, fecha, plazas libres, visibilidad y estado
 - Búsqueda por texto y paginación eficiente
 - Actualización en tiempo real sin recarga manual
 
@@ -195,6 +198,19 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 - Avance de ronda al confirmar resultados, con opción de partido por el 3.º y 4.º puesto
 - Rol de **árbitro** para el organizador sin necesidad de participar como jugador
 - Sincronización multi-dispositivo en cuadro y fichas de torneo
+
+### 🏅 Ligas
+
+- Formatos **round-robin** (ida o ida y vuelta) con jornadas y clasificación
+- Formato **open Elo** con retos entre parejas y ranking Elo de pareja
+- Parejas mixtas, visibilidad pública o privada con contraseña
+- Partidos de liga integrados en el mismo ciclo de resultados y marcador
+
+### 📊 Estadísticas y clasificación
+
+- ELO global, victorias/derrotas, rachas, forma, H2H, compañeros, rivales y sedes
+- Podios de torneo y liga; logros con popup al desbloquear y showcase en perfil
+- Tab de **clasificación** global y por ciudad
 
 ### 📣 Notificaciones y resultados
 

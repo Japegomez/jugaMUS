@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 11/08/2026 (sync `main` → `develop` + security hardening migración `106`)
+> Actualizado: 11/08/2026 (docs v1.7: ligas, stats, contactos, delete-account `105`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -14,6 +14,7 @@
 | Fase 3 - Admin         | Completada | Panel admin, Analíticas, Disputas                                                |
 | Fase 4 - Torneos       | Completada | Cuadros, parejas, explore, UX móvil                                              |
 | Fase 5 - Marcador      | Completada | Marcador en vivo local + enlace a resultado; guest sin login en rama             |
+| Fase 6 - Ligas y stats | Completada | Ligas round-robin/Elo, stats, badges, leaderboard, contacto nativo; v1.7.0       |
 | UI — Ultra Limpio      | Completada | Rediseño visual                                                                  |
 | UX — Cuenta            | Completada | Feedback, valoración App Store, confirmación cerrar sesión                       |
 | UX — Jul. 2026         | Completada | Marcador, recovery, WhatsApp invites, sesión caducada, PostHog funnels, v1.2.1   |
@@ -23,6 +24,7 @@
 | Release minor          | Completada | Review follow-ups + npm audit shim; v1.4.0                                       |
 | Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                    |
 | Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
+| Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
 
 ---
 
@@ -85,11 +87,11 @@
 - [x] Cerrar sesión desde pantalla de perfil
 - [x] Confirmación modal al cerrar sesión (`SignOutModal`: Confirmar / Cancelar)
 - [x] Flujo de eliminación de cuenta (derecho de supresión RGPD)
-  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`).
+  - Edge Function `delete-account` (desplegada en remoto) + RPC `delete_user_account_data` (migraciones `023`–`025`, `105`).
   - CORS: allowlist producción + loopback `localhost`/`127.0.0.1` (cualquier puerto) para Expo web local.
-  - Anonimización: partidas y resultados se conservan; creador/participante/referencias pasan al perfil sentinel **Usuario eliminado** (`00000000-0000-4000-8000-000000000001`, cuenta interna sin login).
+  - Anonimización: partidas, **ligas y torneos** se conservan; creador/participante/parejas/retos/grants pasan al sentinel **Usuario eliminado** o texto «Usuario eliminado» (`00000000-0000-4000-8000-000000000001`).
   - UI: `DeleteAccountModal` + botón en perfil; `deleteAccount()` en `useAuth`.
-  - PR #21 mergeado en `develop`.
+  - PR #21 mergeado en `develop`; fix FKs ligas/torneos mig. `105` (ago. 2026).
 
 ### F2 - Perfil de usuario
 
@@ -517,6 +519,20 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Orden UI consistente: integrantes de pareja/equipo antes del nombre (crear/editar partida, modales, PairCard)
 - [x] `locales/es.json`: claves nativas bajo `ios` (fix Android `ExtraTranslation` / `lintVitalRelease`)
 - [x] Versión app → **1.5.0** (`app.json`, `package.json`)
+
+### Release 1.7 — contactos, stats, ligas (ago. 2026)
+
+- [x] Contacto nativo desde teléfono en perfil ajeno (`expo-contacts` / copia en web) — PRs #139 / #147
+- [x] Stats de jugador: ELO, H2H, forma, rivales, compañeros, sedes, podios — mig. `086`+ / PRs #142 / #148
+- [x] Badges/logros + showcase (hasta 3) + popup al desbloquear — mig. `094`–`099`
+- [x] Leaderboard global/ciudad (tab Clasificación) — mig. `100`
+- [x] Ligas: round-robin / open Elo, clasificación, retos, privadas, explore — mig. `086`+ / PRs #143 / #150
+- [x] Admin acceso a privados (partidas/torneos/ligas) — mig. `101`
+- [x] CI: `GITHUB_TOKEN` mínimo privilegio en workflows — PR #149
+- [x] Delete-account: anonimizar FKs de ligas/torneos — mig. `105` (evita 500 `leagues_creator_id_fkey`)
+- [x] Security: lifecycle ligas solo cron + gate refresh stats — mig. `106`
+- [x] Dependabot #140/#141 + versión app → **1.7.0**
+- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`) en `develop`
 
 ---
 
