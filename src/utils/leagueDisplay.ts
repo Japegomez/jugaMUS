@@ -11,7 +11,9 @@ export function leagueStatusDisplay(league: {
   switch (league.status) {
     case LEAGUE_STATUS.REGISTRATION:
       return {
-        text: league.fixtures_generated_at ? 'Inscripción' : 'Inscripción abierta',
+        // Compatibilidad: si `fixtures_generated_at` no viene (undefined),
+        // mantenemos el texto histórico "Inscripción".
+        text: league.fixtures_generated_at === null ? 'Inscripción abierta' : 'Inscripción',
         color: Colors.primary,
       }
     case LEAGUE_STATUS.IN_PROGRESS:
