@@ -30,6 +30,7 @@ export default function PlayerStatsScreen() {
         <Pressable
           onPress={() => router.back()}
           accessibilityRole="button"
+          accessibilityLabel="Cerrar estadísticas"
           hitSlop={8}
           style={styles.closeWrap}>
           <Text style={styles.close}>✕</Text>

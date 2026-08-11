@@ -887,7 +887,7 @@ BEGIN
     FROM public.player_stats ps
     JOIN public.profiles pr ON pr.id = ps.user_id
     WHERE ps.matches_played > 0
-      AND (p_city IS NULL OR p_city = '' OR pr.city ILIKE p_city)
+      AND (p_city IS NULL OR p_city = '' OR LOWER(pr.city) = LOWER(p_city))
     ORDER BY ps.elo_rating DESC, ps.wins DESC, ps.matches_played DESC
     LIMIT v_lim
   ) r;
@@ -905,6 +905,6 @@ BEGIN
   PERFORM public.backfill_player_stats();
 EXCEPTION
   WHEN OTHERS THEN
-    RAISE NOTICE 'player_stats backfill skipped: %', SQLERRM;
+  RAISE EXCEPTION 'player_stats backfill failed: %', SQLERRM;
 END;
 $$;

@@ -54,7 +54,9 @@ export function useSubmitResult() {
         queryClient.invalidateQueries({ queryKey: userMatchesQueryKey(sessionUserId) })
         invalidateMyMatchesDashboard(queryClient, sessionUserId)
       }
-      invalidatePlayerStatsCaches(queryClient)
+      if (row.status === 'confirmed') {
+        invalidatePlayerStatsCaches(queryClient)
+      }
     },
   })
 }
