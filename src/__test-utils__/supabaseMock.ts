@@ -62,7 +62,7 @@ export function mockFromChain<T>(result: { data: T; error: unknown }): MockQuery
     ) => Promise.resolve(result).then(onFulfilled, onRejected),
     catch: (onRejected?: ((reason: unknown) => unknown) | null) =>
       Promise.resolve(result).catch(onRejected),
-  } as MockQueryChain<T>
+  } as unknown as MockQueryChain<T>
 
   for (const method of CHAIN_METHODS) {
     chain[method] = jest.fn(() => chain)
@@ -135,11 +135,17 @@ export function createSupabaseMock(overrides: Partial<SupabaseMock> = {}): Supab
       })),
     },
     channel: jest.fn(() => {
-      const ch = {
-        on: jest.fn(() => ch),
-        subscribe: jest.fn(() => ch),
+      const ch: {
+        on: jest.Mock
+        subscribe: jest.Mock
+        unsubscribe: jest.Mock
+      } = {
+        on: jest.fn(),
+        subscribe: jest.fn(),
         unsubscribe: jest.fn(),
       }
+      ch.on.mockReturnValue(ch)
+      ch.subscribe.mockReturnValue(ch)
       return ch
     }),
     removeChannel: jest.fn(),

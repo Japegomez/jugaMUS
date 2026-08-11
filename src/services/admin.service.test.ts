@@ -336,7 +336,7 @@ describe('admin.service', () => {
         })
       )
 
-      const rows = await fetchAdminFeedback({ category: 'bug' })
+      const rows = await fetchAdminFeedback({ category: 'issue' })
 
       expect(rows).toHaveLength(1)
       expect(rows[0].user_display_name).toBe('Ana')

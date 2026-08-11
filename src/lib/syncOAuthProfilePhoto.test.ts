@@ -26,7 +26,7 @@ import { uploadAvatar } from '@/services/profiles.service'
 import { supabase } from '@/lib/supabase'
 import { syncOAuthProfilePhoto } from '@/lib/syncOAuthProfilePhoto'
 
-const mockSupabase = supabase as { from: jest.Mock }
+const mockSupabase = supabase as unknown as { from: jest.Mock }
 
 describe('syncOAuthProfilePhoto', () => {
   beforeEach(() => {

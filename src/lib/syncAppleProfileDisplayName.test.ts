@@ -28,7 +28,14 @@ describe('syncAppleProfileDisplayName', () => {
     mockSupabase.auth.updateUser.mockResolvedValue({ data: { user: null }, error: null })
 
     await syncAppleProfileDisplayName('user-1', {
-      appleFullName: { givenName: 'Ana', familyName: 'López' },
+      appleFullName: {
+        namePrefix: null,
+        givenName: 'Ana',
+        middleName: null,
+        familyName: 'López',
+        nameSuffix: null,
+        nickname: null,
+      },
       email: 'ana@privaterelay.appleid.com',
     })
 
@@ -64,7 +71,14 @@ describe('syncAppleProfileDisplayName', () => {
 
     await expect(
       syncAppleProfileDisplayName('user-1', {
-        appleFullName: { givenName: 'Ana', familyName: 'López' },
+        appleFullName: {
+          namePrefix: null,
+          givenName: 'Ana',
+          middleName: null,
+          familyName: 'López',
+          nameSuffix: null,
+          nickname: null,
+        },
         email: 'ana@privaterelay.appleid.com',
       })
     ).resolves.toBeUndefined()
