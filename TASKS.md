@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 11/08/2026 (docs v1.7: ligas, stats, contactos, delete-account `105`)
+> Actualizado: 11/08/2026 (hotfix v1.7.1: suite TDD + coverage gates)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -25,6 +25,7 @@
 | Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                    |
 | Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
 | Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
+| Hotfix tests TDD       | Completada | Characterization tests + coverage gates + docs; v1.7.1                           |
 
 ---
 
@@ -263,7 +264,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 
 ### CI/CD hardening (checklist Nana — jun. 2026)
 
-- [x] **Cobertura Jest con umbral 1%** — `coverageThreshold` en `jest.config.js`; artefacto `coverage/` en `quality.yml`.
+- [x] **Cobertura Jest con umbral ≥60% líneas** — `coverageThreshold` en `jest.config.js` sobre `src/{utils,lib,services,hooks}`; artefacto `coverage/` en `quality.yml`.
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
 - [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
 - [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
@@ -534,6 +535,15 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Dependabot #140/#141 + versión app → **1.7.0**
 - [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`) en `develop`
 
+### Hotfix v1.7.1 — tests TDD (ago. 2026)
+
+- [x] Characterization tests: 9 services, hooks principales, utils/lib gaps (~420 tests)
+- [x] Jest: coverage collectFrom services/hooks/utils/lib; umbrales ≥60% líneas; `docs/testing.md`
+- [x] Pre-commit: `jest --findRelatedTests` vía lint-staged
+- [x] TDD estricto documentado hacia adelante (rojo → verde → refactor)
+- [x] Versión app → **1.7.1** (`app.json`, `package.json`)
+- [x] Commit + PR `hotfix/v1.7.1` → `main` (revisor/asignado Japegomez)
+
 ---
 
 ## UI — Rediseño Ultra Limpio (may. 2026)
@@ -637,7 +647,10 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Preferencias de notificación avanzadas — integradas en perfil (ver F2 / PR #19); sin pantalla de configuración dedicada
 - [x] Icono de app y splash screen — ver Servicios externos Fase 1 / PR #20
 - [x] README del proyecto — existe `README.md` (visión, stack, funcionalidades, enlaces a tiendas y docs)
-- [ ] Tests unitarios de validaciones (E.164, reglas de partida)
+- [x] Tests unitarios de lógica crítica (ago. 2026)
+  - Characterization tests: services (9), hooks principales, utils/lib gaps; `docs/testing.md`.
+  - Jest coverage gates (≥60% lines) + pre-commit `jest --findRelatedTests` vía lint-staged.
+  - TDD estricto obligatorio hacia adelante para features/bugfixes.
 - [x] Documentación de variables de entorno (`.env.example`) — incluye `EDGE_CRON_SECRET` para CI
 - [x] **Security hardening (may. 2026, rama `chore/security`, migraciones 038–048):** anti-escalada admin, PII lockdown, cron secret, Edge Functions, Sentry, OAuth release
   - `CRON_SECRET` / `EDGE_CRON_SECRET` configurados (Supabase Edge Functions + GitHub) según `.env.example` / docs.

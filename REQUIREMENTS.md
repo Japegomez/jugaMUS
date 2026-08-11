@@ -11,7 +11,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 ### Decisiones clave
 
 - **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
-- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura 1%). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. `GITHUB_TOKEN` con mínimo privilegio: `contents: read` por defecto; `contents: write` solo en el job de etiquetado de release (`eas.yml`). Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
+- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura ≥60% líneas en `src/{utils,lib,services,hooks}`). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. `GITHUB_TOKEN` con mínimo privilegio: `contents: read` por defecto; `contents: write` solo en el job de etiquetado de release (`eas.yml`). Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
 - **Legal / Play (may. 2026):** URLs públicas de privacidad y eliminación de cuenta vía **GitHub Pages** (`docs/` en `main`, carpeta `/docs`). Contacto de soporte / seguridad: `japenago@gmail.com`. Package Android: `com.javiwacho.musapp`; slug EAS `musapp`.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web. **Empezar partida (jul. 2026):** el creador puede pasar una partida `planned` a `in_progress` manualmente (sin modal de confirmación; sí aviso si la plantilla está incompleta); se fija `start_at` al instante actual.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
@@ -39,7 +39,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
 - **PostHog producto (jul. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
 - **Torneos — cuadro interactivo (jul. 2026):** cada pareja en tarjeta propia; tap en pareja para registrar resultado y avanzar (modal rápido o ficha de partido). Etiquetas de ronda (cuartos, semifinal, final). Confirmación destructiva al organizar cuadro. Al cancelar torneo se cancelan **todos** los partidos del cuadro (`082`). Fix auto-cancel al poblar la final (`081`). Notificación «Validar resultado» solo si el resultado queda `pending_validation` (`083`).
-- **Versión app (ago. 2026):** **1.7.0** (`app.json`, `package.json`).
+- **Versión app (ago. 2026):** **1.7.1** (`app.json`, `package.json`). Hotfix de calidad: suite de characterization tests (services/hooks/utils/lib), umbrales de cobertura y proceso TDD (`docs/testing.md`).
 - **Security hardening ligas/stats (ago. 2026, mig. `106`):** `process_league_lifecycle` solo vía pg_cron (REVOKE a PUBLIC/authenticated). `enqueue_player_stats_recompute` no ejecutable por clientes. `get_player_stats` recalcula ELO/agregados solo para el propio usuario o admin; el resto lee stats cacheadas (mitiga amplificación cross-user).
 - **UI responsive (jul. 2026):** helpers `useResponsiveLayout` / `ScrollableModalBody` para escalado tipográfico y modales con scroll seguro en pantallas pequeñas.
 - **Crear partida — UX (jul.–ago. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ cierra a **Mis partidas** (no `back` a Descubrir). Sin autofocus/teclado al abrir el formulario. Etiquetas de campo en negrita; sin asteriscos ni «(opcional)» en labels de crear/editar. **Empezar partida:** sin modal de confirmación (sí aviso si plantilla incompleta). Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`). **Partida ya jugada (ago. 2026):** si `start_at` es anterior a ahora, el formulario muestra el marcador al final (casillas vacías; nombres de equipo derivados como en ficha); exige plantilla completa; al crear registra resultado directo (`record_match_result_direct`, mig. `085` admite también `finished_no_result`) y abre la partida `finished`. Orden de pareja/equipo en formularios y tarjetas: **integrantes primero, nombre después**.
@@ -743,16 +743,16 @@ Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para 
 
 ### Herramientas
 
-| Área                 | Herramienta                                            |
-| -------------------- | ------------------------------------------------------ |
-| Control de versiones | Git + GitHub                                           |
-| Gestión de tareas    | `TASKS.md` en el repositorio (actualizado cada sesión) |
-| CI/CD                | GitHub Actions + Expo EAS Build + EAS Submit           |
-| Linting y formato    | ESLint + Prettier                                      |
-| Commits              | Conventional Commits (`feat(scope): descripción`)      |
-| Quality gates        | Husky (pre-commit: lint + type-check)                  |
-| Testing              | Jest (solo lógica crítica: validaciones, servicios)    |
-| Migraciones DB       | Supabase (preferente vía MCP; CLI opcional)            |
+| Área                 | Herramienta                                             |
+| -------------------- | ------------------------------------------------------- |
+| Control de versiones | Git + GitHub                                            |
+| Gestión de tareas    | `TASKS.md` en el repositorio (actualizado cada sesión)  |
+| CI/CD                | GitHub Actions + Expo EAS Build + EAS Submit            |
+| Linting y formato    | ESLint + Prettier                                       |
+| Commits              | Conventional Commits (`feat(scope): descripción`)       |
+| Quality gates        | Husky (pre-commit: lint + Prettier + Jest related)      |
+| Testing              | Jest (services, hooks, utils, lib) + TDD hacia adelante |
+| Migraciones DB       | Supabase (preferente vía MCP; CLI opcional)             |
 
 ### GitFlow (estructura de ramas)
 
@@ -775,13 +775,20 @@ Reglas operativas:
 
 ### Estrategia de testing
 
-Cobertura mínima en lógica crítica:
+Alcance unitario (characterization + TDD):
 
-- Validaciones de datos (teléfono E.164, campos de partida)
-- Reglas de negocio (límite de participantes, cambios de estado)
-- Servicios de Supabase (mocks)
+- **`src/utils` / `src/lib`**: validaciones, formatters, auth helpers, invites, marcador local
+- **`src/services`**: reglas de negocio y RPCs con cliente Supabase mockeado
+- **`src/hooks`**: query keys, `enabled`, mutaciones e invalidación de cache (React Testing Library `renderHook`)
 
-No se escriben tests de componentes UI en las fases iniciales.
+Proceso:
+
+1. Código existente: tests de caracterización que fijan el comportamiento actual.
+2. Features / bugfixes nuevos: **TDD estricto** (rojo → verde → refactor). Ver `docs/testing.md`.
+
+CI (`quality.yml` / `npm run test:ci`): umbrales globales ≥ 60% líneas/statements/functions (branches ≥ 50%) sobre `src/{utils,lib,services,hooks}` (con exclusiones documentadas de wiring nativo/SDK).
+
+No se escriben tests de pantallas/componentes UI en esta fase (salvo helpers puros). Sin pgTAP / Edge Function unit tests todavía.
 
 ### Conventional Commits
 

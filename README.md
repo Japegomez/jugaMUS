@@ -269,6 +269,7 @@ El despliegue de nuevas versiones se automatiza mediante **GitHub Actions** y **
 | ----------------- | ---------------------------------------------------------------------- |
 | `REQUIREMENTS.md` | Especificaciones funcionales y no funcionales                          |
 | `TASKS.md`        | Backlog vivo por fases y estado de avance                              |
+| `docs/testing.md` | Guía de tests unitarios y proceso TDD (rojo → verde → refactor)        |
 | `docs/`           | Páginas legales públicas (privacidad, términos, eliminación de cuenta) |
 
 ---
