@@ -4,9 +4,15 @@ import { acknowledgeAlert, confirmAlert, showAlert } from '@/utils/alert'
 
 describe('alert utils', () => {
   const originalPlatform = Platform.OS
+  const originalConfirm = globalThis.confirm
 
   afterEach(() => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true })
+    Object.defineProperty(globalThis, 'confirm', {
+      value: originalConfirm,
+      configurable: true,
+      writable: true,
+    })
     jest.restoreAllMocks()
   })
 
@@ -41,6 +47,7 @@ describe('alert utils', () => {
       Object.defineProperty(globalThis, 'confirm', {
         value: jest.fn(() => true),
         configurable: true,
+        writable: true,
       })
     })
 

@@ -69,6 +69,13 @@ describe('authSchemas', () => {
           confirmPassword: 'short',
         }).success
       ).toBe(false)
+
+      expect(
+        updatePasswordSchema.safeParse({
+          password: '12345678',
+          confirmPassword: '87654321',
+        }).success
+      ).toBe(false)
     })
   })
 })

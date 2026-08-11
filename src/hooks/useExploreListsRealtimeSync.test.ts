@@ -4,11 +4,16 @@ import { renderHookWithClient } from '@/__test-utils__/renderHook'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useExploreListsRealtimeSync } from '@/hooks/useExploreListsRealtimeSync'
 
-const mockChannel = {
-  on: jest.fn(function (this: typeof mockChannel) {
+type MockChannel = {
+  on: jest.Mock
+  subscribe: jest.Mock
+}
+
+const mockChannel: MockChannel = {
+  on: jest.fn(function (this: MockChannel) {
     return this
   }),
-  subscribe: jest.fn(function (this: typeof mockChannel) {
+  subscribe: jest.fn(function (this: MockChannel) {
     return this
   }),
 }

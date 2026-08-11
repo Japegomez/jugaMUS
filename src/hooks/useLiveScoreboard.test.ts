@@ -139,7 +139,15 @@ describe('useLiveScoreboard', () => {
     })
 
     await waitFor(() => {
-      expect(mockSave).toHaveBeenCalled()
+      expect(mockSave).toHaveBeenCalledWith(
+        'match-1',
+        expect.objectContaining({
+          pointsA: 1,
+          pointsB: 0,
+          gamesA: 0,
+          gamesB: 0,
+        })
+      )
     })
   })
 })

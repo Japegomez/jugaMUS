@@ -43,7 +43,7 @@ import { identifyUser } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/hooks/useAuth'
 
-const mockSupabase = supabase as ReturnType<typeof createSupabaseMock>
+const mockSupabase = supabase as unknown as ReturnType<typeof createSupabaseMock>
 
 function resetAuthStore() {
   useAuthStore.setState({

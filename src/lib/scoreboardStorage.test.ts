@@ -1,5 +1,3 @@
-import { Platform } from 'react-native'
-
 import { createDefaultScoreboardState } from '@/hooks/useLiveScoreboard'
 import {
   clearScoreboardState,
@@ -25,7 +23,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 describe('scoreboardStorage', () => {
   beforeEach(() => {
     mockStorage.clear()
-    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
   })
 
   it('returns null when nothing stored', async () => {
@@ -47,7 +44,10 @@ describe('scoreboardStorage', () => {
   })
 
   it('returns null for invalid JSON', async () => {
-    mockStorage.set('jugamus.scoreboard.m1', '{bad json')
+    await saveScoreboardState('m1', createDefaultScoreboardState())
+    const key = [...mockStorage.keys()][0]
+    expect(key).toBeTruthy()
+    mockStorage.set(key!, '{bad json')
     await expect(loadScoreboardState('m1')).resolves.toBeNull()
   })
 })

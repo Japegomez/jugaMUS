@@ -38,7 +38,8 @@ describe('feedback.service', () => {
     })
 
     it('trims message and inserts', async () => {
-      mockSupabase.from.mockReturnValue(mockFromChain({ data: null, error: null }))
+      const chain = mockFromChain({ data: null, error: null })
+      mockSupabase.from.mockReturnValue(chain)
 
       await submitFeedback({
         userId: 'u1',
@@ -47,8 +48,7 @@ describe('feedback.service', () => {
       })
 
       expect(mockSupabase.from).toHaveBeenCalledWith('user_feedback')
-      const insertChain = mockSupabase.from.mock.results[0].value
-      await insertChain.insert({
+      expect(chain.insert).toHaveBeenCalledWith({
         user_id: 'u1',
         category: 'feature',
         message: 'Esto es un mensaje válido',

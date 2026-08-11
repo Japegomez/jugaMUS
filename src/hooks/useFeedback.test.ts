@@ -29,7 +29,7 @@ describe('useSubmitFeedback', () => {
     const { result } = renderHookWithClient(() => useSubmitFeedback())
 
     await expect(
-      result.current.mutateAsync({ category: 'bug', message: 'Algo falla' })
+      result.current.mutateAsync({ category: 'issue', message: 'Algo falla' })
     ).rejects.toThrow('No autenticado')
   })
 
@@ -39,11 +39,11 @@ describe('useSubmitFeedback', () => {
     const { result } = renderHookWithClient(() => useSubmitFeedback())
 
     await act(async () => {
-      await result.current.mutateAsync({ category: 'idea', message: 'Me gustaría X' })
+      await result.current.mutateAsync({ category: 'feature', message: 'Me gustaría X' })
     })
 
     expect(mockSubmitFeedback).toHaveBeenCalledWith({
-      category: 'idea',
+      category: 'feature',
       message: 'Me gustaría X',
       userId: 'user-1',
     })

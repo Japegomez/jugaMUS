@@ -33,7 +33,9 @@ describe('tournamentForm (beyond entry fee)', () => {
   describe('formatEntryFee / entryFeeToFormValue', () => {
     it('formats EUR currency', () => {
       expect(formatEntryFee(10)).toMatch(/10/)
+      expect(formatEntryFee(10)).toMatch(/€/)
       expect(formatEntryFee(10.5)).toMatch(/10,50|10\.50/)
+      expect(formatEntryFee(10.5)).toMatch(/€/)
     })
 
     it('coerces form values', () => {

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { SESSION_EXPIRED_MESSAGE, validateAuthSession } from '@/lib/validateAuthSession'
 
-const mockSupabase = supabase as {
+const mockSupabase = supabase as unknown as {
   auth: {
     getUser: jest.Mock
     signOut: jest.Mock

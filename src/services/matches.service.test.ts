@@ -411,12 +411,31 @@ describe('matches.service', () => {
     })
 
     it('returns empty participants for private match without access', async () => {
-      mockSupabase.from.mockReturnValue(
-        mockFromChain({
-          data: { ...matchRow, visibility: MATCH_VISIBILITY.PRIVATE },
-          error: null,
-        })
-      )
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return mockFromChain({
+            data: { ...matchRow, visibility: MATCH_VISIBILITY.PRIVATE },
+            error: null,
+          })
+        }
+        if (table === 'match_participants') {
+          return mockFromChain({
+            data: [
+              {
+                id: 'p1',
+                match_id: 'm1',
+                user_id: 'u1',
+                team: 'A',
+                state: 'confirmed',
+                joined_at: '2026-01-01T00:00:00Z',
+                left_at: null,
+              },
+            ],
+            error: null,
+          })
+        }
+        return mockFromChain({ data: null, error: null })
+      })
       mockSupabase.rpc.mockImplementation((fn: string) => {
         if (fn === 'viewer_can_access_match') {
           return Promise.resolve({ data: false, error: null })

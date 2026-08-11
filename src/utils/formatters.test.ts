@@ -6,6 +6,7 @@ describe('formatters', () => {
       const formatted = formatDate('2026-01-15T14:30:00.000Z')
       expect(formatted).toMatch(/\d{2}/)
       expect(formatted.toLowerCase()).toMatch(/ene|2026/)
+      expect(formatted).toMatch(/\d{1,2}:\d{2}/)
     })
   })
 

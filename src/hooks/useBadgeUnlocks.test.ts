@@ -48,13 +48,13 @@ describe('useBadgeUnlocks', () => {
 
     mockUsePlayerStats.mockReturnValue({
       data: {
-        badges: [{ key: 'first_win' }, { key: 'ten_wins' }],
+        badges: [{ key: 'first_win' }, { key: 'wins_10' }],
       },
     })
     rerender()
 
     await waitFor(() => {
-      expect(result.current.unlockedBadge).toEqual({ key: 'ten_wins', emoji: '🏅' })
+      expect(result.current.unlockedBadge).toEqual({ key: 'wins_10', emoji: '🔟' })
     })
   })
 

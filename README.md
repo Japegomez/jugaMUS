@@ -55,7 +55,7 @@ Este marco permitió mantener coherencia entre lo planificado y lo entregado, fa
 
 El alcance se estructuró en **seis fases incrementales**, cada una con objetivos acotados y entregables verificables:
 
-```
+```text
 Fase 1 ──► Core          Autenticación · Perfil · Partidas · Descubrir
 Fase 2 ──► Resultados    Notificaciones · Validación de marcadores · Reportes
 Fase 3 ──► Administración Panel de moderación · Analíticas · Auditoría

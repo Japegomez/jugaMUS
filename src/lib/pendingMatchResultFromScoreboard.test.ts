@@ -44,4 +44,20 @@ describe('pendingMatchResultFromScoreboard', () => {
     clearPendingMatchResultFromScoreboard('m1')
     expect(getPendingMatchResultFromScoreboard('m1')).toBeNull()
   })
+
+  it('clearing another match id leaves pending result intact', () => {
+    setPendingMatchResultFromScoreboard({
+      matchId: 'm1',
+      teamAGames: 2,
+      teamBGames: 1,
+    })
+
+    clearPendingMatchResultFromScoreboard('m2')
+
+    expect(getPendingMatchResultFromScoreboard('m1')).toEqual({
+      matchId: 'm1',
+      teamAGames: 2,
+      teamBGames: 1,
+    })
+  })
 })

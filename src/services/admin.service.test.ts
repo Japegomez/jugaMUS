@@ -120,20 +120,32 @@ describe('admin.service', () => {
 
   describe('resolveReport', () => {
     it('updates report and writes audit log on success', async () => {
+      const reportsChain = mockFromChain({ data: null, error: null })
+      const auditChain = mockFromChain({ data: null, error: null })
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'reports') {
-          return mockFromChain({ data: null, error: null })
-        }
-        if (table === 'audit_logs') {
-          return mockFromChain({ data: null, error: null })
-        }
+        if (table === 'reports') return reportsChain
+        if (table === 'audit_logs') return auditChain
         return mockFromChain({ data: null, error: null })
       })
 
       await resolveReport('admin1', 'rep1', 'warned_user')
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('reports')
-      expect(mockSupabase.from).toHaveBeenCalledWith('audit_logs')
+      expect(reportsChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'resolved',
+          action_taken: 'warned_user',
+          resolved_by: 'admin1',
+        })
+      )
+      expect(reportsChain.eq).toHaveBeenCalledWith('id', 'rep1')
+      expect(auditChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          admin_id: 'admin1',
+          action: 'resolve_report',
+          target_type: 'report',
+          target_id: 'rep1',
+        })
+      )
     })
 
     it('throws when report update fails', async () => {
@@ -147,20 +159,26 @@ describe('admin.service', () => {
 
   describe('blockUser', () => {
     it('suspends user and writes audit log', async () => {
+      const profilesChain = mockFromChain({ data: null, error: null })
+      const auditChain = mockFromChain({ data: null, error: null })
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') {
-          return mockFromChain({ data: null, error: null })
-        }
-        if (table === 'audit_logs') {
-          return mockFromChain({ data: null, error: null })
-        }
+        if (table === 'profiles') return profilesChain
+        if (table === 'audit_logs') return auditChain
         return mockFromChain({ data: null, error: null })
       })
 
       await blockUser('admin1', 'u2')
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('profiles')
-      expect(mockSupabase.from).toHaveBeenCalledWith('audit_logs')
+      expect(profilesChain.update).toHaveBeenCalledWith({ status: 'suspended' })
+      expect(profilesChain.eq).toHaveBeenCalledWith('id', 'u2')
+      expect(auditChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          admin_id: 'admin1',
+          action: 'block_user',
+          target_type: 'user',
+          target_id: 'u2',
+        })
+      )
     })
 
     it('throws when profile update fails', async () => {
@@ -244,20 +262,26 @@ describe('admin.service', () => {
 
   describe('deleteMatch', () => {
     it('deletes match and writes audit log', async () => {
+      const matchesChain = mockFromChain({ data: null, error: null })
+      const auditChain = mockFromChain({ data: null, error: null })
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'matches') {
-          return mockFromChain({ data: null, error: null })
-        }
-        if (table === 'audit_logs') {
-          return mockFromChain({ data: null, error: null })
-        }
+        if (table === 'matches') return matchesChain
+        if (table === 'audit_logs') return auditChain
         return mockFromChain({ data: null, error: null })
       })
 
       await deleteMatch('admin1', 'm1')
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('matches')
-      expect(mockSupabase.from).toHaveBeenCalledWith('audit_logs')
+      expect(matchesChain.delete).toHaveBeenCalled()
+      expect(matchesChain.eq).toHaveBeenCalledWith('id', 'm1')
+      expect(auditChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          admin_id: 'admin1',
+          action: 'delete_match',
+          target_type: 'match',
+          target_id: 'm1',
+        })
+      )
     })
 
     it('throws when delete fails', async () => {
@@ -271,20 +295,26 @@ describe('admin.service', () => {
 
   describe('deleteMatchResult', () => {
     it('deletes result and writes audit log', async () => {
+      const resultsChain = mockFromChain({ data: null, error: null })
+      const auditChain = mockFromChain({ data: null, error: null })
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'match_results') {
-          return mockFromChain({ data: null, error: null })
-        }
-        if (table === 'audit_logs') {
-          return mockFromChain({ data: null, error: null })
-        }
+        if (table === 'match_results') return resultsChain
+        if (table === 'audit_logs') return auditChain
         return mockFromChain({ data: null, error: null })
       })
 
       await deleteMatchResult('admin1', 'r1')
 
-      expect(mockSupabase.from).toHaveBeenCalledWith('match_results')
-      expect(mockSupabase.from).toHaveBeenCalledWith('audit_logs')
+      expect(resultsChain.delete).toHaveBeenCalled()
+      expect(resultsChain.eq).toHaveBeenCalledWith('id', 'r1')
+      expect(auditChain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          admin_id: 'admin1',
+          action: 'delete_result',
+          target_type: 'result',
+          target_id: 'r1',
+        })
+      )
     })
   })
 

@@ -218,12 +218,34 @@ describe('leagues.service', () => {
     })
 
     it('hides pairs without access on private league', async () => {
-      mockSupabase.from.mockReturnValue(
-        mockFromChain({
-          data: { ...league, visibility: MATCH_VISIBILITY.PRIVATE },
-          error: null,
-        })
-      )
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'leagues') {
+          return mockFromChain({
+            data: { ...league, visibility: MATCH_VISIBILITY.PRIVATE },
+            error: null,
+          })
+        }
+        if (table === 'league_pairs') {
+          return mockFromChain({
+            data: [
+              {
+                id: 'lp1',
+                league_id: 'l1',
+                name: 'Pareja',
+                player_a_user_id: 'u1',
+                player_a_text: null,
+                player_b_user_id: null,
+                player_b_text: 'Guest',
+                created_at: '2026-01-01T00:00:00Z',
+                player_a_profile: { display_name: 'Ana' },
+                player_b_profile: null,
+              },
+            ],
+            error: null,
+          })
+        }
+        return mockFromChain({ data: null, error: null })
+      })
       mockSupabase.rpc.mockResolvedValue({ data: false, error: null })
 
       const row = await getLeague('l1')
@@ -333,6 +355,18 @@ describe('leagues.service', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith('generate_league_fixtures', {
         p_league_id: 'l1',
       })
+    })
+
+    it('startLeague starts open elo without generating fixtures', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
+
+      await startLeague('l1', LEAGUE_FORMAT.OPEN_ELO)
+
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('start_open_league', { p_league_id: 'l1' })
+      expect(mockSupabase.rpc).not.toHaveBeenCalledWith(
+        'generate_league_fixtures',
+        expect.anything()
+      )
     })
   })
 

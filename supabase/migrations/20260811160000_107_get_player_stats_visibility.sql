@@ -1,57 +1,8 @@
--- 106: Security hardening follow-up (after sync main → develop)
--- Addresses security review findings:
---   1. process_league_lifecycle was exposed as a privileged RPC with no REVOKE and no
---      auth check (SECURITY DEFINER, default PUBLIC execute). Any caller could run
---      global league lifecycle: expire challenges, cancel in-progress league matches
---      and force leagues to finish across ALL leagues.
---   2. Migration 104 had a REVOKE typo (enqueue_player_stats_recompute_queue vs the
---      real name enqueue_player_stats_recompute). Defensive REVOKE here covers any
---      environment where 104 was applied with the broken line skipped.
---   3. get_player_stats triggered refresh_player_stats (full-history ELO rebuild +
---      aggregate/badge recompute) for ANY caller, including anon viewing other users.
---      The refresh is now gated to self/admin only; others read cached stats.
+-- 107: Gate get_player_stats behind profile visibility (same as get_viewable_user_profile).
+-- Follow-up to 106: refresh was already self/admin-only, but any caller (incl. anon via
+-- GRANT in 091) could still read cached stats for arbitrary user ids.
+-- Unauthorized callers (including anonymous) get NULL; self/admin refresh stays separate.
 
--- ── 1. Lock down process_league_lifecycle (mirror process_tournament_lifecycle) ────
-REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM anon;
-REVOKE ALL ON FUNCTION public.process_league_lifecycle() FROM authenticated;
-
--- Schedule it alongside the existing match-state-transitions cron job (every minute).
-SELECT cron.unschedule('match-state-transitions');
-SELECT cron.schedule(
-  'match-state-transitions',
-  '* * * * *',
-  $cron$
-    SELECT public.process_match_state_transitions();
-    SELECT public.process_tournament_lifecycle();
-    SELECT public.process_league_lifecycle();
-  $cron$
-);
-
--- ── 2. Defensive REVOKE for enqueue_player_stats_recompute (migration 104 typo) ─────
-REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM anon;
-REVOKE ALL ON FUNCTION public.enqueue_player_stats_recompute(UUID) FROM authenticated;
-REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM anon;
-REVOKE ALL ON FUNCTION public.process_player_stats_recompute_queue(INT) FROM authenticated;
-REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM anon;
-REVOKE ALL ON FUNCTION public.recompute_player_stats_for_match(UUID) FROM authenticated;
-
--- Internal helpers used by get_player_stats refresh path — not client RPCs.
--- Without this, anon/authenticated could call refresh_player_stats directly and
--- bypass the self/admin gate inside get_player_stats.
-REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM anon;
-REVOKE ALL ON FUNCTION public.refresh_player_stats(UUID) FROM authenticated;
-REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM anon;
-REVOKE ALL ON FUNCTION public.rebuild_player_elo(UUID) FROM authenticated;
-
--- ── 3. Gate refresh_player_stats to self/admin inside get_player_stats ─────────────
--- Only the user themselves (or an admin) triggers the expensive full-history recompute.
--- Other callers (including anon) get the cached stats — read-only, no amplification.
 CREATE OR REPLACE FUNCTION public.get_player_stats(p_user_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -73,7 +24,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- Same visibility gate as viewing another user's profile (unauthorized / anon → NULL).
+  -- Same visibility gate as viewing another user's profile.
   IF NOT public.profile_is_viewable_by_auth(p_user_id) THEN
     RETURN NULL;
   END IF;
@@ -230,5 +181,10 @@ BEGIN
   );
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_player_stats(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_player_stats(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_player_stats(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_player_stats(UUID) TO service_role;
 
 NOTIFY pgrst, 'reload schema';

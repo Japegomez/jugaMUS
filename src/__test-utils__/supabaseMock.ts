@@ -3,26 +3,77 @@
  * Supports patterns like: from().select().eq().single() and rpc().
  */
 
-type ThenableResult<T> = PromiseLike<{ data: T; error: unknown }> & Record<string, unknown>
+const CHAIN_METHODS = [
+  'select',
+  'insert',
+  'update',
+  'upsert',
+  'delete',
+  'eq',
+  'neq',
+  'gt',
+  'gte',
+  'lt',
+  'lte',
+  'like',
+  'ilike',
+  'is',
+  'in',
+  'contains',
+  'containedBy',
+  'rangeGt',
+  'rangeGte',
+  'rangeLt',
+  'rangeLte',
+  'rangeAdjacent',
+  'overlaps',
+  'textSearch',
+  'match',
+  'not',
+  'or',
+  'filter',
+  'order',
+  'limit',
+  'range',
+  'abortSignal',
+  'single',
+  'maybeSingle',
+  'csv',
+  'geojson',
+  'explain',
+  'rollback',
+  'returns',
+] as const
 
-function makeThenable<T>(result: { data: T; error: unknown }): ThenableResult<T> {
-  const chain: ThenableResult<T> = {
-    then: (onFulfilled, onRejected) => Promise.resolve(result).then(onFulfilled, onRejected),
-  } as ThenableResult<T>
+export type MockQueryChain<T = unknown> = {
+  then: PromiseLike<{ data: T; error: unknown }>['then']
+  catch: Promise<{ data: T; error: unknown }>['catch']
+} & Record<(typeof CHAIN_METHODS)[number], jest.Mock>
 
-  const handler: ProxyHandler<object> = {
-    get(_target, prop) {
-      if (prop === 'then') return chain.then.bind(chain)
-      if (prop === 'catch') {
-        return (onRejected: (reason: unknown) => unknown) =>
-          Promise.resolve(result).catch(onRejected)
-      }
-      // Any further chain method returns the same thenable proxy
-      return (..._args: unknown[]) => new Proxy({}, handler)
-    },
+/**
+ * Build a from() chain that resolves to `{ data, error }`.
+ * Each chain method is a jest.fn() returning the same builder (spies for assertions).
+ */
+export function mockFromChain<T>(result: { data: T; error: unknown }): MockQueryChain<T> {
+  const chain = {
+    then: (
+      onFulfilled?: ((value: { data: T; error: unknown }) => unknown) | null,
+      onRejected?: ((reason: unknown) => unknown) | null
+    ) => Promise.resolve(result).then(onFulfilled, onRejected),
+    catch: (onRejected?: ((reason: unknown) => unknown) | null) =>
+      Promise.resolve(result).catch(onRejected),
+  } as MockQueryChain<T>
+
+  for (const method of CHAIN_METHODS) {
+    chain[method] = jest.fn(() => chain)
   }
 
-  return new Proxy(chain, handler) as ThenableResult<T>
+  return chain
+}
+
+/** Default resolved result for from()/rpc() chains. */
+export function createQueryResult<T>(data: T, error: unknown = null) {
+  return { data, error }
 }
 
 export type SupabaseMock = {
@@ -49,20 +100,6 @@ export type SupabaseMock = {
   functions: {
     invoke: jest.Mock
   }
-}
-
-/** Default resolved result for from()/rpc() chains. */
-export function createQueryResult<T>(data: T, error: unknown = null) {
-  return { data, error }
-}
-
-/**
- * Build a from() chain that resolves to `{ data, error }`.
- * All intermediate methods (select, eq, insert, update, delete, order, limit, single, maybeSingle…)
- * return the same thenable.
- */
-export function mockFromChain<T>(result: { data: T; error: unknown }) {
-  return makeThenable(result)
 }
 
 export function createSupabaseMock(overrides: Partial<SupabaseMock> = {}): SupabaseMock {

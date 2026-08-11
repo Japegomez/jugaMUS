@@ -9,7 +9,7 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams'
 import { supabase } from '@/lib/supabase'
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 
-const mockSupabase = supabase as {
+const mockSupabase = supabase as unknown as {
   auth: {
     exchangeCodeForSession: jest.Mock
     setSession: jest.Mock

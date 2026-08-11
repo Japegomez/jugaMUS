@@ -8,7 +8,7 @@ import { resolveAppleProfileDisplayName } from '@/lib/appleDisplayName'
 import { supabase } from '@/lib/supabase'
 import { syncAppleProfileDisplayName } from '@/lib/syncAppleProfileDisplayName'
 
-const mockSupabase = supabase as {
+const mockSupabase = supabase as unknown as {
   from: jest.Mock
   auth: { updateUser: jest.Mock }
 }
@@ -48,5 +48,27 @@ describe('syncAppleProfileDisplayName', () => {
     })
 
     expect(mockSupabase.auth.updateUser).not.toHaveBeenCalled()
+  })
+
+  it('does not throw when auth metadata update fails', async () => {
+    mockSupabase.from
+      .mockReturnValueOnce(
+        mockFromChain({ data: { display_name: 'user@privaterelay.appleid.com' }, error: null })
+      )
+      .mockReturnValueOnce(mockFromChain({ data: null, error: null }))
+
+    mockSupabase.auth.updateUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'auth update failed' },
+    })
+
+    await expect(
+      syncAppleProfileDisplayName('user-1', {
+        appleFullName: { givenName: 'Ana', familyName: 'López' },
+        email: 'ana@privaterelay.appleid.com',
+      })
+    ).resolves.toBeUndefined()
+
+    expect(mockSupabase.auth.updateUser).toHaveBeenCalled()
   })
 })

@@ -27,7 +27,8 @@ describe('reports.service', () => {
 
   describe('submitReport', () => {
     it('inserts report with trimmed notes', async () => {
-      mockSupabase.from.mockReturnValue(mockFromChain({ data: null, error: null }))
+      const chain = mockFromChain({ data: null, error: null })
+      mockSupabase.from.mockReturnValue(chain)
 
       await submitReport({
         targetType: 'user',
@@ -38,10 +39,18 @@ describe('reports.service', () => {
       })
 
       expect(mockSupabase.from).toHaveBeenCalledWith('reports')
+      expect(chain.insert).toHaveBeenCalledWith({
+        target_type: 'user',
+        target_id: 'u2',
+        reason: 'Comportamiento inapropiado',
+        notes: 'detalle del incidente',
+        reporter_id: 'u1',
+      })
     })
 
     it('stores null notes when blank after trim', async () => {
-      mockSupabase.from.mockReturnValue(mockFromChain({ data: null, error: null }))
+      const chain = mockFromChain({ data: null, error: null })
+      mockSupabase.from.mockReturnValue(chain)
 
       await expect(
         submitReport({
@@ -52,6 +61,12 @@ describe('reports.service', () => {
           reporterId: 'u1',
         })
       ).resolves.toBeUndefined()
+
+      expect(chain.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: null,
+        })
+      )
     })
 
     it('throws on supabase error', async () => {

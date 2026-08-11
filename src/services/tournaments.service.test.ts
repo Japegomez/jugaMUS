@@ -238,12 +238,35 @@ describe('tournaments.service', () => {
     })
 
     it('hides pairs for private tournament without access', async () => {
-      mockSupabase.from.mockReturnValue(
-        mockFromChain({
-          data: { ...tournament, visibility: MATCH_VISIBILITY.PRIVATE },
-          error: null,
-        })
-      )
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'tournaments') {
+          return mockFromChain({
+            data: { ...tournament, visibility: MATCH_VISIBILITY.PRIVATE },
+            error: null,
+          })
+        }
+        if (table === 'tournament_pairs') {
+          return mockFromChain({
+            data: [
+              {
+                id: 'p1',
+                tournament_id: 't1',
+                name: '',
+                player_a_user_id: 'u1',
+                player_a_text: null,
+                player_b_text: 'Guest',
+                player_b_user_id: null,
+                entry_fee_paid: false,
+                created_at: '2026-01-01T00:00:00Z',
+                player_a_profile: { display_name: 'Ana' },
+                player_b_profile: null,
+              },
+            ],
+            error: null,
+          })
+        }
+        return mockFromChain({ data: null, error: null })
+      })
       mockSupabase.rpc.mockResolvedValue({ data: false, error: null })
 
       const row = await getTournament('t1')
@@ -338,12 +361,7 @@ describe('tournaments.service', () => {
 
   describe('bracket', () => {
     it('generateTournamentBracket calls rpc', async () => {
-      mockSupabase.rpc.mockImplementation((fn: string) => {
-        if (fn === 'generate_tournament_bracket') {
-          return Promise.resolve({ data: null, error: null })
-        }
-        return Promise.resolve({ data: null, error: null })
-      })
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
 
       await generateTournamentBracket('t1')
 
