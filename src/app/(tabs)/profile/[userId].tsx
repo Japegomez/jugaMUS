@@ -14,9 +14,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { SendFriendRequestModal } from '@/components/profile/SendFriendRequestModal'
 import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/hooks/useAuth'
+import {
+  useCancelFriendRequest,
+  useFriendshipWithUser,
+  useRespondFriendRequest,
+  type FriendshipStatus as FriendshipStatusRow,
+} from '@/hooks/useFriends'
 import { useViewableUserMatches } from '@/hooks/useMatches'
 import { useViewableUserProfile } from '@/hooks/useProfile'
 import { Colors } from '@/theme/colors'
@@ -65,6 +72,10 @@ export default function UserProfileScreen() {
 
   const { data: profile, isPending, isError } = useViewableUserProfile(userId)
   const { data: matches, isPending: matchesPending } = useViewableUserMatches(userId)
+  const { data: friendship, isPending: friendshipPending } = useFriendshipWithUser(userId)
+  const respond = useRespondFriendRequest()
+  const cancel = useCancelFriendRequest()
+  const [sendModalOpen, setSendModalOpen] = useState(false)
 
   useEffect(() => {
     if (userId && sessionUserId && userId === sessionUserId) {
@@ -123,13 +134,47 @@ export default function UserProfileScreen() {
 
   const phone = profile.phone_e164?.trim() ?? ''
 
+  const friendshipStatus = friendship?.status ?? null
+  const friendshipDirection = friendship?.direction ?? null
+
   return (
     <View style={[styles.root, { paddingTop: screenTopPadding(insets.top, 8) }]}>
       <View style={styles.topBar}>
-        <Pressable
-          onPress={goBack}
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar">
+        <FriendActionButton
+          status={friendshipStatus}
+          direction={friendshipDirection}
+          pending={friendshipPending}
+          busy={respond.isPending || cancel.isPending}
+          onSend={() => setSendModalOpen(true)}
+          onAccept={() =>
+            friendship?.friendship_id
+              ? void respond
+                  .mutateAsync({ friendshipId: friendship.friendship_id, accept: true })
+                  .catch((err) =>
+                    Alert.alert('No se pudo aceptar', err instanceof Error ? err.message : 'Error')
+                  )
+              : undefined
+          }
+          onReject={() =>
+            friendship?.friendship_id
+              ? void respond
+                  .mutateAsync({ friendshipId: friendship.friendship_id, accept: false })
+                  .catch((err) =>
+                    Alert.alert('No se pudo rechazar', err instanceof Error ? err.message : 'Error')
+                  )
+              : undefined
+          }
+          onCancel={() =>
+            friendship?.friendship_id
+              ? void cancel
+                  .mutateAsync(friendship.friendship_id)
+                  .catch((err) =>
+                    Alert.alert('No se pudo cancelar', err instanceof Error ? err.message : 'Error')
+                  )
+              : undefined
+          }
+        />
+        <Pressable onPress={goBack} accessibilityRole="button" accessibilityLabel="Cerrar">
           <Text style={styles.close}>✕</Text>
         </Pressable>
       </View>
@@ -141,9 +186,7 @@ export default function UserProfileScreen() {
         <View style={styles.header}>
           <AvatarCircle uri={profile.photo_url} name={profile.display_name} />
           <Text style={styles.displayName}>{profile.display_name}</Text>
-          {phone ? (
-            <PhoneUnderName displayName={profile.display_name} phoneE164={phone} />
-          ) : null}
+          {phone ? <PhoneUnderName displayName={profile.display_name} phoneE164={phone} /> : null}
           {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
 
@@ -162,20 +205,119 @@ export default function UserProfileScreen() {
             loading={matchesPending}
             emptyMessage="Sin partidas visibles en su historial"
             onMatchPress={(matchId) =>
-              router.push(
-                buildMatchDetailHref(matchId, { from: 'profile', profileUserId: userId })
-              )
+              router.push(buildMatchDetailHref(matchId, { from: 'profile', profileUserId: userId }))
             }
           />
         </View>
       </ScrollView>
+
+      <SendFriendRequestModal
+        visible={sendModalOpen}
+        addresseeId={userId}
+        addresseeName={profile.display_name}
+        onClose={() => setSendModalOpen(false)}
+      />
     </View>
+  )
+}
+
+type FriendshipStatusValue = FriendshipStatusRow['status']
+
+function FriendActionButton({
+  status,
+  direction,
+  pending,
+  busy,
+  onSend,
+  onAccept,
+  onReject,
+  onCancel,
+}: {
+  status: FriendshipStatusValue
+  direction: 'sent' | 'received' | null
+  pending: boolean
+  busy: boolean
+  onSend: () => void
+  onAccept: () => void
+  onReject: () => void
+  onCancel: () => void
+}) {
+  if (pending) {
+    return (
+      <View style={styles.friendBtnPlaceholder}>
+        <Ionicons name="person-outline" size={22} color={Colors.textSecondary} />
+      </View>
+    )
+  }
+  if (status === 'accepted') {
+    return (
+      <View
+        style={styles.friendBtn}
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel="Sois amigos">
+        <Ionicons name="checkmark-circle-outline" size={22} color={Colors.primary} />
+      </View>
+    )
+  }
+  if (status === 'pending' && direction === 'received') {
+    return (
+      <View style={styles.friendBtnRow}>
+        <Pressable
+          onPress={onAccept}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel="Aceptar solicitud"
+          style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
+          <Ionicons name="checkmark-outline" size={22} color={Colors.primary} />
+        </Pressable>
+        <Pressable
+          onPress={onReject}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel="Rechazar solicitud"
+          style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
+          <Ionicons name="close-outline" size={22} color={Colors.danger} />
+        </Pressable>
+      </View>
+    )
+  }
+  if (status === 'pending' && direction === 'sent') {
+    return (
+      <Pressable
+        onPress={onCancel}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel="Cancelar solicitud enviada"
+        style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
+        <Ionicons name="hourglass-outline" size={22} color={Colors.textSecondary} />
+      </Pressable>
+    )
+  }
+  // No friendship yet (rejected/cancelled/none): send a request.
+  return (
+    <Pressable
+      onPress={onSend}
+      accessibilityRole="button"
+      accessibilityLabel="Enviar solicitud de amistad"
+      style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
+      <Ionicons name="person-add-outline" size={22} color={Colors.primary} />
+    </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
-  topBar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  friendBtn: { padding: 8 },
+  friendBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  friendBtnPlaceholder: { padding: 8 },
+  friendBtnPressed: { opacity: 0.6 },
   closeWrap: { alignSelf: 'flex-end', padding: 8 },
   close: { fontSize: 22, color: Colors.textSecondary, padding: 8 },
   scroll: {

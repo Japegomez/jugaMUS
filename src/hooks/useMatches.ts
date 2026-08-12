@@ -35,6 +35,7 @@ import {
 import { useAuthStore } from '@/hooks/useAuth'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
+import { invalidateMatchInvitationQueries, matchQueryKey } from '@/lib/matchQueryKeys'
 import {
   MATCH_PAGE_SIZE,
   MATCH_STATUS,
@@ -43,11 +44,9 @@ import {
   TOURNAMENT_QUERY_STALE_TIME,
 } from '@/constants'
 
-// ─── Query keys ──────────────────────────────────────────────────────────────
+export { matchQueryKey } from '@/lib/matchQueryKeys'
 
-export function matchQueryKey(id: string) {
-  return ['match', id] as const
-}
+// ─── Query keys ──────────────────────────────────────────────────────────────
 
 /** Latest `match_results` (+ viewer confirmation) for a match detail screen. */
 export function matchResultQueryKey(matchId: string, viewerUserId?: string | null) {
@@ -310,6 +309,11 @@ export function useCancelMatch() {
       queryClient.invalidateQueries({
         queryKey: [...matchQueryKey(updated.id), 'match_result'],
         exact: false,
+      })
+      // Pending invites are cancelled with the match; refresh invitee/creator lists.
+      invalidateMatchInvitationQueries(queryClient, {
+        userId: sessionUserId,
+        matchId: updated.id,
       })
       if (sessionUserId) {
         queryClient.invalidateQueries({

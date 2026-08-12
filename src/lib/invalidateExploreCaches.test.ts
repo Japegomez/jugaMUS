@@ -1,5 +1,8 @@
 import { QueryClient } from '@tanstack/react-query'
 
+import { collectPendingMatchIds } from '@/lib/realtimePending'
+import { idsFromRealtimeRow } from '@/lib/realtimeRowIds'
+
 import { invalidateAllExploreListQueries } from '@/lib/invalidateExploreCaches'
 
 describe('invalidateAllExploreListQueries', () => {
@@ -31,5 +34,23 @@ describe('invalidateAllExploreListQueries', () => {
     expect(spy).toHaveBeenCalledWith({ queryKey: ['match', 'm1'] })
     expect(spy).toHaveBeenCalledWith({ queryKey: ['match-insights', 'm1'] })
     expect(spy).toHaveBeenCalledWith({ queryKey: ['tournament', 't1'] })
+  })
+
+  it('maps match_invitations row', () => {
+    expect(idsFromRealtimeRow('match_invitations', { match_id: 'm5' })).toEqual({
+      matchId: 'm5',
+    })
+  })
+
+  it('maps friendships row to empty ids', () => {
+    expect(idsFromRealtimeRow('friendships', { id: 'f1' })).toEqual({})
+  })
+})
+
+describe('collectPendingMatchIds', () => {
+  it('keeps distinct match ids across consecutive invitation events', () => {
+    const afterFirst = collectPendingMatchIds([], 'm-a')
+    const afterSecond = collectPendingMatchIds(afterFirst, 'm-b')
+    expect(afterSecond.sort()).toEqual(['m-a', 'm-b'])
   })
 })

@@ -8,6 +8,10 @@ export const AnalyticsEvents = {
   MATCH_CREATED: 'match_created',
   MATCH_JOINED: 'match_joined',
   MATCH_COMPLETED: 'match_completed',
+  FRIEND_REQUEST_SENT: 'friend_request_sent',
+  FRIEND_REQUEST_ACCEPTED: 'friend_request_accepted',
+  MATCH_INVITE_SENT: 'match_invite_sent',
+  MATCH_INVITE_ACCEPTED: 'match_invite_accepted',
 } as const
 
 export type AuthSignupMethod = 'email' | 'google' | 'apple'
@@ -61,6 +65,26 @@ export function trackMatchCreated(matchId: string, visibility: string): void {
 
 export function trackMatchJoined(matchId: string, team: string): void {
   captureEvent(AnalyticsEvents.MATCH_JOINED, { match_id: matchId, team })
+}
+
+export function trackFriendRequestSent(addresseeId: string): void {
+  captureEvent(AnalyticsEvents.FRIEND_REQUEST_SENT, { addressee_id: addresseeId })
+}
+
+export function trackFriendRequestAccepted(addresseeId: string): void {
+  captureEvent(AnalyticsEvents.FRIEND_REQUEST_ACCEPTED, { addressee_id: addresseeId })
+}
+
+export function trackMatchInviteSent(matchId: string, inviteeId: string, team: string): void {
+  captureEvent(AnalyticsEvents.MATCH_INVITE_SENT, {
+    match_id: matchId,
+    invitee_id: inviteeId,
+    team,
+  })
+}
+
+export function trackMatchInviteAccepted(matchId: string, team: string): void {
+  captureEvent(AnalyticsEvents.MATCH_INVITE_ACCEPTED, { match_id: matchId, team })
 }
 
 async function loadCompletedMatchIds(): Promise<string[]> {

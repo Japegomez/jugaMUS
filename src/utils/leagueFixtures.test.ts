@@ -1,33 +1,11 @@
 import { expectedMatchCount, generateRoundRobinFixtures } from '@/utils/leagueFixtures'
 
-function unorderedPairKey(a: string, b: string): string {
-  return [a, b].sort().join('|')
-}
-
-function expectUniqueDistinctPairings(
-  pairIds: string[],
-  fixtures: ReturnType<typeof generateRoundRobinFixtures>
-) {
-  const keys = fixtures.map((f) => unorderedPairKey(f.pairAId, f.pairBId))
-  expect(new Set(keys).size).toBe(keys.length)
-  for (const fixture of fixtures) {
-    expect(fixture.pairAId).not.toBe(fixture.pairBId)
-  }
-  const expectedPairs = (pairIds.length * (pairIds.length - 1)) / 2
-  // single-round unique pairings (ignore second-leg duplicates by filtering)
-  const firstLeg = fixtures.filter((f) => !f.isSecondLeg)
-  expect(new Set(firstLeg.map((f) => unorderedPairKey(f.pairAId, f.pairBId))).size).toBe(
-    expectedPairs
-  )
-}
-
 describe('generateRoundRobinFixtures', () => {
   it('generates correct count for 4 pairs single round', () => {
     const ids = ['a', 'b', 'c', 'd']
     const fixtures = generateRoundRobinFixtures(ids, false)
     expect(fixtures).toHaveLength(expectedMatchCount(4, false))
     expect(fixtures.every((f) => !f.isSecondLeg)).toBe(true)
-    expectUniqueDistinctPairings(ids, fixtures)
   })
 
   it('doubles fixtures for double round', () => {
@@ -35,10 +13,36 @@ describe('generateRoundRobinFixtures', () => {
     const fixtures = generateRoundRobinFixtures(ids, true)
     expect(fixtures).toHaveLength(expectedMatchCount(4, true))
     expect(fixtures.filter((f) => f.isSecondLeg)).toHaveLength(expectedMatchCount(4, false))
-    expectUniqueDistinctPairings(
-      ids,
-      fixtures.filter((f) => !f.isSecondLeg)
-    )
+  })
+
+  it('covers every unordered pair once in a single round', () => {
+    const ids = ['a', 'b', 'c', 'd']
+    const fixtures = generateRoundRobinFixtures(ids, false)
+    const pairs = fixtures.map((f) => [f.pairAId, f.pairBId].sort().join('|'))
+    expect(new Set(pairs).size).toBe(pairs.length)
+    const expected = new Set<string>()
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        expected.add([ids[i], ids[j]].sort().join('|'))
+      }
+    }
+    expect(new Set(pairs)).toEqual(expected)
+  })
+
+  it('second leg inverts first-leg pairings', () => {
+    const ids = ['a', 'b', 'c', 'd']
+    const fixtures = generateRoundRobinFixtures(ids, true)
+    const first = fixtures.filter((f) => !f.isSecondLeg)
+    const second = fixtures.filter((f) => f.isSecondLeg)
+    expect(second).toHaveLength(first.length)
+    const normalize = (list: typeof first) =>
+      [...list].map((f) => `${f.pairAId}|${f.pairBId}`).sort((a, b) => a.localeCompare(b))
+    const secondAsFirst = second.map((f) => ({
+      ...f,
+      pairAId: f.pairBId,
+      pairBId: f.pairAId,
+    }))
+    expect(normalize(secondAsFirst)).toEqual(normalize(first))
   })
 
   it('handles odd number of pairs with byes', () => {
@@ -49,7 +53,6 @@ describe('generateRoundRobinFixtures', () => {
       const count = fixtures.filter((f) => f.pairAId === id || f.pairBId === id).length
       expect(count).toBe(2)
     }
-    expectUniqueDistinctPairings(ids, fixtures)
   })
 
   it('returns empty for fewer than 2 pairs', () => {

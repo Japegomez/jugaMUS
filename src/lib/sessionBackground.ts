@@ -3,7 +3,7 @@ import { getAuthStorage } from '@/lib/authStorage'
 const SESSION_BACKGROUNDED_AT_KEY = 'jugamus.session_backgrounded_at'
 
 /** Sign out when the app returns from background after at least this long. */
-export const BACKGROUND_SESSION_TIMEOUT_MS = 10 * 60 * 1000
+export const BACKGROUND_SESSION_TIMEOUT_MS = 6 * 60 * 60 * 1000
 
 export async function markSessionBackgrounded(): Promise<void> {
   await getAuthStorage().setItem(SESSION_BACKGROUNDED_AT_KEY, String(Date.now()))

@@ -3,7 +3,16 @@ import { useFocusEffect } from '@react-navigation/native'
 import { useRouter, type Href } from 'expo-router'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { Alert, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  Alert,
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { z } from 'zod'
 
@@ -19,9 +28,13 @@ import {
   validateMatchScores,
 } from '@/components/matches/MatchScorePicker'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
+import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCreateMatch, useRecordMatchResultDirect } from '@/hooks/useMatches'
+import { useInviteFriendToMatch } from '@/hooks/useMatchInvitations'
+import { useMyFriends } from '@/hooks/useFriends'
 import { useProfile } from '@/hooks/useProfile'
+import { useSubmitResult } from '@/hooks/useResults'
 import { MATCH_STATUS, MATCH_VISIBILITY, TEAM } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -153,7 +166,14 @@ export default function CreateMatchScreen() {
   const { data: profile } = useProfile(sessionUserId)
   const createMatch = useCreateMatch()
   const recordMatchResult = useRecordMatchResultDirect()
+  const submitResult = useSubmitResult()
+  const inviteFriend = useInviteFriendToMatch()
+  const { data: friends } = useMyFriends()
   const [pastResult, setPastResult] = useState<MatchScoreValues | null>(null)
+  const [invitesA, setInvitesA] = useState<string[]>([])
+  const [invitesB, setInvitesB] = useState<string[]>([])
+  const [friendSearch, setFriendSearch] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const closeToPrevious = useCallback(() => {
     if (router.canGoBack()) {
@@ -179,6 +199,9 @@ export default function CreateMatchScreen() {
     useCallback(() => {
       reset(createDefaultFormValues())
       setPastResult(null)
+      setInvitesA([])
+      setInvitesB([])
+      setFriendSearch('')
       Keyboard.dismiss()
     }, [reset])
   )
@@ -193,14 +216,63 @@ export default function CreateMatchScreen() {
   const teamBPlayer2 = watch('team_b_player_2')
   const isPastResultMode = isMatchStartAtPast(startAtValue)
 
+  // Invite capacity is fixed; text roster slots unlock for leftover seats.
+  const inviteCapacityA = 1
+  const inviteCapacityB = 2
+  const textSlotsA = Math.max(0, inviteCapacityA - invitesA.length)
+  const textSlotsB = Math.max(0, inviteCapacityB - invitesB.length)
+
+  const toggleInvite = (friendId: string, team: 'A' | 'B') => {
+    if (team === 'A') {
+      setInvitesA((prev) => {
+        if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
+        if (prev.length >= inviteCapacityA) return prev
+        return [...prev, friendId]
+      })
+      setInvitesB((prev) => prev.filter((id) => id !== friendId))
+      if (!invitesA.includes(friendId) && invitesA.length < inviteCapacityA) {
+        setValue('team_a_player_2', '')
+      }
+    } else {
+      const alreadyInB = invitesB.includes(friendId)
+      const nextLen = alreadyInB
+        ? invitesB.filter((id) => id !== friendId).length
+        : invitesB.length >= inviteCapacityB
+          ? invitesB.length
+          : invitesB.length + 1
+      const willAdd = !alreadyInB && invitesB.length < inviteCapacityB
+      setInvitesB((prev) => {
+        if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
+        if (prev.length >= inviteCapacityB) return prev
+        return [...prev, friendId]
+      })
+      setInvitesA((prev) => prev.filter((id) => id !== friendId))
+      if (willAdd) {
+        if (nextLen >= 2) {
+          setValue('team_b_player_1', '')
+          setValue('team_b_player_2', '')
+        } else if (nextLen === 1) {
+          setValue('team_b_player_2', '')
+        }
+      }
+    }
+  }
+
+  const filteredFriends = useMemo(() => {
+    const list = friends ?? []
+    const q = friendSearch.trim().toLowerCase()
+    if (!q) return list
+    return list.filter((f) => f.display_name.toLowerCase().includes(q))
+  }, [friends, friendSearch])
+
   const previewTeamNames = useMemo(() => {
     const draft = {
       team_a_name: teamANameValue ?? '',
       team_b_name: teamBNameValue ?? '',
       team_a_player_1: null,
-      team_a_player_2: teamAPlayer2?.trim() || null,
-      team_b_player_1: teamBPlayer1?.trim() || null,
-      team_b_player_2: teamBPlayer2?.trim() || null,
+      team_a_player_2: invitesA.length > 0 ? null : teamAPlayer2?.trim() || null,
+      team_b_player_1: invitesB.length >= 2 ? null : teamBPlayer1?.trim() || null,
+      team_b_player_2: invitesB.length >= 1 ? null : teamBPlayer2?.trim() || null,
     }
     const creatorParticipant = profile?.display_name
       ? [
@@ -223,6 +295,8 @@ export default function CreateMatchScreen() {
     teamBNameValue,
     teamBPlayer1,
     teamBPlayer2,
+    invitesA.length,
+    invitesB.length,
   ])
 
   useEffect(() => {
@@ -230,6 +304,7 @@ export default function CreateMatchScreen() {
   }, [durationValue, isPastResultMode])
 
   const onSubmit = async (values: CreateMatchValues) => {
+    if (isSubmitting) return
     if (isPastResultMode && !pastResult) {
       showAlert('Resultado pendiente', 'Selecciona el marcador de la partida antes de crearla.')
       return
@@ -245,31 +320,37 @@ export default function CreateMatchScreen() {
         return
       }
     }
-    if (
-      isPastResultMode &&
-      hasIncompleteMatchRoster({
-        team_a_player_2: values.team_a_player_2,
-        team_b_player_1: values.team_b_player_1,
-        team_b_player_2: values.team_b_player_2,
-      })
-    ) {
+    const effectiveRoster = {
+      team_a_player_2: invitesA.length > 0 ? 'invited' : values.team_a_player_2,
+      team_b_player_1: invitesB.length >= 1 ? 'invited' : values.team_b_player_1,
+      team_b_player_2:
+        invitesB.length >= 2
+          ? 'invited'
+          : invitesB.length === 1
+            ? values.team_b_player_1
+            : values.team_b_player_2,
+    }
+    if (isPastResultMode && hasIncompleteMatchRoster(effectiveRoster)) {
       showAlert(
         'Faltan jugadores',
-        'Para registrar una partida ya jugada debes completar los cuatro jugadores de los dos equipos.'
+        'Para registrar una partida ya jugada debes completar los cuatro jugadores de los dos equipos (por nombre o invitando a amigos).'
       )
       return
     }
     if (
       !isPastResultMode &&
-      requiresFutureStartAtForIncompleteRoster(values.start_at, {
-        team_a_player_2: values.team_a_player_2,
-        team_b_player_1: values.team_b_player_1,
-        team_b_player_2: values.team_b_player_2,
-      })
+      requiresFutureStartAtForIncompleteRoster(values.start_at, effectiveRoster)
     ) {
       showAlert(PAST_DATE_INCOMPLETE_ROSTER_ALERT.title, PAST_DATE_INCOMPLETE_ROSTER_ALERT.message)
       return
     }
+
+    const inviteTargets: { fid: string; team: (typeof TEAM)[keyof typeof TEAM] }[] = [
+      ...invitesA.slice(0, inviteCapacityA).map((fid) => ({ fid, team: TEAM.A })),
+      ...invitesB.slice(0, inviteCapacityB).map((fid) => ({ fid, team: TEAM.B })),
+    ]
+
+    setIsSubmitting(true)
     try {
       const match = await createMatch.mutateAsync({
         data: {
@@ -281,41 +362,92 @@ export default function CreateMatchScreen() {
           duration_target_games: values.duration_target_games,
           visibility: values.visibility,
           location_privacy: 'participants_only',
-          // Past matches with a result are created already in progress so closing
-          // via record_match_result_direct does not depend on post-join promotion.
           ...(isPastResultMode ? { status: MATCH_STATUS.IN_PROGRESS } : {}),
           team_a_name: (values.team_a_name ?? '').trim(),
           team_b_name: (values.team_b_name ?? '').trim(),
           team_a_player_1: null,
-          team_a_player_2: textPlayerOrNull(values.team_a_player_2),
-          team_b_player_1: textPlayerOrNull(values.team_b_player_1),
-          team_b_player_2: textPlayerOrNull(values.team_b_player_2),
+          team_a_player_2: invitesA.length > 0 ? null : textPlayerOrNull(values.team_a_player_2),
+          team_b_player_1: invitesB.length >= 2 ? null : textPlayerOrNull(values.team_b_player_1),
+          team_b_player_2: invitesB.length >= 1 ? null : textPlayerOrNull(values.team_b_player_2),
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
-      if (
-        !isPastResultMode &&
-        hasIncompleteMatchRoster({
-          team_a_player_2: values.team_a_player_2,
-          team_b_player_1: values.team_b_player_1,
-          team_b_player_2: values.team_b_player_2,
-        })
-      ) {
+      if (!isPastResultMode && hasIncompleteMatchRoster(effectiveRoster)) {
         await acknowledgeAlert(
           AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.title,
           AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.message
         )
       }
+
+      const failedInvites: { fid: string; team: string }[] = []
+      if (inviteTargets.length > 0) {
+        await Promise.all(
+          inviteTargets.map(async ({ fid, team }) => {
+            try {
+              await inviteFriend.mutateAsync({ matchId: match.id, inviteeId: fid, team })
+            } catch (err) {
+              console.warn('invite_friend_failed', err)
+              failedInvites.push({ fid, team })
+            }
+          })
+        )
+      }
+
+      const successfulInviteCount = inviteTargets.length - failedInvites.length
+      const rivalInviteTargets = inviteTargets.filter((t) => t.team === TEAM.B)
+      const rivalInvitesOk =
+        rivalInviteTargets.length === 0 ||
+        failedInvites.filter((f) => f.team === TEAM.B).length === 0
+      const hasRivalInvites = rivalInviteTargets.length > 0
+
       if (isPastResultMode && pastResult) {
-        await recordMatchResult.mutateAsync({
-          matchId: match.id,
-          teamAGames: pastResult.teamAGames,
-          teamBGames: pastResult.teamBGames,
+        // Direct path only when there are no rival-team invitations (team A invites are not rivals).
+        if (hasRivalInvites && rivalInvitesOk) {
+          await submitResult.mutateAsync({
+            matchId: match.id,
+            submittedByUserId: sessionUserId!,
+            submittedByTeam: TEAM.A,
+            teamAGames: pastResult.teamAGames,
+            teamBGames: pastResult.teamBGames,
+          })
+        } else if (!hasRivalInvites) {
+          await recordMatchResult.mutateAsync({
+            matchId: match.id,
+            teamAGames: pastResult.teamAGames,
+            teamBGames: pastResult.teamBGames,
+          })
+        } else {
+          showAlert(
+            'Invitaciones incompletas',
+            'No se pudo enviar alguna invitación rival. El resultado no se ha registrado como pendiente de validación. Revisa las invitaciones en la ficha de la partida.'
+          )
+        }
+      }
+
+      if (failedInvites.length > 0) {
+        const names = failedInvites
+          .map((f) => friends?.find((fr) => fr.user_id === f.fid)?.display_name ?? 'Amigo')
+          .join(', ')
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            'Algunas invitaciones fallaron',
+            `No se pudo invitar a: ${names}. Puedes reintentarlo desde la ficha de la partida.`,
+            [{ text: 'Entendido', onPress: () => resolve() }]
+          )
         })
       }
-      router.replace(`/(tabs)/matches/${match.id}`)
+
+      router.replace({
+        pathname: '/(tabs)/matches/[id]',
+        params: {
+          id: match.id,
+          ...(successfulInviteCount > 0 && failedInvites.length === 0 ? { shareInvite: '1' } : {}),
+        },
+      } as Href)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la partida')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -482,23 +614,131 @@ export default function CreateMatchScreen() {
       <View style={s.fieldWrap}>
         <Text style={s.label}>Equipos y jugadores</Text>
         <Text style={s.hint}>
-          Te unirás automáticamente como jugador 1 del primer equipo. El resto puede ser por nombre
-          (sin cuenta en la app).
+          Te unirás automáticamente como jugador 1 del primer equipo. Invita amigos primero; las
+          plazas libres se pueden completar con nombres (sin cuenta).
         </Text>
-        <Controller
-          control={control}
-          name="team_a_player_2"
-          render={({ field }) => (
-            <Input
-              label="Compañero (jugador 2)"
-              placeholder="Nombre"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_a_player_2?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
+
+        {friends && friends.length > 0 ? (
+          <>
+            <Text style={s.subLabel}>Invitar amigos</Text>
+            <Text style={s.hint}>
+              Compañero = tu equipo. Rival = equipo contrario. Las plazas de texto se desbloquean
+              según las invitaciones pendientes.
+            </Text>
+            <View style={s.friendSearchWrap}>
+              <TextInput
+                value={friendSearch}
+                onChangeText={setFriendSearch}
+                placeholder="Buscar amigo…"
+                placeholderTextColor={Colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                style={s.friendSearchInput}
+                accessibilityLabel="Buscar amigos para invitar"
+              />
+              {friendSearch.length > 0 ? (
+                <Pressable
+                  onPress={() => setFriendSearch('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Limpiar búsqueda de amigos"
+                  hitSlop={8}
+                  style={s.friendSearchClear}>
+                  <Text style={s.friendSearchClearText}>✕</Text>
+                </Pressable>
+              ) : null}
+            </View>
+            {filteredFriends.length === 0 ? (
+              <Text style={s.friendSearchEmpty}>No hay amigos con ese nombre.</Text>
+            ) : (
+              <ScrollView
+                style={s.friendListScroll}
+                contentContainerStyle={s.friendListContent}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator>
+                {filteredFriends.map((f) => {
+                  const inA = invitesA.includes(f.user_id)
+                  const inB = invitesB.includes(f.user_id)
+                  return (
+                    <View key={f.user_id} style={s.friendRow}>
+                      <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
+                      <View style={s.friendInfo}>
+                        <Text style={s.friendName} numberOfLines={1}>
+                          {f.display_name}
+                        </Text>
+                        {f.city ? (
+                          <Text style={s.friendCity} numberOfLines={1}>
+                            {f.city}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Pressable
+                        onPress={() => toggleInvite(f.user_id, 'A')}
+                        disabled={!inA && inviteCapacityA - invitesA.length <= 0}
+                        style={[
+                          s.inviteChip,
+                          inA && s.inviteChipActive,
+                          !inA && inviteCapacityA - invitesA.length <= 0 && s.inviteChipDisabled,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: inA }}>
+                        <Text style={[s.inviteChipText, inA && s.inviteChipTextActive]}>
+                          {inA ? 'Compañero ✓' : 'Compañero'}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => toggleInvite(f.user_id, 'B')}
+                        disabled={!inB && inviteCapacityB - invitesB.length <= 0}
+                        style={[
+                          s.inviteChip,
+                          inB && s.inviteChipActive,
+                          !inB && inviteCapacityB - invitesB.length <= 0 && s.inviteChipDisabled,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: inB }}>
+                        <Text style={[s.inviteChipText, inB && s.inviteChipTextActive]}>
+                          {inB ? 'Rival ✓' : 'Rival'}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )
+                })}
+              </ScrollView>
+            )}
+            {invitesA.length + invitesB.length > 0 ? (
+              <Text style={s.friendSelectionHint}>
+                {invitesA.length + invitesB.length}{' '}
+                {invitesA.length + invitesB.length === 1
+                  ? 'amigo seleccionado'
+                  : 'amigos seleccionados'}
+                {' · '}
+                {textSlotsA + textSlotsB}{' '}
+                {textSlotsA + textSlotsB === 1 ? 'plaza de texto libre' : 'plazas de texto libres'}
+              </Text>
+            ) : null}
+          </>
+        ) : null}
+
+        <Text style={s.subLabel}>Nombres (sin cuenta)</Text>
+        {textSlotsA > 0 ? (
+          <Controller
+            control={control}
+            name="team_a_player_2"
+            render={({ field }) => (
+              <Input
+                label="Compañero (jugador 2)"
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_a_player_2?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : (
+          <Text style={s.slotLockedHint}>Compañero cubierto por invitación.</Text>
+        )}
         <Controller
           control={control}
           name="team_a_name"
@@ -513,34 +753,40 @@ export default function CreateMatchScreen() {
             />
           )}
         />
-        <Controller
-          control={control}
-          name="team_b_player_1"
-          render={({ field }) => (
-            <Input
-              label="Jugador 1"
-              placeholder="Nombre"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_b_player_1?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
-        <Controller
-          control={control}
-          name="team_b_player_2"
-          render={({ field }) => (
-            <Input
-              label="Jugador 2"
-              placeholder="Nombre"
-              value={field.value ?? ''}
-              onChangeText={field.onChange}
-              error={errors.team_b_player_2?.message}
-              autoCapitalize="words"
-            />
-          )}
-        />
+        {textSlotsB >= 1 ? (
+          <Controller
+            control={control}
+            name="team_b_player_1"
+            render={({ field }) => (
+              <Input
+                label={textSlotsB === 1 ? 'Rival (sin cuenta)' : 'Jugador 1'}
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_b_player_1?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : null}
+        {textSlotsB >= 2 ? (
+          <Controller
+            control={control}
+            name="team_b_player_2"
+            render={({ field }) => (
+              <Input
+                label="Jugador 2"
+                placeholder="Nombre"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={errors.team_b_player_2?.message}
+                autoCapitalize="words"
+              />
+            )}
+          />
+        ) : textSlotsB === 0 ? (
+          <Text style={s.slotLockedHint}>Rivales cubiertos por invitación.</Text>
+        ) : null}
         <Controller
           control={control}
           name="team_b_name"
@@ -597,12 +843,21 @@ export default function CreateMatchScreen() {
       <Button
         title="Crear partida"
         onPress={handleSubmit(onSubmit, showFormFieldsMissingAlert)}
-        loading={createMatch.isPending || recordMatchResult.isPending}
+        loading={
+          isSubmitting ||
+          createMatch.isPending ||
+          recordMatchResult.isPending ||
+          submitResult.isPending ||
+          inviteFriend.isPending
+        }
         style={s.submitBtn}
       />
     </KeyboardAwareScrollView>
   )
 }
+
+const FRIEND_ROW_HEIGHT = 56
+const FRIEND_LIST_VISIBLE_ROWS = 5
 
 const s = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.background },
@@ -638,6 +893,86 @@ const s = StyleSheet.create({
     marginHorizontal: -4,
   },
   hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
+  subLabel: {
+    fontSize: 14,
+    fontFamily: Fonts.semiBold,
+    color: Colors.textPrimary,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  slotLockedHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontStyle: 'italic',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  friendSearchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    marginBottom: 10,
+  },
+  friendSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.textPrimary,
+    paddingVertical: 10,
+  },
+  friendSearchClear: { padding: 4 },
+  friendSearchClearText: { fontSize: 14, color: Colors.textSecondary },
+  friendSearchEmpty: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    paddingVertical: 8,
+  },
+  friendListScroll: {
+    // ~5 friend rows visible; scroll for the rest.
+    maxHeight: FRIEND_LIST_VISIBLE_ROWS * FRIEND_ROW_HEIGHT,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    backgroundColor: Colors.background,
+  },
+  friendListContent: {
+    paddingHorizontal: 8,
+  },
+  friendSelectionHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: FRIEND_ROW_HEIGHT,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  friendInfo: { flex: 1, minWidth: 0, gap: 2 },
+  friendName: { fontSize: 15, fontFamily: Fonts.medium, color: Colors.textPrimary },
+  friendCity: { fontSize: 13, color: Colors.textSecondary },
+  inviteChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  inviteChipActive: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  inviteChipDisabled: { opacity: 0.4 },
+  inviteChipText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  inviteChipTextActive: { color: Colors.primary },
   teamLabel: {
     fontSize: 14,
     fontFamily: Fonts.bold,

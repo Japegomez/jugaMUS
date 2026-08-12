@@ -57,11 +57,11 @@ El alcance se estructuró en **seis fases incrementales**, cada una con objetivo
 
 ```text
 Fase 1 ──► Core          Autenticación · Perfil · Partidas · Descubrir
-Fase 2 ──► Resultados    Notificaciones · Validación de marcadores · Reportes
-Fase 3 ──► Administración Panel de moderación · Analíticas · Auditoría
-Fase 4 ──► Torneos       Cuadros eliminatorios · Parejas · Sincronización en tiempo real
-Fase 5 ──► Marcador      Conteo en vivo local · Acceso sin registro
-Fase 6 ──► Ligas y stats Ligas round-robin / Elo · Estadísticas · Logros · Clasificación
+    Fase 2 ──► Resultados    Notificaciones · Validación de marcadores · Reportes
+    Fase 3 ──► Administración Panel de moderación · Analíticas · Auditoría
+    Fase 4 ──► Torneos       Cuadros eliminatorios · Parejas · Sincronización en tiempo real
+    Fase 5 ──► Marcador      Conteo en vivo local · Acceso sin registro
+    Fase 6 ──► Ligas y stats Ligas round-robin / Elo · Estadísticas · Logros · Clasificación
 ```
 
 ---
@@ -185,7 +185,7 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 
 ### 🔍 Descubrir
 
-- Listado de partidas, torneos y **ligas** públicas con ordenación por proximidad temporal
+- Listado de partidas, torneos y **ligas** públicas y **privadas con contraseña** (aparecen en Descubrir; la contraseña desbloquea la vista)
 - Filtros por tipo, ciudad, fecha, plazas libres, visibilidad y estado
 - Búsqueda por texto y paginación eficiente
 - Actualización en tiempo real sin recarga manual

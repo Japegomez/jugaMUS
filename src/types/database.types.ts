@@ -534,6 +534,8 @@ export type Database = {
           notify_on_reminder_2h: boolean
           notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
+          notify_on_friend_request: boolean
+          notify_on_match_invitation: boolean
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
@@ -556,6 +558,8 @@ export type Database = {
           notify_on_reminder_2h?: boolean
           notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
+          notify_on_friend_request?: boolean
+          notify_on_match_invitation?: boolean
           notify_push?: boolean
           phone_e164: string
           photo_url?: string | null
@@ -578,6 +582,8 @@ export type Database = {
           notify_on_reminder_2h?: boolean
           notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
+          notify_on_friend_request?: boolean
+          notify_on_match_invitation?: boolean
           notify_push?: boolean
           phone_e164?: string
           photo_url?: string | null
@@ -1205,6 +1211,106 @@ export type Database = {
           },
         ]
       }
+      friendships: {
+        Row: {
+          addressee_id: string
+          created_at: string
+          id: string
+          message: string | null
+          requester_id: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee_id: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          requester_id: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee_id?: string
+          created_at?: string
+          id?: string
+          message?: string | null
+          requester_id?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'friendships_addressee_id_fkey'
+            columns: ['addressee_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'friendships_requester_id_fkey'
+            columns: ['requester_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      match_invitations: {
+        Row: {
+          created_at: string
+          id: string
+          invitee_id: string
+          inviter_id: string
+          match_id: string
+          responded_at: string | null
+          status: string
+          team: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitee_id: string
+          inviter_id: string
+          match_id: string
+          responded_at?: string | null
+          status?: string
+          team: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitee_id?: string
+          inviter_id?: string
+          match_id?: string
+          responded_at?: string | null
+          status?: string
+          team?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'match_invitations_invitee_id_fkey'
+            columns: ['invitee_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_invitations_inviter_id_fkey'
+            columns: ['inviter_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'match_invitations_match_id_fkey'
+            columns: ['match_id']
+            isOneToOne: false
+            referencedRelation: 'matches'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: {
       profiles_public: {
@@ -1705,6 +1811,8 @@ export type Database = {
           notify_on_reminder_2h: boolean
           notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
+          notify_on_friend_request: boolean
+          notify_on_match_invitation: boolean
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
@@ -1724,31 +1832,11 @@ export type Database = {
         Args: { p_match_id: string; p_profile_id: string }
         Returns: {
           city: string | null
-          created_at: string
           display_name: string
           id: string
-          notify_on_join: boolean
-          notify_on_match_cancel: boolean
-          notify_on_match_edit: boolean
-          notify_on_match_start: boolean
-          notify_on_reminder_24h: boolean
-          notify_on_reminder_2h: boolean
-          notify_on_reminder_in_progress: boolean
-          notify_on_result: boolean
-          notify_push: boolean
           phone_e164: string
           photo_url: string | null
-          push_token: string | null
-          role: string
-          status: string
-          updated_at: string
         }[]
-        SetofOptions: {
-          from: '*'
-          to: 'profiles'
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       get_leaderboard: {
         Args: { p_city?: string; p_limit?: number }
@@ -2008,6 +2096,112 @@ export type Database = {
           p_team_b_games: number
         }
         Returns: undefined
+      }
+      cancel_friend_request: {
+        Args: { p_friendship_id: string }
+        Returns: undefined
+      }
+      remove_friend: {
+        Args: { p_other_user_id: string }
+        Returns: undefined
+      }
+      cancel_match_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
+      get_friendship_with_user: {
+        Args: { p_other_user_id: string }
+        Returns: {
+          friendship_id: string
+          status: string
+          direction: string
+        }[]
+      }
+      invite_friend_to_match: {
+        Args: {
+          p_match_id: string
+          p_invitee_id: string
+          p_team: string
+        }
+        Returns: string
+      }
+      inviter_team_capacity_available: {
+        Args: { p_match_id: string; p_team: string }
+        Returns: boolean
+      }
+      list_match_invitations: {
+        Args: { p_match_id: string }
+        Returns: {
+          created_at: string
+          invitation_id: string
+          invitee_id: string
+          invitee_name: string
+          status: string
+          team: string
+        }[]
+      }
+      list_my_friend_requests: {
+        Args: { p_direction: string }
+        Returns: {
+          city: string | null
+          created_at: string
+          display_name: string
+          friendship_id: string
+          message: string | null
+          photo_url: string | null
+          user_id: string
+        }[]
+      }
+      list_my_friends: {
+        Args: Record<never, never>
+        Returns: {
+          city: string | null
+          display_name: string
+          photo_url: string | null
+          since: string
+          user_id: string
+        }[]
+      }
+      list_my_match_invitations: {
+        Args: Record<never, never>
+        Returns: {
+          created_at: string
+          invitation_id: string
+          inviter_id: string
+          inviter_name: string
+          match_id: string
+          match_status: string
+          start_at: string
+          team: string
+          title: string
+        }[]
+      }
+      match_pending_invitations_filled: {
+        Args: { p_match_id: string }
+        Returns: number
+      }
+      respond_friend_request: {
+        Args: { p_friendship_id: string; p_accept: boolean }
+        Returns: undefined
+      }
+      respond_match_invitation: {
+        Args: { p_invitation_id: string; p_accept: boolean }
+        Returns: undefined
+      }
+      search_users_by_display_name: {
+        Args: { p_query: string; p_limit?: number }
+        Returns: {
+          user_id: string
+          display_name: string
+          city: string | null
+          photo_url: string | null
+          friendship_status: string | null
+          friendship_direction: string | null
+        }[]
+      }
+      send_friend_request: {
+        Args: { p_addressee_id: string; p_message?: string }
+        Returns: { friendship_id: string; status: string }[]
       }
       record_tournament_match_result_as_referee: {
         Args: {

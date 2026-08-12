@@ -17,7 +17,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
 - **Eliminación de cuenta (may.–ago. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial compartido se anonimiza**, no se elimina: referencias de partidas, **ligas y torneos** (creador, parejas, retos, grants) pasan al perfil interno **Usuario eliminado** (sentinel) o a texto «Usuario eliminado» (mig. `023`–`025`, `105`). CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
 - **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422).
-- **Notificaciones en perfil (may./jul. 2026):** preferencias **push** («Todas») y por **evento** en perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla. Eventos: unión; partida/torneo inicio, edición y cancelación (separados); resultado pendiente de validar; resultado pendiente de enviar (aviso ~5 h en curso); recordatorios 24 h y/o 2 h antes (chips multi-selección). `enqueue_notification` y `process-notifications` respetan `notify_push` + `notify_on_*` (migraciones `077`–`079`).
+- **Notificaciones en perfil (may./jul./ago. 2026):** preferencias **push** («Todas») y por **evento** en perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla. Eventos: unión; partida/torneo inicio, edición y cancelación (separados); resultado pendiente de validar; resultado pendiente de enviar (aviso ~5 h en curso); recordatorios 24 h y/o 2 h antes (chips multi-selección); **solicitudes de amistad** e **invitaciones a partidas** (`notify_on_friend_request` / `notify_on_match_invitation`, mig. `110`). `enqueue_notification` y `process-notifications` respetan `notify_push` + `notify_on_*` (migraciones `077`–`079`, `110`).
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand.
 - **Torneos (may. 2026):** eliminación directa con parejas mixtas (registradas + texto). Partidos del cuadro reutilizan `matches` (`tournament_id`, metadatos de ronda). FAB speed-dial: crear partida, torneo o liga. Cuadro visual en canvas SVG con resultados por enfrentamiento. Byes automáticos si faltan parejas para potencia de 2; **partidas bye no cuentan** en historial ni analíticas admin. Avance de ronda al confirmar resultado (incl. propagación bye y relleno parcial del cuadro); partido siguiente con `start_at = NOW()`. Torneo pasa a `finished` al cerrar la final (y el partido de 3º/4º si está activado). Organizador puede ser árbitro (sin jugar); registra resultado directo si todos los jugadores del partido son texto. **Un jugador registrado solo en una pareja** por torneo. Descubrir: filtro partidas/torneos/ligas; partidas del cuadro o de liga no listadas ni unibles manualmente como partidas sueltas. Detalle y tarjetas muestran organizador y `ciudad · lugar`. Lugar en formularios: nombre obligatorio o «Lugar por definir». Historial de perfil colorea victoria/derrota. Sincronización multi-dispositivo: Supabase Realtime (`058`) en `matches`, participantes, resultados, torneos y parejas; invalidación React Query en Descubrir, Mis partidas, historial y ficha/cuadro de torneo (sin polling 30 s en detalle). **Edición de parejas (may.–jun. 2026):** organizador o miembros de la pareja pueden editar nombre y plazas texto en inscripción; solo el organizador elimina parejas (`062`). Opcional **3º y 4º puesto** entre perdedores de semifinales (`064`). En la ficha de un partido del cuadro, enlace **🏆 Ir al torneo** al detalle del torneo.
@@ -34,15 +34,16 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Torneos — parejas y 3º puesto (jun. 2026):** cualquier miembro de la pareja puede editarla en inscripción (`062`); eliminar sigue siendo solo organizador. Al editar, **no se pueden quitar** jugadores de texto (solo renombrar; `069`). Opción **3º y 4º puesto** al crear torneo: partido entre perdedores de semifinales (`064`); torneo no finaliza hasta cerrar final y dicho partido si aplica.
 - **Partidas y torneos privados (jun. 2026):** visibilidad `private` con contraseña del organizador/creador. Aparecen en Descubrir (filtro Privadas). La contraseña **desbloquea la vista** (plantel/cuadro); unirse sigue con el flujo normal (partida) o parejas (torneo). Migraciones `066`–`068`.
 - **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`.
-- **Sesión Auth (jul. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo sigue vigente.
+- **Sesión Auth (jul.–ago. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo: **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS` en `sessionBackground.ts`).
 - **Torneos — auto-cancel sin cuadro (jul. 2026):** en `registration` pasado `start_at` sin `bracket_generated_at` → `cancelled` (+ notificación al organizador). Crear/editar: título/ciudad/lugar opcionales (defaults «Torneo» / «Ciudad por definir»). Aviso al guardar. Migraciones `070`/`071`.
 - **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
-- **PostHog producto (jul. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
+- **PostHog producto (jul./ago. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`); `friend_request_sent`, `friend_request_accepted` (auto-aceptación), `match_invite_sent`, `match_invite_accepted` (v1.8). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
 - **Torneos — cuadro interactivo (jul. 2026):** cada pareja en tarjeta propia; tap en pareja para registrar resultado y avanzar (modal rápido o ficha de partido). Etiquetas de ronda (cuartos, semifinal, final). Confirmación destructiva al organizar cuadro. Al cancelar torneo se cancelan **todos** los partidos del cuadro (`082`). Fix auto-cancel al poblar la final (`081`). Notificación «Validar resultado» solo si el resultado queda `pending_validation` (`083`).
-- **Versión app (ago. 2026):** **1.7.1** (`app.json`, `package.json`). Hotfix de calidad: suite de characterization tests (services/hooks/utils/lib), umbrales de cobertura y proceso TDD (`docs/testing.md`).
+- **Amigos e invitaciones a partidas (ago. 2026, v1.8):** solicitudes de amistad con mensaje opcional (máx. 200) desde perfil ajeno o búsqueda por nombre; cooldown tras rechazo reciente; lista de amigos/solicitudes en perfil propio. Invitar amigos a pareja/rival al crear o editar equipo (solo partida standalone `planned`/`in_progress` del creador); pendientes ocupan plaza; compartir vía modal en ficha tras crear. Mis Partidas: Invitaciones; ficha: banner Aceptar/Rechazar. Rechazar en partida iniciada/finalizada (o con resultado confirmado) cancela y voidea resultado; rivales invitados fuerzan `pending_validation`. Migraciones `108`–`116`.
+- **Versión app (ago. 2026):** **1.8.0** (`app.json`, `package.json`). Incluye hotfix de calidad v1.7.1 (characterization tests, umbrales de cobertura ≥60%, proceso TDD en `docs/testing.md`).
 - **Security hardening ligas/stats (ago. 2026, mig. `106`):** `process_league_lifecycle` solo vía pg_cron (REVOKE a PUBLIC/authenticated). `enqueue_player_stats_recompute` no ejecutable por clientes. `get_player_stats` recalcula ELO/agregados solo para el propio usuario o admin; el resto lee stats cacheadas (mitiga amplificación cross-user).
 - **UI responsive (jul. 2026):** helpers `useResponsiveLayout` / `ScrollableModalBody` para escalado tipográfico y modales con scroll seguro en pantallas pequeñas.
-- **Crear partida — UX (jul.–ago. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ cierra a **Mis partidas** (no `back` a Descubrir). Sin autofocus/teclado al abrir el formulario. Etiquetas de campo en negrita; sin asteriscos ni «(opcional)» en labels de crear/editar. **Empezar partida:** sin modal de confirmación (sí aviso si plantilla incompleta). Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`). **Partida ya jugada (ago. 2026):** si `start_at` es anterior a ahora, el formulario muestra el marcador al final (casillas vacías; nombres de equipo derivados como en ficha); exige plantilla completa; al crear registra resultado directo (`record_match_result_direct`, mig. `085` admite también `finished_no_result`) y abre la partida `finished`. Orden de pareja/equipo en formularios y tarjetas: **integrantes primero, nombre después**.
+- **Crear partida — UX (jul.–ago. 2026):** título, ciudad y lugar **opcionales** al crear (defaults: «Partida», «Ciudad por definir», «Lugar por definir» si vacíos). Sin toggle «Lugar por definir» en creación. Fecha/hora por defecto **+10 min** respecto a ahora. Botón ✕ cierra a **Mis partidas** (no `back` a Descubrir). Sin autofocus/teclado al abrir el formulario. Etiquetas de campo en negrita; sin asteriscos ni «(opcional)» en labels de crear/editar. **Empezar partida:** sin modal de confirmación (sí aviso si plantilla incompleta). Edición de partida conserva validación anterior. Aviso si plantilla incompleta (auto-cancel al llegar `start_at`). **Partida ya jugada (ago. 2026):** si `start_at` es anterior a ahora, el formulario muestra el marcador al final (casillas vacías; nombres de equipo derivados como en ficha); exige plantilla completa (nombres o amigos invitados); al crear registra resultado (directo o `pending_validation` si hay rivales invitados) y abre la partida. Orden de pareja/equipo en formularios y tarjetas: **integrantes primero, nombre después**. **Invitar amigos (v1.8):** selector de amigos como compañero/rival al crear; pestaña «Añadir amigo» en editar pareja.
 - **Locales nativos (ago. 2026):** `locales/es.json` anida claves bajo `ios` (SDK 54+) para no generar `ExtraTranslation` en Android `lintVitalRelease`.
 - **Apple Sign In (jun. 2026):** nombre de perfil legible con `fullName` de Apple y backfill para relay emails (`060`–`061`).
 - **Plantilla y cron (may. 2026):** unirse solo en `planned`. Al llegar `start_at`, cron promueve a `in_progress` solo con roster completo (4 plazas); si no, `cancelled`. Partida con hora actual y plantilla llena queda `in_progress` al crear/unirse. Listas y fichas de partida/torneo se actualizan vía Realtime + refetch al foco.
@@ -113,7 +114,8 @@ Solo dos roles en el MVP:
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
 - Preferencias de notificación en pantalla de perfil:
   - **Todas** (`notify_push`): master que enciende/apaga todos los eventos
-  - **Por evento:** unión; inicio / edición / cancelación de partida o torneo; resultado pendiente de validar; resultado pendiente de enviar; recordatorios 24 h y 2 h (selección independiente) — columnas `notify_on_*` (migraciones `022`, `078`, `079`)
+  - **Por evento:** unión; inicio / edición / cancelación de partida o torneo; resultado pendiente de validar; resultado pendiente de enviar; recordatorios 24 h y 2 h (selección independiente); solicitudes de amistad; invitaciones a partidas — columnas `notify_on_*` (migraciones `022`, `078`, `079`, `110`)
+- **Amigos (v1.8):** sección desplegable en perfil propio (lista, solicitudes enviadas/recibidas, eliminar amigo); botón persona+plus en perfil ajeno para enviar solicitud con mensaje opcional (mig. `108` / `110`)
 - Enlaces a términos y política de privacidad desde el perfil
 - **Perfil de otro usuario (solo lectura):** nombre, ciudad, teléfono según permisos del servidor e historial de partidas visibles; navegación desde participantes registrados en detalle de partida
 - **El teléfono solo es visible para participantes de la misma partida confirmada** (también en perfil ajeno vía RPC)
@@ -158,9 +160,18 @@ Solo dos roles en el MVP:
 
 - Cada usuario tiene acceso a su historial de partidas pasadas
 
+**Amigos e invitaciones (v1.8)**
+
+- Al crear o editar la pareja de una partida standalone (`planned`/`in_progress`, creador), se pueden invitar amigos confirmados a equipo A o B (capacidad acotada; pestaña «Añadir amigo» solo si aplica)
+- Las invitaciones pendientes ocupan plaza de roster (la partida `planned` empieza a `start_at` aunque queden pendientes); al aceptar se revalida capacidad
+- Mis Partidas muestra sección «Invitaciones»; la ficha muestra banner Aceptar/Rechazar y modal de compartir (WhatsApp/enlace)
+- Rechazar (o cancelar) una invitación en partida `in_progress`/`finished`/`finished_no_result` (o con resultado confirmado) cancela la partida y voidea el resultado
+- Rivales invitados (pendientes o aceptados) fuerzan resultado `pending_validation` (también en partidas pasadas)
+- Solicitudes de amistad: mensaje ≤200; cooldown tras rechazo reciente; búsqueda por nombre (`111`); eliminar amigo cancela invitaciones pendientes entre el par (`114`)
+
 ### F5 - Descubrir y filtrar (Fase 1 + 6)
 
-- Listado de partidas, torneos y ligas públicas ordenado por fecha
+- Listado de partidas, torneos y ligas **públicas y privadas con contraseña** ordenado por fecha (filtro de visibilidad; las privadas aparecen en Descubrir y requieren contraseña para desbloquear la vista)
 - Filtros: tipo (partidas / torneos / ligas), fecha, ciudad/pueblo, plazas libres, visibilidad, estado
 - Búsqueda por texto en el campo título
 - Paginación de 20 elementos por página
@@ -182,6 +193,7 @@ Solo dos roles en el MVP:
 - Push cuando alguien se une a tu partida
 - Push cuando la partida es editada o cancelada
 - Push al ser expulsado o cuando alguien abandona
+- Push de solicitud de amistad e invitación a partida (preferencias propias; v1.8 / mig. `110`)
 - Preferencias granulares en cliente (push + evento); `enqueue_notification` y Edge Function `process-notifications` respetan `notify_push` y `notify_on_*`
 
 **Notificaciones automáticas (Fase 2)**
@@ -236,7 +248,7 @@ Solo dos roles en el MVP:
 - Open Elo: retos entre parejas; ranking Elo de pareja; fecha de fin opcional
 - Partidos de liga reutilizan `matches` con `league_id`; mismos flujos de resultado/marcador que partidas normales cuando aplica
 - Privadas con contraseña + grants; admin puede leer sin contraseña
-- Listado en Descubrir (filtro Ligas); invitaciones/compartir según visibilidad
+- Listado en Descubrir (filtro Ligas): ligas públicas y privadas con contraseña; la contraseña desbloquea la vista
 - Lifecycle y recordatorios vía cron (`process_league_lifecycle`, mig. `102`/`106`)
 
 ### F11 - Estadísticas, logros y clasificación (Fase 6)
@@ -621,7 +633,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH2: Un usuario puede autenticarse con Google
 - CA_AUTH3: Un usuario puede autenticarse con Apple ID
 - CA_AUTH4: Un usuario puede recuperar su contraseña por email, fijar una nueva en `auth/update-password` e iniciar sesión después
-- CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
+- CA_AUTH5: La sesión persiste entre cierres de la app (refresh token); tras ≥6 h en segundo plano, al volver a primer plano se cierra la sesión con aviso
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
 - CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas, ligas y torneos (perfil sentinel «Usuario eliminado»)
 
@@ -630,7 +642,9 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_PROF1: El teléfono se valida en formato E.164 antes de guardar
 - CA_PROF2: La foto de perfil se redimensiona automáticamente a ≤ 500KB al subir
 - CA_PROF3: El teléfono solo aparece visible para participantes de la misma partida confirmada
-- CA_PROF4: Las preferencias de notificación (canal y por evento) se editan desde el perfil y persisten en `profiles`
+- CA_PROF4: Las preferencias de notificación (canal y por evento, incl. amistad e invitaciones a partida) se editan desde el perfil y persisten en `profiles`
+- CA_PROF8: Un usuario puede enviar, aceptar, rechazar o cancelar solicitudes de amistad y eliminar un amigo confirmado
+- CA_PROF9: Solo amigos confirmados pueden recibir invitaciones a partidas standalone (pareja o rival)
 
 **Partidas**
 
@@ -715,7 +729,7 @@ Supabase (PostgreSQL + Auth + Storage)
 
 **Contacto**
 
-- CA_CONTACT1: Con teléfono visible en perfil ajeno, en iOS/Android se puede abrir la ficha nativa de nuevo contacto
+- CA_CONTACT1: Con teléfono visible en perfil ajeno, en iOS/Android se puede abrir la ficha nativa de nuevo contacto; en web se puede copiar el número al portapapeles
 
 ---
 
@@ -723,19 +737,19 @@ Supabase (PostgreSQL + Auth + Storage)
 
 Las siguientes funcionalidades están **fuera del MVP** y serán evaluadas para versiones futuras:
 
-| Funcionalidad                           | Motivo del aplazamiento                                                                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Ligas y clasificaciones                 | ~~Pospuesta~~ **Implementado (v1.7 / Fase 6):** round-robin, open Elo, stats, badges y leaderboard (mig. `086`+)                                              |
-| Chat interno                            | Requiere moderación constante; se delega en WhatsApp                                                                                                          |
-| Geolocalización GPS exacta              | Sacrifica privacidad sin aportar valor suficiente en el MVP                                                                                                   |
-| Autenticación con Apple ID              | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store)                                                                                                  |
-| Soporte multilenguaje completo (i18n)   | No prioritario hasta tener masa crítica de usuarios                                                                                                           |
-| Notificaciones personalizadas avanzadas | ~~Fase 3~~ **Implementado:** toggles por canal y evento en perfil; `enqueue_notification` / `process-notifications` respetan `notify_on_*` (mig. `077`–`079`) |
-| Sistema de reputación y valoraciones    | Necesita masa crítica de usuarios para ser útil                                                                                                               |
-| Integración con redes sociales          | No crítico para el MVP                                                                                                                                        |
-| Modo offline/sincronización             | Alta complejidad de sincronización; conexión asumida                                                                                                          |
-| Verificación de teléfono por SMS        | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2                                                                                                  |
-| Compartir en otras redes (no WhatsApp)  | WhatsApp HTTPS invites en producto (jul. 2026); otras redes fuera de alcance                                                                                  |
+| Funcionalidad                           | Motivo del aplazamiento                                                                                                                                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ligas y clasificaciones                 | ~~Pospuesta~~ **Implementado (v1.7 / Fase 6):** round-robin, open Elo, stats, badges y leaderboard (mig. `086`+)                                                                                                          |
+| Chat interno                            | Requiere moderación constante; se delega en WhatsApp                                                                                                                                                                      |
+| Geolocalización GPS exacta              | Sacrifica privacidad sin aportar valor suficiente en el MVP                                                                                                                                                               |
+| Autenticación con Apple ID              | ~~Pospuesta~~ **Movida al MVP** (obligatorio para App Store)                                                                                                                                                              |
+| Soporte multilenguaje completo (i18n)   | No prioritario hasta tener masa crítica de usuarios                                                                                                                                                                       |
+| Notificaciones personalizadas avanzadas | ~~Fase 3~~ **Implementado:** toggles por canal y evento en perfil (incl. amistad e invitaciones a partida, mig. `110`); `enqueue_notification` / `process-notifications` respetan `notify_on_*` (mig. `077`–`079`, `110`) |
+| Sistema de reputación y valoraciones    | Necesita masa crítica de usuarios para ser útil                                                                                                                                                                           |
+| Integración con redes sociales          | No crítico para el MVP                                                                                                                                                                                                    |
+| Modo offline/sincronización             | Alta complejidad de sincronización; conexión asumida                                                                                                                                                                      |
+| Verificación de teléfono por SMS        | Añade coste (Twilio ~0.05€/SMS) y complejidad; valorar en v2                                                                                                                                                              |
+| Compartir en otras redes (no WhatsApp)  | WhatsApp HTTPS invites en producto (jul. 2026); otras redes fuera de alcance                                                                                                                                              |
 
 ---
 

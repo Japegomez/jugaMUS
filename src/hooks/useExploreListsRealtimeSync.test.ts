@@ -48,7 +48,7 @@ describe('useExploreListsRealtimeSync', () => {
 
     const { unmount } = renderHookWithClient(() => useExploreListsRealtimeSync())
 
-    expect(supabase.channel).toHaveBeenCalledWith('explore-lists-sync:user-1')
+    expect(supabase.channel).toHaveBeenCalledWith('explore-lists-user-1')
     expect(mockChannel.on).toHaveBeenCalled()
     expect(mockChannel.subscribe).toHaveBeenCalled()
 

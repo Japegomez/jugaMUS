@@ -73,13 +73,9 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- Same visibility gate as viewing another user's profile (unauthorized / anon → NULL).
-  IF NOT public.profile_is_viewable_by_auth(p_user_id) THEN
-    RETURN NULL;
-  END IF;
-
   -- Only refresh (expensive full-history recompute) when the caller is the user
-  -- themselves or an admin. Other authorized callers get the cached stats.
+  -- themselves or an admin. Other callers get the cached stats.
+  -- Visibility gate for unauthorized/anon → NULL is in migration 107.
   IF p_user_id = auth.uid() OR public.auth_is_admin() THEN
     PERFORM public.refresh_player_stats(p_user_id);
   END IF;

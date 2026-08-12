@@ -16,6 +16,7 @@ import { requestAppStoreRating } from '@/lib/storeReview'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { FriendsSection } from '@/components/profile/FriendsSection'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { BadgeUnlockPopup } from '@/components/stats/BadgeUnlockPopup'
@@ -50,6 +51,8 @@ type NotifField = Pick<
   | 'notify_on_reminder_24h'
   | 'notify_on_reminder_2h'
   | 'notify_on_reminder_in_progress'
+  | 'notify_on_friend_request'
+  | 'notify_on_match_invitation'
 >
 
 export default function ProfileScreen() {
@@ -154,207 +157,225 @@ export default function ProfileScreen() {
   const notifDisabled = updateProfile.isPending
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.scroll,
-        { paddingTop: screenTopPadding(insets.top, 24), paddingBottom: 32 + insets.bottom + 72 },
-      ]}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <View style={styles.avatarWrap}>
-          <AvatarCircle
-            uri={profile.photo_url}
-            name={profile.display_name}
-            size={space(96)}
-            initialsStyle={{ fontSize: font(36) }}
-          />
-          <Pressable
-            onPress={() => router.push('/(tabs)/profile/edit' as Href)}
-            accessibilityRole="button"
-            accessibilityLabel="Editar perfil"
-            style={({ pressed }) => [styles.avatarPencil, pressed && styles.avatarPencilPressed]}>
-            <Ionicons name="pencil" size={14} color={Colors.white} />
-          </Pressable>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: screenTopPadding(insets.top, 24), paddingBottom: 32 + insets.bottom + 72 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View style={styles.avatarWrap}>
+            <AvatarCircle
+              uri={profile.photo_url}
+              name={profile.display_name}
+              size={space(96)}
+              initialsStyle={{ fontSize: font(36) }}
+            />
+            <Pressable
+              onPress={() => router.push('/(tabs)/profile/edit' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Editar perfil"
+              style={({ pressed }) => [styles.avatarPencil, pressed && styles.avatarPencilPressed]}>
+              <Ionicons name="pencil" size={14} color={Colors.white} />
+            </Pressable>
+          </View>
+          <Text style={[styles.displayName, { fontSize: font(22) }]}>{profile.display_name}</Text>
+          {profile.phone_e164 ? (
+            <Text style={styles.phoneUnderName}>{formatPhone(profile.phone_e164)}</Text>
+          ) : null}
+          {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
         </View>
-        <Text style={[styles.displayName, { fontSize: font(22) }]}>{profile.display_name}</Text>
-        {profile.phone_e164 ? (
-          <Text style={styles.phoneUnderName}>{formatPhone(profile.phone_e164)}</Text>
+
+        {sessionUserId ? (
+          <ProfileStatsCard
+            userId={sessionUserId}
+            onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
+            onPressRanking={() => router.push('/(tabs)/leaderboard' as Href)}
+          />
         ) : null}
-        {profile.city ? <Text style={styles.city}>{profile.city}</Text> : null}
-      </View>
 
-      {sessionUserId ? (
-        <ProfileStatsCard
-          userId={sessionUserId}
-          onPressDetails={() => router.push(`/(tabs)/profile/stats/${sessionUserId}` as Href)}
-          onPressRanking={() => router.push('/(tabs)/leaderboard' as Href)}
-        />
-      ) : null}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Historial</Text>
+          <MatchHistoryList
+            matches={userMatches}
+            loading={matchesPending}
+            emptyMessage="Aún no has participado en ninguna partida"
+            onMatchPress={(matchId) =>
+              router.push(buildMatchDetailHref(matchId, { from: 'profile' }))
+            }
+          />
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Historial</Text>
-        <MatchHistoryList
-          matches={userMatches}
-          loading={matchesPending}
-          emptyMessage="Aún no has participado en ninguna partida"
-          onMatchPress={(matchId) =>
-            router.push(buildMatchDetailHref(matchId, { from: 'profile' }))
-          }
-        />
-      </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Notificaciones</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Notificaciones</Text>
+          <NotifToggleRow
+            label="Todas"
+            value={profile.notify_push}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_push'}
+            onValueChange={(value) => void onNotifChange('notify_push', value)}
+          />
 
-        <NotifToggleRow
-          label="Todas"
-          value={profile.notify_push}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_push'}
-          onValueChange={(value) => void onNotifChange('notify_push', value)}
-        />
-
-        <Text style={styles.cardSubtitle}>Por evento</Text>
-        <NotifToggleRow
-          label="Alguien se une a tu partida"
-          value={profile.notify_on_join}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_join'}
-          onValueChange={(value) => void onNotifChange('notify_on_join', value)}
-        />
-        <NotifToggleRow
-          label="Partida o torneo: inicio"
-          value={profile.notify_on_match_start}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_match_start'}
-          onValueChange={(value) => void onNotifChange('notify_on_match_start', value)}
-        />
-        <NotifToggleRow
-          label="Partida o torneo: edición"
-          value={profile.notify_on_match_edit}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_match_edit'}
-          onValueChange={(value) => void onNotifChange('notify_on_match_edit', value)}
-        />
-        <NotifToggleRow
-          label="Partida o torneo: cancelación"
-          value={profile.notify_on_match_cancel}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_match_cancel'}
-          onValueChange={(value) => void onNotifChange('notify_on_match_cancel', value)}
-        />
-        <NotifToggleRow
-          label="Resultado pendiente de validar"
-          value={profile.notify_on_result}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_result'}
-          onValueChange={(value) => void onNotifChange('notify_on_result', value)}
-        />
-        <NotifToggleRow
-          label="Resultado pendiente de enviar"
-          value={profile.notify_on_reminder_in_progress}
-          disabled={notifDisabled}
-          busy={savingField === 'notify_on_reminder_in_progress'}
-          onValueChange={(value) => void onNotifChange('notify_on_reminder_in_progress', value)}
-        />
-        <View style={[styles.reminderRow, styles.infoRowLast]}>
-          <Text style={styles.infoLabel}>Recordatorio antes de la partida</Text>
-          <View style={styles.reminderChips}>
-            <ReminderChip
-              label="24 h antes"
-              selected={profile.notify_on_reminder_24h}
-              disabled={notifDisabled}
-              busy={savingField === 'notify_on_reminder_24h'}
-              onPress={() => void onReminderTimingChange('24h', !profile.notify_on_reminder_24h)}
-            />
-            <ReminderChip
-              label="2 h antes"
-              selected={profile.notify_on_reminder_2h}
-              disabled={notifDisabled}
-              busy={savingField === 'notify_on_reminder_2h'}
-              onPress={() => void onReminderTimingChange('2h', !profile.notify_on_reminder_2h)}
-            />
+          <Text style={styles.cardSubtitle}>Por evento</Text>
+          <NotifToggleRow
+            label="Alguien se une a tu partida"
+            value={profile.notify_on_join}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_join'}
+            onValueChange={(value) => void onNotifChange('notify_on_join', value)}
+          />
+          <NotifToggleRow
+            label="Partida o torneo: inicio"
+            value={profile.notify_on_match_start}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_match_start'}
+            onValueChange={(value) => void onNotifChange('notify_on_match_start', value)}
+          />
+          <NotifToggleRow
+            label="Partida o torneo: edición"
+            value={profile.notify_on_match_edit}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_match_edit'}
+            onValueChange={(value) => void onNotifChange('notify_on_match_edit', value)}
+          />
+          <NotifToggleRow
+            label="Partida o torneo: cancelación"
+            value={profile.notify_on_match_cancel}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_match_cancel'}
+            onValueChange={(value) => void onNotifChange('notify_on_match_cancel', value)}
+          />
+          <NotifToggleRow
+            label="Resultado pendiente de validar"
+            value={profile.notify_on_result}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_result'}
+            onValueChange={(value) => void onNotifChange('notify_on_result', value)}
+          />
+          <NotifToggleRow
+            label="Resultado pendiente de enviar"
+            value={profile.notify_on_reminder_in_progress}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_reminder_in_progress'}
+            onValueChange={(value) => void onNotifChange('notify_on_reminder_in_progress', value)}
+          />
+          <NotifToggleRow
+            label="Solicitudes de amistad"
+            value={profile.notify_on_friend_request}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_friend_request'}
+            onValueChange={(value) => void onNotifChange('notify_on_friend_request', value)}
+          />
+          <NotifToggleRow
+            label="Invitaciones a partidas"
+            value={profile.notify_on_match_invitation}
+            disabled={notifDisabled}
+            busy={savingField === 'notify_on_match_invitation'}
+            onValueChange={(value) => void onNotifChange('notify_on_match_invitation', value)}
+          />
+          <View style={[styles.reminderRow, styles.infoRowLast]}>
+            <Text style={styles.infoLabel}>Recordatorio antes de la partida</Text>
+            <View style={styles.reminderChips}>
+              <ReminderChip
+                label="24 h antes"
+                selected={profile.notify_on_reminder_24h}
+                disabled={notifDisabled}
+                busy={savingField === 'notify_on_reminder_24h'}
+                onPress={() => void onReminderTimingChange('24h', !profile.notify_on_reminder_24h)}
+              />
+              <ReminderChip
+                label="2 h antes"
+                selected={profile.notify_on_reminder_2h}
+                disabled={notifDisabled}
+                busy={savingField === 'notify_on_reminder_2h'}
+                onPress={() => void onReminderTimingChange('2h', !profile.notify_on_reminder_2h)}
+              />
+            </View>
           </View>
         </View>
-      </View>
 
-      {isRatingPromptSupported() ? (
+        {isRatingPromptSupported() ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Ayuda</Text>
+            <LinkRow label="Valorar en la tienda" onPress={() => void onRateApp()} isLast />
+          </View>
+        ) : null}
+
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Ayuda</Text>
-          <LinkRow label="Valorar en la tienda" onPress={() => void onRateApp()} isLast />
+          <Text style={styles.cardTitle}>Legal</Text>
+          <LinkRow
+            label="Términos y condiciones"
+            onPress={() => router.push('/(auth)/terms' as Href)}
+          />
+          <LinkRow
+            label="Política de privacidad"
+            onPress={() => router.push('/(auth)/privacy' as Href)}
+            isLast
+          />
         </View>
-      ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Legal</Text>
-        <LinkRow
-          label="Términos y condiciones"
-          onPress={() => router.push('/(auth)/terms' as Href)}
-        />
-        <LinkRow
-          label="Política de privacidad"
-          onPress={() => router.push('/(auth)/privacy' as Href)}
-          isLast
-        />
-      </View>
+        {profile.role === 'admin' ? (
+          <Pressable
+            style={styles.adminButton}
+            onPress={() => router.push('/(admin)' as Href)}
+            accessibilityRole="button">
+            <Text style={styles.adminButtonText}>Panel de administración</Text>
+          </Pressable>
+        ) : null}
 
-      {profile.role === 'admin' ? (
         <Pressable
-          style={styles.adminButton}
-          onPress={() => router.push('/(admin)' as Href)}
+          style={styles.editButton}
+          onPress={() => router.push('/(tabs)/profile/edit')}
           accessibilityRole="button">
-          <Text style={styles.adminButtonText}>Panel de administración</Text>
+          <Text style={styles.editButtonText}>Editar perfil</Text>
         </Pressable>
-      ) : null}
 
-      <Pressable
-        style={styles.editButton}
-        onPress={() => router.push('/(tabs)/profile/edit')}
-        accessibilityRole="button">
-        <Text style={styles.editButtonText}>Editar perfil</Text>
-      </Pressable>
+        <Pressable
+          style={styles.editButton}
+          onPress={() => setShowFeedbackModal(true)}
+          accessibilityRole="button">
+          <Text style={styles.editButtonText}>Enviar feedback</Text>
+        </Pressable>
 
-      <Pressable
-        style={styles.editButton}
-        onPress={() => setShowFeedbackModal(true)}
-        accessibilityRole="button">
-        <Text style={styles.editButtonText}>Enviar feedback</Text>
-      </Pressable>
+        <Button
+          title="Cerrar sesión"
+          variant="outline"
+          onPress={() => setShowSignOutModal(true)}
+          style={styles.signOutBtn}
+          textStyle={styles.signOutLabel}
+        />
 
-      <Button
-        title="Cerrar sesión"
-        variant="outline"
-        onPress={() => setShowSignOutModal(true)}
-        style={styles.signOutBtn}
-        textStyle={styles.signOutLabel}
-      />
+        <Button
+          title="Eliminar cuenta"
+          variant="danger"
+          onPress={() => setShowDeleteModal(true)}
+          style={styles.deleteAccountBtn}
+        />
 
-      <Button
-        title="Eliminar cuenta"
-        variant="danger"
-        onPress={() => setShowDeleteModal(true)}
-        style={styles.deleteAccountBtn}
-      />
+        <SignOutModal
+          visible={showSignOutModal}
+          onClose={() => setShowSignOutModal(false)}
+          loading={signingOut}
+          onConfirm={onSignOut}
+        />
 
-      <SignOutModal
-        visible={showSignOutModal}
-        onClose={() => setShowSignOutModal(false)}
-        loading={signingOut}
-        onConfirm={onSignOut}
-      />
+        <FeedbackModal visible={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
 
-      <FeedbackModal visible={showFeedbackModal} onClose={() => setShowFeedbackModal(false)} />
+        <DeleteAccountModal
+          visible={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          loading={deletingAccount}
+          onConfirm={onDeleteAccount}
+        />
 
-      <DeleteAccountModal
-        visible={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
-        loading={deletingAccount}
-        onConfirm={onDeleteAccount}
-      />
+        <BadgeUnlockPopup badge={unlockedBadge} onClose={dismiss} />
+      </ScrollView>
 
-      <BadgeUnlockPopup badge={unlockedBadge} onClose={dismiss} />
-    </ScrollView>
+      <FriendsSection />
+    </View>
   )
 }
 
@@ -443,6 +464,10 @@ function LinkRow({
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 20,

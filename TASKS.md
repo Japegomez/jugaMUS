@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 11/08/2026 (hotfix v1.7.1: suite TDD + coverage gates)
+> Actualizado: 12/08/2026 (merge main hotfix v1.7.1; timeout sesión 6 h; invites `117`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -26,6 +26,7 @@
 | Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
 | Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
 | Hotfix tests TDD       | Completada | Characterization tests + coverage gates + docs; v1.7.1                           |
+| Release 1.8            | Completada | Amigos, invitaciones a partidas, prefs notif. friend/invite; v1.8.0              |
 
 ---
 
@@ -440,6 +441,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ### Sesión, torneos, analytics y hotfix (v1.2.1) — 23/07/2026
 
 - [x] Sesión caducada tras días sin abrir: `validateAuthSession` + `ensureSessionValid`; logout automático y mensaje en login; harden HMR
+- [x] Timeout al volver de segundo plano: **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS`; antes 10 min)
 - [x] Torneos: auto-cancel en `start_at` sin cuadro organizado (migraciones `070`/`071`); título/ciudad/lugar opcionales; aviso al guardar; «Organizar cuadro» deshabilitado con menos de 2 parejas completas
 - [x] Partidas: aviso post-crear si plantilla incompleta (auto-cancel al `start_at`)
 - [x] PostHog: eventos funnels 1–2 + idempotencia `match_completed` + tests
@@ -543,6 +545,27 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] TDD estricto documentado hacia adelante (rojo → verde → refactor)
 - [x] Versión app → **1.7.1** (`app.json`, `package.json`)
 - [x] Commit + PR `hotfix/v1.7.1` → `main` (revisor/asignado Japegomez)
+
+### Release 1.8 — amigos e invitaciones a partidas (ago. 2026)
+
+- [x] Sistema de amigos: solicitudes con mensaje, aceptar/rechazar/cancelar, eliminar amistad — mig. `108` / `110`
+- [x] Invitaciones a partidas (pareja/rival) al crear o editar equipo; pendientes ocupan plaza de roster — mig. `109`
+- [x] Mis Partidas: sección Invitaciones; ficha: banner Aceptar/Rechazar + deeplink WhatsApp
+- [x] Resultado `pending_validation` cuando hay rivales invitados (también en partidas pasadas); rechazo cancela partida iniciada/finalizada
+- [x] Preferencias push: `notify_on_friend_request` / `notify_on_match_invitation` (perfil + `enqueue_notification` + Edge Function) — mig. `110`
+- [x] PostHog: `friend_request_sent`, `friend_request_accepted`, `match_invite_sent`, `match_invite_accepted`
+- [x] Versión app → **1.8.0** (`app.json`, `package.json`)
+- [x] Búsqueda de usuarios por `display_name` (RPC) — mig. `111`
+- [x] Listado de mis invitaciones excluye canceladas — mig. `112`
+- [x] Rechazar invitación con resultado confirmado: void + cancelar partida — mig. `113`
+- [x] Review follow-ups amigos/invites: cooldown tras rechazo, mensaje ≤200, capacidad al aceptar, auth en `list_match_invitations`, `match_effective_roster_filled` SECURITY DEFINER, grants `badge_showcase`, cancel invites al eliminar amigo — mig. `114`/`115`
+- [x] `send_friend_request` devuelve status; `get_profile_with_phone` sin prefs/badge sensibles — mig. `116`
+- [x] Review follow-ups 2: escape ILIKE + trgm, `match_status`, `friend_request_accepted`, unique_violation, slim phone RPC — mig. `117` + Edge `process-notifications`
+- [x] UX create/detail: capacidad de invites, `isSubmitting` de punta a punta, modal compartir en ficha, invite tab solo en partida standalone editable
+- [x] Timeout sesión en segundo plano → **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS`)
+- [x] Contrato Descubrir: públicas + privadas con contraseña (docs README/REQUIREMENTS); CA_CONTACT1 incluye copia en web
+- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`)
+- [x] Merge `main` (hotfix v1.7.1) en `develop` para desbloquear PR #158
 
 ---
 
