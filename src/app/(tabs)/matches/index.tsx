@@ -13,12 +13,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { formatDisplay } from '@/components/ui/dateTimePickerUtils'
 import { CreateFab } from '@/components/ui/CreateFab'
+import { Button } from '@/components/ui/Button'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
 import { TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
+import { useMyMatchInvitations, useRespondMatchInvitation } from '@/hooks/useMatchInvitations'
 import type { MyMatchesDashboard } from '@/services/matches.service'
+import type { MyMatchInvitationRow } from '@/services/matchInvitations.service'
 import type { UserTournamentSummary } from '@/services/tournaments.service'
 import { leagueFormatDisplay, leagueStatusDisplay } from '@/utils/leagueDisplay'
 import { Colors } from '@/theme/colors'
@@ -91,6 +94,11 @@ type MatchesListItem =
   | { key: string; kind: 'section'; title: string }
   | {
       key: string
+      kind: 'invitation'
+      invitation: MyMatchInvitationRow
+    }
+  | {
+      key: string
       kind: 'row'
       title: string
       location: string
@@ -110,7 +118,10 @@ function tournamentStatusLabel(t: UserTournamentSummary): string {
   return 'Inscripción abierta'
 }
 
-function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
+function buildMatchesListItems(
+  data: MyMatchesDashboard,
+  invitations: MyMatchInvitationRow[]
+): MatchesListItem[] {
   const awaitingIds = new Set(data.awaitingResultValidation.map((m) => m.id))
   const inProgressDeduped = data.inProgress.filter((m) => !awaitingIds.has(m.id))
   const tournamentsUpcoming = data.tournamentsUpcoming ?? []
@@ -118,6 +129,7 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
   const leaguesUpcoming = data.leaguesUpcoming ?? []
   const leaguesInProgress = data.leaguesInProgress ?? []
   const hasAny =
+    invitations.length > 0 ||
     data.upcoming.length > 0 ||
     inProgressDeduped.length > 0 ||
     data.awaitingResultValidation.length > 0 ||
@@ -137,6 +149,15 @@ function buildMatchesListItems(data: MyMatchesDashboard): MatchesListItem[] {
     items.push({ key: `section-${title}`, kind: 'section', title })
     items.push(...rows)
   }
+
+  pushSection(
+    'Invitaciones',
+    invitations.map((inv) => ({
+      key: `invitation-${inv.invitation_id}`,
+      kind: 'invitation' as const,
+      invitation: inv,
+    }))
+  )
 
   pushSection(
     'Pendiente: validar resultado',
@@ -254,6 +275,8 @@ export default function MatchesScreen() {
   const insets = useSafeAreaInsets()
   const userId = useAuthStore((s) => s.session?.user.id)
   const { data, isPending, isError, refetch, isFetched } = useMyMatchesDashboard()
+  const { data: invitations } = useMyMatchInvitations()
+  const respondInvitation = useRespondMatchInvitation()
   const [isUserRefreshing, setIsUserRefreshing] = useState(false)
 
   const onUserRefresh = useCallback(async () => {
@@ -267,7 +290,10 @@ export default function MatchesScreen() {
 
   const createFab = <CreateFab />
   const topPadding = screenTopPadding(insets.top)
-  const listItems = useMemo(() => (data ? buildMatchesListItems(data) : []), [data])
+  const listItems = useMemo(
+    () => (data ? buildMatchesListItems(data, invitations ?? []) : []),
+    [data, invitations]
+  )
 
   if (!userId) {
     return (
@@ -328,6 +354,26 @@ export default function MatchesScreen() {
           if (item.kind === 'section') {
             return <Text style={styles.sectionTitle}>{item.title}</Text>
           }
+          if (item.kind === 'invitation') {
+            return (
+              <MatchInvitationRow
+                invitation={item.invitation}
+                loading={respondInvitation.isPending}
+                onOpen={() => router.push(`/(tabs)/matches/${item.invitation.match_id}` as Href)}
+                onAccept={() =>
+                  void respondInvitation
+                    .mutateAsync({ invitationId: item.invitation.invitation_id, accept: true })
+                    .then(() => router.push(`/(tabs)/matches/${item.invitation.match_id}` as Href))
+                    .catch(() => undefined)
+                }
+                onReject={() =>
+                  void respondInvitation
+                    .mutateAsync({ invitationId: item.invitation.invitation_id, accept: false })
+                    .catch(() => undefined)
+                }
+              />
+            )
+          }
           return (
             <MatchListRow
               title={item.title}
@@ -355,6 +401,59 @@ export default function MatchesScreen() {
         }
       />
       {createFab}
+    </View>
+  )
+}
+
+function MatchInvitationRow({
+  invitation,
+  loading,
+  onOpen,
+  onAccept,
+  onReject,
+}: {
+  invitation: MyMatchInvitationRow
+  loading: boolean
+  onOpen: () => void
+  onAccept: () => void
+  onReject: () => void
+}) {
+  const teamLabel = invitation.team === 'A' ? 'equipo A' : 'equipo rival'
+  return (
+    <View style={styles.invitationRow}>
+      <Pressable
+        style={styles.invitationBody}
+        onPress={onOpen}
+        accessibilityRole="button"
+        accessibilityLabel={`Invitación a ${invitation.title}`}>
+        <StatusDot tone="pending" />
+        <View style={styles.rowBody}>
+          <Text style={styles.rowKind}>Invitación · {teamLabel}</Text>
+          <Text style={styles.rowTitle} numberOfLines={2}>
+            {invitation.title}
+          </Text>
+          <Text style={styles.rowMeta} numberOfLines={1}>
+            {invitation.inviter_name} te ha invitado
+          </Text>
+        </View>
+      </Pressable>
+      <View style={styles.invitationActions}>
+        <Button
+          title="Aceptar"
+          onPress={onAccept}
+          loading={loading}
+          style={styles.smallBtn}
+          textStyle={styles.smallBtnText}
+        />
+        <Button
+          title="Rechazar"
+          variant="outline"
+          onPress={onReject}
+          disabled={loading}
+          style={styles.smallBtn}
+          textStyle={styles.smallBtnText}
+        />
+      </View>
     </View>
   )
 }
@@ -453,4 +552,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Fonts.semiBold,
   },
+  invitationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  invitationBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
+  invitationActions: { flexDirection: 'row', gap: 8 },
+  smallBtn: { minHeight: 36, paddingHorizontal: 12 },
+  smallBtnText: { fontSize: 13 },
 })
