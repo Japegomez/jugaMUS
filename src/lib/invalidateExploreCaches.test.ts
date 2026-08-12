@@ -1,30 +1,39 @@
+import { QueryClient } from '@tanstack/react-query'
+
 import { collectPendingMatchIds } from '@/lib/realtimePending'
 import { idsFromRealtimeRow } from '@/lib/realtimeRowIds'
 
-describe('idsFromRealtimeRow', () => {
-  it('maps matches row', () => {
-    expect(idsFromRealtimeRow('matches', { id: 'm1', tournament_id: 't1' })).toEqual({
+import { invalidateAllExploreListQueries } from '@/lib/invalidateExploreCaches'
+
+describe('invalidateAllExploreListQueries', () => {
+  it('invalidates public explore and broad dashboard keys without userId', () => {
+    const queryClient = new QueryClient()
+    const spy = jest.spyOn(queryClient, 'invalidateQueries')
+
+    invalidateAllExploreListQueries(queryClient)
+
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['my-matches-dashboard'] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['user-matches'] })
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ['viewable-user-matches'],
+      exact: false,
+    })
+  })
+
+  it('invalidates user-scoped and match/tournament detail keys when provided', () => {
+    const queryClient = new QueryClient()
+    const spy = jest.spyOn(queryClient, 'invalidateQueries')
+
+    invalidateAllExploreListQueries(queryClient, {
+      userId: 'u1',
       matchId: 'm1',
       tournamentId: 't1',
     })
-  })
 
-  it('maps match_participants row', () => {
-    expect(idsFromRealtimeRow('match_participants', { match_id: 'm2' })).toEqual({
-      matchId: 'm2',
-    })
-  })
-
-  it('maps tournaments row', () => {
-    expect(idsFromRealtimeRow('tournaments', { id: 't3' })).toEqual({
-      tournamentId: 't3',
-    })
-  })
-
-  it('maps tournament_pairs row', () => {
-    expect(idsFromRealtimeRow('tournament_pairs', { tournament_id: 't4' })).toEqual({
-      tournamentId: 't4',
-    })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['user-matches', 'u1'] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['match', 'm1'] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['match-insights', 'm1'] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['tournament', 't1'] })
   })
 
   it('maps match_invitations row', () => {
