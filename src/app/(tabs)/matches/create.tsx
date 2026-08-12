@@ -19,9 +19,15 @@ import {
   validateMatchScores,
 } from '@/components/matches/MatchScorePicker'
 import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
+import { AvatarCircle } from '@/components/profile/AvatarCircle'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useCreateMatch, useRecordMatchResultDirect } from '@/hooks/useMatches'
+import { useInviteFriendToMatch } from '@/hooks/useMatchInvitations'
+import { useMyFriends } from '@/hooks/useFriends'
 import { useProfile } from '@/hooks/useProfile'
+import { useSubmitResult } from '@/hooks/useResults'
+import { buildMatchHttpsInviteUrl } from '@/lib/inviteLinks'
+import { buildInviteShareMessage, shareInviteViaWhatsApp } from '@/lib/shareInvite'
 import { MATCH_STATUS, MATCH_VISIBILITY, TEAM } from '@/constants'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
@@ -153,7 +159,12 @@ export default function CreateMatchScreen() {
   const { data: profile } = useProfile(sessionUserId)
   const createMatch = useCreateMatch()
   const recordMatchResult = useRecordMatchResultDirect()
+  const submitResult = useSubmitResult()
+  const inviteFriend = useInviteFriendToMatch()
+  const { data: friends } = useMyFriends()
   const [pastResult, setPastResult] = useState<MatchScoreValues | null>(null)
+  const [invitesA, setInvitesA] = useState<string[]>([])
+  const [invitesB, setInvitesB] = useState<string[]>([])
 
   const closeToPrevious = useCallback(() => {
     if (router.canGoBack()) {
@@ -179,6 +190,8 @@ export default function CreateMatchScreen() {
     useCallback(() => {
       reset(createDefaultFormValues())
       setPastResult(null)
+      setInvitesA([])
+      setInvitesB([])
       Keyboard.dismiss()
     }, [reset])
   )
@@ -192,6 +205,31 @@ export default function CreateMatchScreen() {
   const teamBPlayer1 = watch('team_b_player_1')
   const teamBPlayer2 = watch('team_b_player_2')
   const isPastResultMode = isMatchStartAtPast(startAtValue)
+
+  // Free invite slots per team (creator occupies team A slot 1).
+  const freeSlotsA = Math.max(0, 1 - (teamAPlayer2?.trim() ? 1 : 0))
+  const freeSlotsB = Math.max(
+    0,
+    2 - (teamBPlayer1?.trim() ? 1 : 0) - (teamBPlayer2?.trim() ? 1 : 0)
+  )
+
+  const toggleInvite = (friendId: string, team: 'A' | 'B') => {
+    if (team === 'A') {
+      setInvitesA((prev) => {
+        if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
+        if (prev.length >= freeSlotsA) return prev
+        return [...prev, friendId]
+      })
+      setInvitesB((prev) => prev.filter((id) => id !== friendId))
+    } else {
+      setInvitesB((prev) => {
+        if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
+        if (prev.length >= freeSlotsB) return prev
+        return [...prev, friendId]
+      })
+      setInvitesA((prev) => prev.filter((id) => id !== friendId))
+    }
+  }
 
   const previewTeamNames = useMemo(() => {
     const draft = {
@@ -251,12 +289,17 @@ export default function CreateMatchScreen() {
         team_a_player_2: values.team_a_player_2,
         team_b_player_1: values.team_b_player_1,
         team_b_player_2: values.team_b_player_2,
-      })
+      }) &&
+      invitesA.length + invitesB.length === 0
     ) {
       showAlert(
         'Faltan jugadores',
-        'Para registrar una partida ya jugada debes completar los cuatro jugadores de los dos equipos.'
+        'Para registrar una partida ya jugada debes completar los cuatro jugadores de los dos equipos (por nombre o invitando a amigos).'
       )
+      return
+    }
+    if (isPastResultMode && invitesB.length > 0 && !pastResult) {
+      showAlert('Resultado pendiente', 'Selecciona el marcador de la partida antes de crearla.')
       return
     }
     if (
@@ -307,12 +350,47 @@ export default function CreateMatchScreen() {
         )
       }
       if (isPastResultMode && pastResult) {
-        await recordMatchResult.mutateAsync({
-          matchId: match.id,
-          teamAGames: pastResult.teamAGames,
-          teamBGames: pastResult.teamBGames,
-        })
+        // Rival (team B) invites turn a past-match result into pending_validation
+        // instead of a directly-confirmed result.
+        if (invitesB.length > 0) {
+          await submitResult.mutateAsync({
+            matchId: match.id,
+            submittedByUserId: sessionUserId!,
+            submittedByTeam: TEAM.A,
+            teamAGames: pastResult.teamAGames,
+            teamBGames: pastResult.teamBGames,
+          })
+        } else {
+          await recordMatchResult.mutateAsync({
+            matchId: match.id,
+            teamAGames: pastResult.teamAGames,
+            teamBGames: pastResult.teamBGames,
+          })
+        }
       }
+      // Invite selected friends and share a WhatsApp deeplink to the ficha.
+      const shareUrl = buildMatchHttpsInviteUrl(match.id)
+      await Promise.all(
+        [
+          ...invitesA.map((fid) => ({ fid, team: TEAM.A })),
+          ...invitesB.map((fid) => ({ fid, team: TEAM.B })),
+        ].map(async ({ fid, team }) => {
+          try {
+            await inviteFriend.mutateAsync({ matchId: match.id, inviteeId: fid, team })
+            const message = buildInviteShareMessage({
+              kind: 'match',
+              title: values.title?.trim() || DEFAULT_MATCH_TITLE,
+              url: shareUrl,
+              meta: 'Te he invitado a participar en esta partida',
+            })
+            await shareInviteViaWhatsApp(message)
+          } catch (err) {
+            // Best-effort: a failed invite must not abort match creation.
+
+            console.warn('invite_friend_failed', err)
+          }
+        })
+      )
       router.replace(`/(tabs)/matches/${match.id}`)
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la partida')
@@ -557,6 +635,64 @@ export default function CreateMatchScreen() {
         />
       </View>
 
+      {/* Invitar amigos */}
+      {friends && friends.length > 0 ? (
+        <View style={s.fieldWrap}>
+          <Text style={s.label}>Invitar amigos</Text>
+          <Text style={s.hint}>
+            Invita a tus amigos a unirse como compañero (equipo A) o como rivales (equipo B).
+            Recibirán una invitación y un enlace de WhatsApp para confirmar.
+          </Text>
+          {friends.map((f) => {
+            const inA = invitesA.includes(f.user_id)
+            const inB = invitesB.includes(f.user_id)
+            return (
+              <View key={f.user_id} style={s.friendRow}>
+                <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
+                <View style={s.friendInfo}>
+                  <Text style={s.friendName} numberOfLines={1}>
+                    {f.display_name}
+                  </Text>
+                  {f.city ? (
+                    <Text style={s.friendCity} numberOfLines={1}>
+                      {f.city}
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  onPress={() => toggleInvite(f.user_id, 'A')}
+                  disabled={!inA && freeSlotsA - invitesA.length <= 0}
+                  style={[
+                    s.inviteChip,
+                    inA && s.inviteChipActive,
+                    !inA && freeSlotsA - invitesA.length <= 0 && s.inviteChipDisabled,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: inA }}>
+                  <Text style={[s.inviteChipText, inA && s.inviteChipTextActive]}>
+                    {inA ? 'Compañero ✓' : 'Compañero'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => toggleInvite(f.user_id, 'B')}
+                  disabled={!inB && freeSlotsB - invitesB.length <= 0}
+                  style={[
+                    s.inviteChip,
+                    inB && s.inviteChipActive,
+                    !inB && freeSlotsB - invitesB.length <= 0 && s.inviteChipDisabled,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: inB }}>
+                  <Text style={[s.inviteChipText, inB && s.inviteChipTextActive]}>
+                    {inB ? 'Rival ✓' : 'Rival'}
+                  </Text>
+                </Pressable>
+              </View>
+            )
+          })}
+        </View>
+      ) : null}
+
       {isPastResultMode ? (
         <View style={s.pastResultCard}>
           <Text style={s.pastResultTitle}>Partida ya jugada</Text>
@@ -638,6 +774,29 @@ const s = StyleSheet.create({
     marginHorizontal: -4,
   },
   hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 12, lineHeight: 18 },
+  friendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  friendInfo: { flex: 1, minWidth: 0, gap: 2 },
+  friendName: { fontSize: 15, fontFamily: Fonts.medium, color: Colors.textPrimary },
+  friendCity: { fontSize: 13, color: Colors.textSecondary },
+  inviteChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  inviteChipActive: { borderColor: Colors.primary, backgroundColor: Colors.wonBackground },
+  inviteChipDisabled: { opacity: 0.4 },
+  inviteChipText: { fontSize: 13, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  inviteChipTextActive: { color: Colors.primary },
   teamLabel: {
     fontSize: 14,
     fontFamily: Fonts.bold,

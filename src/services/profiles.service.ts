@@ -21,6 +21,8 @@ export type ProfileRow = {
   notify_on_reminder_24h: boolean
   notify_on_reminder_2h: boolean
   notify_on_reminder_in_progress: boolean
+  notify_on_friend_request: boolean
+  notify_on_match_invitation: boolean
   created_at: string
   updated_at: string
 }
@@ -56,6 +58,8 @@ export type ProfileUpdate = Pick<
   | 'notify_on_reminder_24h'
   | 'notify_on_reminder_2h'
   | 'notify_on_reminder_in_progress'
+  | 'notify_on_friend_request'
+  | 'notify_on_match_invitation'
 >
 
 const ALLOWED_AVATAR_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -75,7 +79,7 @@ export async function getProfile(userId: string): Promise<ProfileRow> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, display_name, city, photo_url, badge_showcase, role, status, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress, created_at, updated_at'
+      'id, display_name, city, photo_url, badge_showcase, role, status, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress, notify_on_friend_request, notify_on_match_invitation, created_at, updated_at'
     )
     .eq('id', userId)
     .single()

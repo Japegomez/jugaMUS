@@ -46,6 +46,7 @@ import {
   useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
+import { useMyMatchInvitations, useRespondMatchInvitation } from '@/hooks/useMatchInvitations'
 import { useLeague, useRecordLeagueMatchAsReferee } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
@@ -496,11 +497,12 @@ const jm = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
-  const { id, openResult, gamesA, gamesB } = useLocalSearchParams<{
+  const { id, openResult, gamesA, gamesB, confirmResult } = useLocalSearchParams<{
     id: string
     openResult?: string
     gamesA?: string
     gamesB?: string
+    confirmResult?: string
   }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -532,6 +534,8 @@ export default function MatchDetailScreen() {
     isLoading: resultLoading,
     refetch: refetchResult,
   } = useMatchResult(id)
+  const { data: myInvitations } = useMyMatchInvitations()
+  const respondInvitation = useRespondMatchInvitation()
 
   useFocusEffect(
     useCallback(() => {
@@ -668,6 +672,27 @@ export default function MatchDetailScreen() {
     return () => cancelAnimationFrame(frame)
   }, [match, scoreboardPrefill, submitResultVisible, recordResultVisible, userId, id, router])
 
+  // Deep link / redirect: ?confirmResult=1 opens the result confirmation modal
+  // when the viewer is on the rival team of a pending_validation result.
+  useEffect(() => {
+    const flag = Array.isArray(confirmResult) ? confirmResult[0] : confirmResult
+    if (flag !== '1' || !match || !userId) return
+    const myPart = match.participants.find((p) => p.user_id === userId && p.left_at === null)
+    const result = resultBundle?.result ?? null
+    const canValidate = Boolean(
+      myPart &&
+      result?.status === RESULT_STATUS.PENDING_VALIDATION &&
+      myPart.team !== result.submitted_by_team &&
+      !resultBundle?.myConfirmation
+    )
+    if (!canValidate) return
+    const frame = requestAnimationFrame(() => {
+      setApproveResultVisible(true)
+      router.setParams({ confirmResult: undefined } as never)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [confirmResult, match, resultBundle, userId, router])
+
   if (isLoading) {
     return (
       <View style={s.centered}>
@@ -785,6 +810,47 @@ export default function MatchDetailScreen() {
     myParticipation.team !== latestResult.submitted_by_team &&
     !myResultConfirmation
   )
+
+  const myPendingInvitation =
+    (myInvitations ?? []).find((inv) => inv.match_id === id && inv.status === 'pending') ?? null
+
+  const handleAcceptInvitation = async () => {
+    if (!myPendingInvitation) return
+    try {
+      await respondInvitation.mutateAsync({
+        invitationId: myPendingInvitation.invitation_id,
+        accept: true,
+      })
+      const refreshed = await refetchMatch()
+      const refreshedResult = await refetchResult()
+      const refreshedMatch = refreshed.data
+      const myPart = refreshedMatch?.participants.find(
+        (p) => p.user_id === userId && p.left_at === null
+      )
+      const result = refreshedResult.data?.result ?? null
+      if (
+        myPart &&
+        result?.status === RESULT_STATUS.PENDING_VALIDATION &&
+        myPart.team !== result.submitted_by_team
+      ) {
+        setApproveResultVisible(true)
+      }
+    } catch (err) {
+      Alert.alert('No se pudo aceptar', err instanceof Error ? err.message : 'Error')
+    }
+  }
+
+  const handleRejectInvitation = async () => {
+    if (!myPendingInvitation) return
+    try {
+      await respondInvitation.mutateAsync({
+        invitationId: myPendingInvitation.invitation_id,
+        accept: false,
+      })
+    } catch (err) {
+      Alert.alert('No se pudo rechazar', err instanceof Error ? err.message : 'Error')
+    }
+  }
 
   const awaitingRivalValidation = Boolean(
     latestResult?.status === RESULT_STATUS.PENDING_VALIDATION &&
@@ -1093,6 +1159,30 @@ export default function MatchDetailScreen() {
           />
         </View>
 
+        {myPendingInvitation ? (
+          <View style={s.inviteBanner}>
+            <Text style={s.inviteBannerText}>
+              {myPendingInvitation.inviter_name} te ha invitado a participar en la partida y unirte
+              a {myPendingInvitation.team === TEAM.A ? 'su equipo' : 'al equipo rival'}.
+            </Text>
+            <View style={s.inviteBannerActions}>
+              <Button
+                title="Aceptar"
+                onPress={() => void handleAcceptInvitation()}
+                loading={respondInvitation.isPending}
+                style={s.inviteBtn}
+              />
+              <Button
+                title="Rechazar"
+                variant="outline"
+                onPress={() => void handleRejectInvitation()}
+                disabled={respondInvitation.isPending}
+                style={s.inviteBtn}
+              />
+            </View>
+          </View>
+        ) : null}
+
         {!needsPrivateAccess ? (
           <ShareInviteButton
             kind="match"
@@ -1381,6 +1471,9 @@ export default function MatchDetailScreen() {
         teamLabel={editTeamLabel}
         customTeamName={editCustomTeamName}
         slots={editTeamSlots}
+        matchId={id}
+        team={editingTeam ?? undefined}
+        freeSlots={editingTeam === TEAM.A ? slotsA : editingTeam === TEAM.B ? slotsB : 0}
         onClose={closeEditTeam}
         onSubmit={handleEditTeam}
         loading={updateMatchTeam.isPending}
@@ -1563,6 +1656,18 @@ const s = StyleSheet.create({
   actions: { gap: 10 },
   actionBtn: {},
   shareBtn: { marginBottom: 20 },
+  inviteBanner: {
+    backgroundColor: Colors.wonBackground,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: 10,
+  },
+  inviteBannerText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  inviteBannerActions: { flexDirection: 'row', gap: 10 },
+  inviteBtn: { flex: 1 },
   reportMatchRow: { alignItems: 'center', marginTop: 8, marginBottom: 8 },
   reportMatchLink: {
     fontSize: 14,

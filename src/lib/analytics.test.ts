@@ -35,9 +35,12 @@ import {
   identifyUser,
   isLikelyNewAuthUser,
   resetAnalytics,
+  trackFriendRequestSent,
   trackMatchCompletedIfFinished,
   trackMatchCompletedOnce,
   trackMatchCreated,
+  trackMatchInviteAccepted,
+  trackMatchInviteSent,
   trackMatchJoined,
   trackUserSignedUp,
 } from '@/lib/analytics'
@@ -54,6 +57,9 @@ describe('analytics helpers', () => {
     expect(AnalyticsEvents.MATCH_CREATED).toBe('match_created')
     expect(AnalyticsEvents.MATCH_JOINED).toBe('match_joined')
     expect(AnalyticsEvents.MATCH_COMPLETED).toBe('match_completed')
+    expect(AnalyticsEvents.FRIEND_REQUEST_SENT).toBe('friend_request_sent')
+    expect(AnalyticsEvents.MATCH_INVITE_SENT).toBe('match_invite_sent')
+    expect(AnalyticsEvents.MATCH_INVITE_ACCEPTED).toBe('match_invite_accepted')
   })
 
   it('identifyUser and resetAnalytics delegate to posthog', () => {
@@ -123,6 +129,26 @@ describe('analytics helpers', () => {
         created_at: '2026-07-23T10:00:00.000Z',
       })
     ).toBe(false)
+  })
+
+  it('captures friend/match-invite events', () => {
+    trackFriendRequestSent('u-addressee')
+    expect(posthog.capture).toHaveBeenCalledWith('friend_request_sent', {
+      addressee_id: 'u-addressee',
+    })
+
+    trackMatchInviteSent('m1', 'u-invitee', 'A')
+    expect(posthog.capture).toHaveBeenCalledWith('match_invite_sent', {
+      match_id: 'm1',
+      invitee_id: 'u-invitee',
+      team: 'A',
+    })
+
+    trackMatchInviteAccepted('m1', 'B')
+    expect(posthog.capture).toHaveBeenCalledWith('match_invite_accepted', {
+      match_id: 'm1',
+      team: 'B',
+    })
   })
 
   describe('trackMatchCompletedIfFinished', () => {

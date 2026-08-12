@@ -16,6 +16,7 @@ import { requestAppStoreRating } from '@/lib/storeReview'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { FriendsSection } from '@/components/profile/FriendsSection'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { BadgeUnlockPopup } from '@/components/stats/BadgeUnlockPopup'
@@ -50,6 +51,8 @@ type NotifField = Pick<
   | 'notify_on_reminder_24h'
   | 'notify_on_reminder_2h'
   | 'notify_on_reminder_in_progress'
+  | 'notify_on_friend_request'
+  | 'notify_on_match_invitation'
 >
 
 export default function ProfileScreen() {
@@ -204,6 +207,8 @@ export default function ProfileScreen() {
         />
       </View>
 
+      <FriendsSection />
+
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Notificaciones</Text>
 
@@ -257,6 +262,20 @@ export default function ProfileScreen() {
           disabled={notifDisabled}
           busy={savingField === 'notify_on_reminder_in_progress'}
           onValueChange={(value) => void onNotifChange('notify_on_reminder_in_progress', value)}
+        />
+        <NotifToggleRow
+          label="Solicitudes de amistad"
+          value={profile.notify_on_friend_request}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_friend_request'}
+          onValueChange={(value) => void onNotifChange('notify_on_friend_request', value)}
+        />
+        <NotifToggleRow
+          label="Invitaciones a partidas"
+          value={profile.notify_on_match_invitation}
+          disabled={notifDisabled}
+          busy={savingField === 'notify_on_match_invitation'}
+          onValueChange={(value) => void onNotifChange('notify_on_match_invitation', value)}
         />
         <View style={[styles.reminderRow, styles.infoRowLast]}>
           <Text style={styles.infoLabel}>Recordatorio antes de la partida</Text>

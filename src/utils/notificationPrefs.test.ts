@@ -10,6 +10,8 @@ const allOn = {
   notify_on_reminder_24h: true,
   notify_on_reminder_2h: true,
   notify_on_reminder_in_progress: true,
+  notify_on_friend_request: true,
+  notify_on_match_invitation: true,
 }
 
 const allOff = {
@@ -22,6 +24,8 @@ const allOff = {
   notify_on_reminder_24h: false,
   notify_on_reminder_2h: false,
   notify_on_reminder_in_progress: false,
+  notify_on_friend_request: false,
+  notify_on_match_invitation: false,
 }
 
 describe('buildNotifUpdates', () => {
@@ -71,6 +75,30 @@ describe('buildReminderTimingUpdates', () => {
       ...allOff,
       notify_push: true,
       notify_on_reminder_2h: true,
+    })
+  })
+})
+
+describe('friend / match-invitation preferences', () => {
+  it('toggling notify_on_match_invitation on enables master push from all-off', () => {
+    expect(buildNotifUpdates(allOff, 'notify_on_match_invitation', true)).toEqual({
+      ...allOff,
+      notify_push: true,
+      notify_on_match_invitation: true,
+    })
+  })
+
+  it('toggling notify_on_friend_request off keeps master push when others remain', () => {
+    expect(buildNotifUpdates(allOn, 'notify_on_friend_request', false)).toEqual({
+      ...allOn,
+      notify_on_friend_request: false,
+    })
+  })
+
+  it('reminder timing updates preserve the new preferences', () => {
+    expect(buildReminderTimingUpdates(allOn, '24h', false)).toEqual({
+      ...allOn,
+      notify_on_reminder_24h: false,
     })
   })
 })
