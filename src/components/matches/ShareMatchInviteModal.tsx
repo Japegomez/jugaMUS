@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 
@@ -25,6 +25,7 @@ export function ShareMatchInviteModal({
 }: ShareMatchInviteModalProps) {
   const [copied, setCopied] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const copiedResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const inviteUrl = buildMatchHttpsInviteUrl(matchId)
   const shareMessage = useMemo(
     () =>
@@ -37,11 +38,18 @@ export function ShareMatchInviteModal({
     [inviteUrl, meta, title]
   )
 
+  useEffect(() => {
+    return () => {
+      if (copiedResetRef.current) clearTimeout(copiedResetRef.current)
+    }
+  }, [])
+
   const handleCopy = async () => {
     try {
       await Clipboard.setStringAsync(shareMessage)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      if (copiedResetRef.current) clearTimeout(copiedResetRef.current)
+      copiedResetRef.current = setTimeout(() => setCopied(false), 2000)
     } catch {
       Alert.alert('Enlace', 'No se pudo copiar la invitación.')
     }

@@ -1,3 +1,4 @@
+import { collectPendingMatchIds } from '@/lib/realtimePending'
 import { idsFromRealtimeRow } from '@/lib/realtimeRowIds'
 
 describe('idsFromRealtimeRow', () => {
@@ -34,5 +35,13 @@ describe('idsFromRealtimeRow', () => {
 
   it('maps friendships row to empty ids', () => {
     expect(idsFromRealtimeRow('friendships', { id: 'f1' })).toEqual({})
+  })
+})
+
+describe('collectPendingMatchIds', () => {
+  it('keeps distinct match ids across consecutive invitation events', () => {
+    const afterFirst = collectPendingMatchIds([], 'm-a')
+    const afterSecond = collectPendingMatchIds(afterFirst, 'm-b')
+    expect(afterSecond.sort()).toEqual(['m-a', 'm-b'])
   })
 })

@@ -100,8 +100,7 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
       toValue: PANEL_WIDTH,
       duration: 200,
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished) return
+    }).start(() => {
       clearDrawerState()
       setOpen(false)
       onClosed?.()
@@ -426,17 +425,24 @@ function RequestsList({
 }) {
   const respond = useRespondFriendRequest()
   const cancel = useCancelFriendRequest()
-  const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set())
+  const [busyActions, setBusyActions] = useState<Map<string, 'accept' | 'reject' | 'cancel'>>(
+    () => new Map()
+  )
 
-  const withBusy = async (friendshipId: string, fn: () => Promise<unknown>, errTitle: string) => {
-    setBusyIds((prev) => new Set(prev).add(friendshipId))
+  const withBusy = async (
+    friendshipId: string,
+    action: 'accept' | 'reject' | 'cancel',
+    fn: () => Promise<unknown>,
+    errTitle: string
+  ) => {
+    setBusyActions((prev) => new Map(prev).set(friendshipId, action))
     try {
       await fn()
     } catch (err) {
       Alert.alert(errTitle, err instanceof Error ? err.message : 'Error')
     } finally {
-      setBusyIds((prev) => {
-        const next = new Set(prev)
+      setBusyActions((prev) => {
+        const next = new Map(prev)
         next.delete(friendshipId)
         return next
       })
@@ -476,11 +482,12 @@ function RequestsList({
                   onPress={() =>
                     void withBusy(
                       r.friendship_id,
+                      'accept',
                       () => respond.mutateAsync({ friendshipId: r.friendship_id, accept: true }),
                       'No se pudo aceptar'
                     )
                   }
-                  loading={busyIds.has(r.friendship_id)}
+                  loading={busyActions.get(r.friendship_id) === 'accept'}
                   style={s.smallBtn}
                   textStyle={s.smallBtnText}
                 />
@@ -490,11 +497,12 @@ function RequestsList({
                   onPress={() =>
                     void withBusy(
                       r.friendship_id,
+                      'reject',
                       () => respond.mutateAsync({ friendshipId: r.friendship_id, accept: false }),
                       'No se pudo rechazar'
                     )
                   }
-                  loading={busyIds.has(r.friendship_id)}
+                  loading={busyActions.get(r.friendship_id) === 'reject'}
                   style={s.smallBtn}
                   textStyle={s.smallBtnText}
                 />
@@ -506,11 +514,12 @@ function RequestsList({
                 onPress={() =>
                   void withBusy(
                     r.friendship_id,
+                    'cancel',
                     () => cancel.mutateAsync(r.friendship_id),
                     'No se pudo cancelar'
                   )
                 }
-                loading={busyIds.has(r.friendship_id)}
+                loading={busyActions.get(r.friendship_id) === 'cancel'}
                 style={s.smallBtn}
                 textStyle={s.smallBtnText}
               />

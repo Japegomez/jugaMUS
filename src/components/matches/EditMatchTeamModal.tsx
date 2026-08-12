@@ -220,7 +220,7 @@ function InviteFriendsTab({
   const [invitedIds, setInvitedIds] = useState<string[]>([])
   const [invitingId, setInvitingId] = useState<string | null>(null)
 
-  const remainingSlots = Math.max(0, freeSlots - invitedIds.length)
+  const remainingSlots = Math.max(0, freeSlots)
 
   const handleInvite = async (friendId: string) => {
     if (remainingSlots <= 0 || invitedIds.includes(friendId)) return

@@ -14,7 +14,7 @@ export function mapResultRpcError(message: string): string {
   if (message.includes('result_already_exists'))
     return 'Ya hay un resultado registrado para esta partida.'
   if (message.includes('has_pending_rival_invites')) {
-    return 'Hay invitaciones pendientes. El resultado quedará a la espera de validación del rival.'
+    return 'El resultado no se ha registrado: hay invitaciones rivales pendientes. Espera a que el rival acepte y valide el marcador, o cancela esas invitaciones antes de reintentarlo.'
   }
   if (message.includes('has_other_participants')) {
     return 'Hay otros jugadores registrados. Usa el flujo de validación de resultado.'

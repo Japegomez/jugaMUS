@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { QUERY_STALE_TIME } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
-import { invalidateMyMatchesDashboard, matchQueryKey } from '@/hooks/useMatches'
+import { invalidateMyMatchesDashboard } from '@/hooks/useMatches'
+import {
+  invalidateMatchInvitationQueries,
+  matchInvitationsQueryKey,
+  myMatchInvitationsQueryKey,
+} from '@/lib/matchQueryKeys'
 import {
   cancelMatchInvitation,
   inviteFriendToMatch,
@@ -13,29 +18,11 @@ import {
   type MyMatchInvitationRow,
 } from '@/services/matchInvitations.service'
 
-// ─── Query keys ──────────────────────────────────────────────────────────────
-
-export function myMatchInvitationsQueryKey(userId: string) {
-  return ['my-match-invitations', userId] as const
-}
-
-export function matchInvitationsQueryKey(matchId: string) {
-  return [...matchQueryKey(matchId), 'invitations'] as const
-}
-
-export function invalidateMatchInvitationQueries(
-  queryClient: ReturnType<typeof useQueryClient>,
-  opts: { userId?: string; matchId?: string } = {}
-) {
-  const { userId, matchId } = opts
-  if (userId) {
-    queryClient.invalidateQueries({ queryKey: myMatchInvitationsQueryKey(userId) })
-  }
-  if (matchId) {
-    queryClient.invalidateQueries({ queryKey: matchInvitationsQueryKey(matchId) })
-    queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
-  }
-}
+export {
+  invalidateMatchInvitationQueries,
+  matchInvitationsQueryKey,
+  myMatchInvitationsQueryKey,
+} from '@/lib/matchQueryKeys'
 
 // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -74,8 +61,10 @@ export function useInviteFriendToMatch() {
       team: string
     }) => inviteFriendToMatch(matchId, inviteeId, team),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: matchInvitationsQueryKey(variables.matchId) })
-      queryClient.invalidateQueries({ queryKey: matchQueryKey(variables.matchId) })
+      invalidateMatchInvitationQueries(queryClient, {
+        userId,
+        matchId: variables.matchId,
+      })
       invalidateMyMatchesDashboard(queryClient, userId)
     },
   })
@@ -97,12 +86,14 @@ export function useRespondMatchInvitation() {
       team?: string
     }) =>
       respondMatchInvitation(invitationId, accept, matchId && team ? { matchId, team } : undefined),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      invalidateMatchInvitationQueries(queryClient, {
+        userId,
+        matchId: variables.matchId,
+      })
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: myMatchInvitationsQueryKey(userId) })
         invalidateMyMatchesDashboard(queryClient, userId)
       }
-      queryClient.invalidateQueries({ queryKey: ['match'] })
     },
   })
 }
@@ -113,11 +104,10 @@ export function useCancelMatchInvitation() {
   return useMutation({
     mutationFn: (invitationId: string) => cancelMatchInvitation(invitationId),
     onSuccess: () => {
+      invalidateMatchInvitationQueries(queryClient, { userId })
       if (userId) {
-        queryClient.invalidateQueries({ queryKey: myMatchInvitationsQueryKey(userId) })
         invalidateMyMatchesDashboard(queryClient, userId)
       }
-      queryClient.invalidateQueries({ queryKey: ['match'] })
     },
   })
 }

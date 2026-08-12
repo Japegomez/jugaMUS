@@ -64,6 +64,7 @@ function isNotificationAllowed(type: string, profile: ProfileRow): boolean {
     case 'reminder_5h_in_progress':
       return profile.notify_on_reminder_in_progress
     case 'friend_request_received':
+    case 'friend_request_accepted':
       return profile.notify_on_friend_request
     case 'match_invitation_received':
       return profile.notify_on_match_invitation

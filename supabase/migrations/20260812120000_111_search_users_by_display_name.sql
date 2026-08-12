@@ -22,6 +22,7 @@ AS $$
 DECLARE
   v_self UUID := auth.uid();
   v_q TEXT := NULLIF(BTRIM(COALESCE(p_query, '')), '');
+  v_pattern TEXT;
   v_limit INT := LEAST(GREATEST(COALESCE(p_limit, 20), 1), 30);
 BEGIN
   IF v_self IS NULL THEN
@@ -31,6 +32,9 @@ BEGIN
   IF v_q IS NULL OR char_length(v_q) < 2 THEN
     RETURN;
   END IF;
+
+  -- Neutralize ILIKE wildcards / escape char before interpolating into the pattern.
+  v_pattern := '%' || replace(replace(replace(v_q, '\', '\\'), '%', '\%'), '_', '\_') || '%';
 
   RETURN QUERY
   SELECT
@@ -52,13 +56,20 @@ BEGIN
    AND GREATEST(f.requester_id, f.addressee_id) = GREATEST(v_self, p.id)
   WHERE p.status = 'active'
     AND p.id <> v_self
-    AND p.display_name ILIKE '%' || v_q || '%'
+    AND p.display_name ILIKE v_pattern ESCAPE '\'
   ORDER BY
     CASE WHEN lower(p.display_name) = lower(v_q) THEN 0 ELSE 1 END,
     p.display_name
   LIMIT v_limit;
 END;
 $$;
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX IF NOT EXISTS profiles_display_name_trgm_idx
+  ON public.profiles
+  USING gin (lower(display_name) gin_trgm_ops)
+  WHERE status = 'active';
 
 REVOKE ALL ON FUNCTION public.search_users_by_display_name(TEXT, INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.search_users_by_display_name(TEXT, INT) TO authenticated;

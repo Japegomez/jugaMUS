@@ -66,24 +66,14 @@ export async function sendFriendRequest(addresseeId: string, message?: string): 
     p_message: message?.trim() ? message.trim() : undefined,
   })
   if (error) throw new Error(mapFriendRpcError(error.message))
-  const row = Array.isArray(data) ? data[0] : data
-  const friendshipId =
-    row && typeof row === 'object' && 'friendship_id' in row
-      ? (row as { friendship_id: string; status?: string }).friendship_id
-      : typeof data === 'string'
-        ? data
-        : null
-  if (!friendshipId) throw new Error('No se pudo enviar la solicitud')
-  const status =
-    row && typeof row === 'object' && 'status' in row
-      ? (row as { status?: string }).status
-      : 'pending'
-  if (status === 'accepted') {
+  const row = Array.isArray(data) ? data[0] : null
+  if (!row?.friendship_id) throw new Error('No se pudo enviar la solicitud')
+  if (row.status === 'accepted') {
     trackFriendRequestAccepted(addresseeId)
   } else {
     trackFriendRequestSent(addresseeId)
   }
-  return friendshipId
+  return row.friendship_id
 }
 
 export async function respondFriendRequest(friendshipId: string, accept: boolean): Promise<void> {

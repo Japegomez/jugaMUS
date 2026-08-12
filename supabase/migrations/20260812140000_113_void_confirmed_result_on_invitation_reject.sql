@@ -61,7 +61,10 @@ DECLARE
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'not_authenticated'; END IF;
 
-  SELECT * INTO v_inv FROM public.match_invitations WHERE id = p_invitation_id;
+  SELECT * INTO v_inv
+  FROM public.match_invitations
+  WHERE id = p_invitation_id
+  FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'invitation_not_found'; END IF;
   IF v_inv.invitee_id <> auth.uid() THEN RAISE EXCEPTION 'not_invitee'; END IF;
   IF v_inv.status <> 'pending' THEN RAISE EXCEPTION 'not_pending'; END IF;
@@ -102,6 +105,10 @@ BEGIN
         AND mp.user_id <> auth.uid();
     END IF;
     RETURN;
+  END IF;
+
+  IF NOT public.inviter_team_capacity_available(v_inv.match_id, v_inv.team) THEN
+    RAISE EXCEPTION 'team_capacity_exceeded';
   END IF;
 
   SELECT * INTO v_existing FROM public.match_participants

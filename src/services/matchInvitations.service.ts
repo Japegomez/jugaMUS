@@ -8,7 +8,7 @@ export type MyMatchInvitationRow = {
   match_id: string
   title: string
   start_at: string
-  status: string
+  match_status: string
   inviter_id: string
   inviter_name: string
   team: string

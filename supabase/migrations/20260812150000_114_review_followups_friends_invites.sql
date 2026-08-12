@@ -1,11 +1,13 @@
 -- 114: Review follow-ups for friendships + match invitations security/behavior.
 
 -- Cooldown after rejection + auto-accept notification + message length.
+DROP FUNCTION IF EXISTS public.send_friend_request(UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION public.send_friend_request(
   p_addressee_id UUID,
   p_message TEXT DEFAULT NULL
 )
-RETURNS UUID
+RETURNS TABLE (friendship_id UUID, status TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -41,18 +43,22 @@ BEGIN
       IF v_row.requester_id = p_addressee_id THEN
         UPDATE public.friendships
           SET status = 'accepted', responded_at = NOW()
-          WHERE id = v_row.id;
+          WHERE id = v_row.id
+          RETURNING * INTO v_row;
 
         SELECT display_name INTO v_name FROM public.profiles WHERE id = v_self;
         -- Notify the original requester that we accepted their pending request.
         PERFORM public.enqueue_notification(
           p_user_id       := p_addressee_id,
-          p_type          := 'friend_request_received',
+          p_type          := 'friend_request_accepted',
           p_title         := 'Solicitud aceptada',
           p_body          := COALESCE(v_name, 'Alguien') || ' ha aceptado tu solicitud de amistad',
           p_payload_json  := jsonb_build_object('friendship_id', v_row.id, 'user_id', v_self)
         );
-        RETURN v_row.id;
+        friendship_id := v_row.id;
+        status := v_row.status;
+        RETURN NEXT;
+        RETURN;
       END IF;
       RAISE EXCEPTION 'request_already_pending';
     END IF;
@@ -72,7 +78,8 @@ BEGIN
           status      = 'pending',
           created_at  = NOW(),
           responded_at = NULL
-      WHERE id = v_row.id;
+      WHERE id = v_row.id
+      RETURNING * INTO v_row;
   ELSE
     INSERT INTO public.friendships (requester_id, addressee_id, message)
     VALUES (v_self, p_addressee_id, v_msg)
@@ -89,15 +96,21 @@ BEGIN
     p_payload_json  := jsonb_build_object('friendship_id', v_row.id, 'requester_id', v_self)
   );
 
-  RETURN v_row.id;
+  friendship_id := v_row.id;
+  status := v_row.status;
+  RETURN NEXT;
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.send_friend_request(UUID, TEXT) TO authenticated;
 
 ALTER TABLE public.friendships
   DROP CONSTRAINT IF EXISTS friendships_message_len_chk;
 ALTER TABLE public.friendships
   ADD CONSTRAINT friendships_message_len_chk
-  CHECK (message IS NULL OR char_length(message) <= 200);
+  CHECK (message IS NULL OR char_length(message) <= 200) NOT VALID;
+ALTER TABLE public.friendships
+  VALIDATE CONSTRAINT friendships_message_len_chk;
 
 REVOKE INSERT, UPDATE, DELETE ON public.friendships FROM authenticated;
 REVOKE INSERT, UPDATE, DELETE ON public.friendships FROM anon;

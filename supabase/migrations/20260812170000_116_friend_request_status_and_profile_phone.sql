@@ -1,4 +1,4 @@
--- 116: send_friend_request returns status; get_profile_with_phone drops sensitive columns.
+-- 116: concurrency-safe send_friend_request + slim get_profile_with_phone.
 
 DROP FUNCTION IF EXISTS public.send_friend_request(UUID, TEXT);
 
@@ -48,7 +48,7 @@ BEGIN
         SELECT display_name INTO v_name FROM public.profiles WHERE id = v_self;
         PERFORM public.enqueue_notification(
           p_user_id       := p_addressee_id,
-          p_type          := 'friend_request_received',
+          p_type          := 'friend_request_accepted',
           p_title         := 'Solicitud aceptada',
           p_body          := COALESCE(v_name, 'Alguien') || ' ha aceptado tu solicitud de amistad',
           p_payload_json  := jsonb_build_object('friendship_id', v_row.id, 'user_id', v_self)
@@ -78,9 +78,21 @@ BEGIN
       WHERE id = v_row.id
       RETURNING * INTO v_row;
   ELSE
-    INSERT INTO public.friendships (requester_id, addressee_id, message)
-    VALUES (v_self, p_addressee_id, v_msg)
-    RETURNING * INTO v_row;
+    BEGIN
+      INSERT INTO public.friendships (requester_id, addressee_id, message)
+      VALUES (v_self, p_addressee_id, v_msg)
+      RETURNING * INTO v_row;
+    EXCEPTION
+      WHEN unique_violation THEN
+        SELECT * INTO v_row
+        FROM public.friendships
+        WHERE LEAST(requester_id, addressee_id) = LEAST(v_self, p_addressee_id)
+          AND GREATEST(requester_id, addressee_id) = GREATEST(v_self, p_addressee_id);
+        IF v_row.status = 'accepted' THEN
+          RAISE EXCEPTION 'already_friends';
+        END IF;
+        RAISE EXCEPTION 'request_already_pending';
+    END;
   END IF;
 
   SELECT display_name INTO v_name FROM public.profiles WHERE id = v_self;
@@ -112,21 +124,7 @@ RETURNS TABLE (
   display_name TEXT,
   city TEXT,
   photo_url TEXT,
-  phone_e164 TEXT,
-  push_token TEXT,
-  notify_push BOOLEAN,
-  notify_on_join BOOLEAN,
-  notify_on_match_start BOOLEAN,
-  notify_on_match_edit BOOLEAN,
-  notify_on_match_cancel BOOLEAN,
-  notify_on_result BOOLEAN,
-  notify_on_reminder_24h BOOLEAN,
-  notify_on_reminder_2h BOOLEAN,
-  notify_on_reminder_in_progress BOOLEAN,
-  role TEXT,
-  status TEXT,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
+  phone_e164 TEXT
 )
 LANGUAGE sql
 STABLE
@@ -138,21 +136,7 @@ AS $$
     p.display_name,
     p.city,
     p.photo_url,
-    p.phone_e164,
-    p.push_token,
-    p.notify_push,
-    p.notify_on_join,
-    p.notify_on_match_start,
-    p.notify_on_match_edit,
-    p.notify_on_match_cancel,
-    p.notify_on_result,
-    p.notify_on_reminder_24h,
-    p.notify_on_reminder_2h,
-    p.notify_on_reminder_in_progress,
-    p.role,
-    p.status,
-    p.created_at,
-    p.updated_at
+    p.phone_e164
   FROM public.profiles p
   WHERE p.id = p_profile_id
     AND EXISTS (

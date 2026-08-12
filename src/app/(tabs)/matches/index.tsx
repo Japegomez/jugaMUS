@@ -292,7 +292,9 @@ export default function MatchesScreen() {
   const createFab = <CreateFab />
   const topPadding = screenTopPadding(insets.top)
   const listItems = useMemo(() => {
-    const activeInvites = (invitations ?? []).filter((inv) => inv.status !== MATCH_STATUS.CANCELLED)
+    const activeInvites = (invitations ?? []).filter(
+      (inv) => inv.match_status !== MATCH_STATUS.CANCELLED
+    )
     return data ? buildMatchesListItems(data, activeInvites) : []
   }, [data, invitations])
 

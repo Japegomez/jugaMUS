@@ -227,25 +227,34 @@ export default function CreateMatchScreen() {
       setInvitesA((prev) => {
         if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
         if (prev.length >= inviteCapacityA) return prev
-        setValue('team_a_player_2', '')
         return [...prev, friendId]
       })
       setInvitesB((prev) => prev.filter((id) => id !== friendId))
+      if (!invitesA.includes(friendId) && invitesA.length < inviteCapacityA) {
+        setValue('team_a_player_2', '')
+      }
     } else {
+      const alreadyInB = invitesB.includes(friendId)
+      const nextLen = alreadyInB
+        ? invitesB.filter((id) => id !== friendId).length
+        : invitesB.length >= inviteCapacityB
+          ? invitesB.length
+          : invitesB.length + 1
+      const willAdd = !alreadyInB && invitesB.length < inviteCapacityB
       setInvitesB((prev) => {
         if (prev.includes(friendId)) return prev.filter((id) => id !== friendId)
         if (prev.length >= inviteCapacityB) return prev
-        const nextLen = prev.length + 1
+        return [...prev, friendId]
+      })
+      setInvitesA((prev) => prev.filter((id) => id !== friendId))
+      if (willAdd) {
         if (nextLen >= 2) {
           setValue('team_b_player_1', '')
           setValue('team_b_player_2', '')
         } else if (nextLen === 1) {
-          // One rival invite leaves a single text slot → keep player_1, drop player_2.
           setValue('team_b_player_2', '')
         }
-        return [...prev, friendId]
-      })
-      setInvitesA((prev) => prev.filter((id) => id !== friendId))
+      }
     }
   }
 
@@ -262,12 +271,7 @@ export default function CreateMatchScreen() {
       team_b_name: teamBNameValue ?? '',
       team_a_player_1: null,
       team_a_player_2: invitesA.length > 0 ? null : teamAPlayer2?.trim() || null,
-      team_b_player_1:
-        invitesB.length >= 2
-          ? null
-          : invitesB.length === 1
-            ? teamBPlayer1?.trim() || null
-            : teamBPlayer1?.trim() || null,
+      team_b_player_1: invitesB.length >= 2 ? null : teamBPlayer1?.trim() || null,
       team_b_player_2: invitesB.length >= 1 ? null : teamBPlayer2?.trim() || null,
     }
     const creatorParticipant = profile?.display_name
@@ -298,14 +302,6 @@ export default function CreateMatchScreen() {
   useEffect(() => {
     setPastResult(null)
   }, [durationValue, isPastResultMode])
-
-  useEffect(() => {
-    setInvitesA((prev) => (prev.length > inviteCapacityA ? prev.slice(0, inviteCapacityA) : prev))
-  }, [inviteCapacityA])
-
-  useEffect(() => {
-    setInvitesB((prev) => (prev.length > inviteCapacityB ? prev.slice(0, inviteCapacityB) : prev))
-  }, [inviteCapacityB])
 
   const onSubmit = async (values: CreateMatchValues) => {
     if (isSubmitting) return
@@ -341,10 +337,6 @@ export default function CreateMatchScreen() {
       )
       return
     }
-    if (isPastResultMode && invitesB.length > 0 && !pastResult) {
-      showAlert('Resultado pendiente', 'Selecciona el marcador de la partida antes de crearla.')
-      return
-    }
     if (
       !isPastResultMode &&
       requiresFutureStartAtForIncompleteRoster(values.start_at, effectiveRoster)
@@ -353,9 +345,9 @@ export default function CreateMatchScreen() {
       return
     }
 
-    const inviteTargets = [
-      ...invitesA.slice(0, inviteCapacityA).map((fid) => ({ fid, team: TEAM.A as const })),
-      ...invitesB.slice(0, inviteCapacityB).map((fid) => ({ fid, team: TEAM.B as const })),
+    const inviteTargets: { fid: string; team: (typeof TEAM)[keyof typeof TEAM] }[] = [
+      ...invitesA.slice(0, inviteCapacityA).map((fid) => ({ fid, team: TEAM.A })),
+      ...invitesB.slice(0, inviteCapacityB).map((fid) => ({ fid, team: TEAM.B })),
     ]
 
     setIsSubmitting(true)
@@ -402,12 +394,15 @@ export default function CreateMatchScreen() {
       }
 
       const successfulInviteCount = inviteTargets.length - failedInvites.length
+      const rivalInviteTargets = inviteTargets.filter((t) => t.team === TEAM.B)
       const rivalInvitesOk =
-        invitesB.length === 0 || failedInvites.filter((f) => f.team === TEAM.B).length === 0
+        rivalInviteTargets.length === 0 ||
+        failedInvites.filter((f) => f.team === TEAM.B).length === 0
+      const hasRivalInvites = rivalInviteTargets.length > 0
 
       if (isPastResultMode && pastResult) {
-        // Only submit for validation when rival invites were created successfully.
-        if (successfulInviteCount > 0 && rivalInvitesOk && invitesB.length > 0) {
+        // Direct path only when there are no rival-team invitations (team A invites are not rivals).
+        if (hasRivalInvites && rivalInvitesOk) {
           await submitResult.mutateAsync({
             matchId: match.id,
             submittedByUserId: sessionUserId!,
@@ -415,7 +410,7 @@ export default function CreateMatchScreen() {
             teamAGames: pastResult.teamAGames,
             teamBGames: pastResult.teamBGames,
           })
-        } else if (successfulInviteCount === 0 || invitesB.length === 0) {
+        } else if (!hasRivalInvites) {
           await recordMatchResult.mutateAsync({
             matchId: match.id,
             teamAGames: pastResult.teamAGames,

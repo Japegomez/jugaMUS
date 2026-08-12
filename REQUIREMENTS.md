@@ -34,7 +34,7 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Torneos — parejas y 3º puesto (jun. 2026):** cualquier miembro de la pareja puede editarla en inscripción (`062`); eliminar sigue siendo solo organizador. Al editar, **no se pueden quitar** jugadores de texto (solo renombrar; `069`). Opción **3º y 4º puesto** al crear torneo: partido entre perdedores de semifinales (`064`); torneo no finaliza hasta cerrar final y dicho partido si aplica.
 - **Partidas y torneos privados (jun. 2026):** visibilidad `private` con contraseña del organizador/creador. Aparecen en Descubrir (filtro Privadas). La contraseña **desbloquea la vista** (plantel/cuadro); unirse sigue con el flujo normal (partida) o parejas (torneo). Migraciones `066`–`068`.
 - **Invitaciones WhatsApp HTTPS (jul. 2026):** compartir ficha de partida o torneo por WhatsApp con enlace `https://musapp-731e1.web.app/m|t/{id}` (Firebase Hosting + App/Universal Links). Cualquier usuario que pueda ver la ficha puede compartir; privadas piden contraseña al abrir; unirse requiere registro. Sin app → redirect a tienda. EAS: `EXPO_PUBLIC_INVITE_HOST`.
-- **Sesión Auth (jul. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo sigue vigente.
+- **Sesión Auth (jul.–ago. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo: **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS` en `sessionBackground.ts`).
 - **Torneos — auto-cancel sin cuadro (jul. 2026):** en `registration` pasado `start_at` sin `bracket_generated_at` → `cancelled` (+ notificación al organizador). Crear/editar: título/ciudad/lugar opcionales (defaults «Torneo» / «Ciudad por definir»). Aviso al guardar. Migraciones `070`/`071`.
 - **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
 - **PostHog producto (jul./ago. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`); `friend_request_sent`, `friend_request_accepted` (auto-aceptación), `match_invite_sent`, `match_invite_accepted` (v1.8). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
@@ -633,7 +633,7 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH2: Un usuario puede autenticarse con Google
 - CA_AUTH3: Un usuario puede autenticarse con Apple ID
 - CA_AUTH4: Un usuario puede recuperar su contraseña por email, fijar una nueva en `auth/update-password` e iniciar sesión después
-- CA_AUTH5: La sesión persiste entre cierres de la app (refresh token)
+- CA_AUTH5: La sesión persiste entre cierres de la app (refresh token); tras ≥6 h en segundo plano, al volver a primer plano se cierra la sesión con aviso
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
 - CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas, ligas y torneos (perfil sentinel «Usuario eliminado»)
 

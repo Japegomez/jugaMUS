@@ -35,10 +35,14 @@ describe('generateRoundRobinFixtures', () => {
     const first = fixtures.filter((f) => !f.isSecondLeg)
     const second = fixtures.filter((f) => f.isSecondLeg)
     expect(second).toHaveLength(first.length)
-    for (const leg of second) {
-      const mirror = first.find((f) => f.pairAId === leg.pairBId && f.pairBId === leg.pairAId)
-      expect(mirror).toBeDefined()
-    }
+    const normalize = (list: typeof first) =>
+      [...list].map((f) => `${f.pairAId}|${f.pairBId}`).sort((a, b) => a.localeCompare(b))
+    const secondAsFirst = second.map((f) => ({
+      ...f,
+      pairAId: f.pairBId,
+      pairBId: f.pairAId,
+    }))
+    expect(normalize(secondAsFirst)).toEqual(normalize(first))
   })
 
   it('handles odd number of pairs with byes', () => {

@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 12/08/2026 (v1.8 follow-ups: search amigos, invite UX/security, mig. `111`–`116`)
+> Actualizado: 12/08/2026 (timeout sesión background 6 h; review follow-ups invites `117`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -440,6 +440,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 ### Sesión, torneos, analytics y hotfix (v1.2.1) — 23/07/2026
 
 - [x] Sesión caducada tras días sin abrir: `validateAuthSession` + `ensureSessionValid`; logout automático y mensaje en login; harden HMR
+- [x] Timeout al volver de segundo plano: **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS`; antes 10 min)
 - [x] Torneos: auto-cancel en `start_at` sin cuadro organizado (migraciones `070`/`071`); título/ciudad/lugar opcionales; aviso al guardar; «Organizar cuadro» deshabilitado con menos de 2 parejas completas
 - [x] Partidas: aviso post-crear si plantilla incompleta (auto-cancel al `start_at`)
 - [x] PostHog: eventos funnels 1–2 + idempotencia `match_completed` + tests
@@ -549,7 +550,9 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Rechazar invitación con resultado confirmado: void + cancelar partida — mig. `113`
 - [x] Review follow-ups amigos/invites: cooldown tras rechazo, mensaje ≤200, capacidad al aceptar, auth en `list_match_invitations`, `match_effective_roster_filled` SECURITY DEFINER, grants `badge_showcase`, cancel invites al eliminar amigo — mig. `114`/`115`
 - [x] `send_friend_request` devuelve status; `get_profile_with_phone` sin prefs/badge sensibles — mig. `116`
+- [x] Review follow-ups 2: escape ILIKE + trgm, `match_status`, `friend_request_accepted`, unique_violation, slim phone RPC — mig. `117` + Edge `process-notifications`
 - [x] UX create/detail: capacidad de invites, `isSubmitting` de punta a punta, modal compartir en ficha, invite tab solo en partida standalone editable
+- [x] Timeout sesión en segundo plano → **6 h** (`BACKGROUND_SESSION_TIMEOUT_MS`)
 - [x] Contrato Descubrir: públicas + privadas con contraseña (docs README/REQUIREMENTS); CA_CONTACT1 incluye copia en web
 - [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`)
 

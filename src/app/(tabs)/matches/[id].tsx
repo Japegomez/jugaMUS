@@ -586,8 +586,13 @@ export default function MatchDetailScreen() {
     refetch: refetchResult,
   } = useMatchResult(id)
   const { data: myInvitations } = useMyMatchInvitations()
-  const { data: matchInvitations } = useMatchInvitations(id)
+  const {
+    data: matchInvitations,
+    isPending: matchInvitationsPending,
+    isFetched: matchInvitationsFetched,
+  } = useMatchInvitations(id)
   const respondInvitation = useRespondMatchInvitation()
+  const matchInvitationsReady = !matchInvitationsPending && matchInvitationsFetched
 
   useFocusEffect(
     useCallback(() => {
@@ -707,6 +712,9 @@ export default function MatchDetailScreen() {
       })
     }
 
+    // Wait for invitation query so undefined is not treated as "no invites".
+    if (!matchInvitationsReady) return
+
     const active = match.participants.filter((p) => p.left_at === null)
     const myParticipation = active.find((p) => p.user_id === userId)
     const otherRegistered = active.filter((p) => p.user_id !== userId)
@@ -738,6 +746,7 @@ export default function MatchDetailScreen() {
     id,
     router,
     matchInvitations,
+    matchInvitationsReady,
   ])
 
   // Deep link / redirect: ?confirmResult=1 opens the result confirmation modal
@@ -828,11 +837,21 @@ export default function MatchDetailScreen() {
   const rivalHasRegisteredParticipants = activeParticipants.some(
     (p) => p.user_id && p.team !== myParticipation?.team
   )
-  const rivalHasPendingInvites = pendingInvitesB.length > 0
+  const rivalTeam =
+    myParticipation?.team === TEAM.A ? TEAM.B : myParticipation?.team === TEAM.B ? TEAM.A : null
+  const rivalHasPendingInvites =
+    rivalTeam === TEAM.A
+      ? pendingInvitesA.length > 0
+      : rivalTeam === TEAM.B
+        ? pendingInvitesB.length > 0
+        : false
   // Pending account invites block direct close (record_match_result_direct);
   // those matches must go through submit_match_result / pending_validation.
-  const hasOutstandingAccountInvites = pendingInvites.length > 0
+  const hasOutstandingAccountInvites = (matchInvitations ?? []).some(
+    (inv) => inv.status === 'pending'
+  )
   const isPersonalMatch =
+    matchInvitationsReady &&
     !match.tournament_id &&
     isCreator &&
     otherRegistered.length === 0 &&
@@ -905,12 +924,12 @@ export default function MatchDetailScreen() {
   )
 
   const matchId = Array.isArray(id) ? id[0] : id
-  // list_my_match_invitations only returns pending invites; `status` is match status.
+  // list_my_match_invitations only returns pending invites; `match_status` is match status.
   const myPendingInvitation =
     (myInvitations ?? []).find(
       (inv) =>
         inv.match_id === matchId &&
-        inv.status !== MATCH_STATUS.CANCELLED &&
+        inv.match_status !== MATCH_STATUS.CANCELLED &&
         match.status !== MATCH_STATUS.CANCELLED
     ) ?? null
 

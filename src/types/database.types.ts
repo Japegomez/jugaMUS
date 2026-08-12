@@ -1832,24 +1832,10 @@ export type Database = {
         Args: { p_match_id: string; p_profile_id: string }
         Returns: {
           city: string | null
-          created_at: string
           display_name: string
           id: string
-          notify_on_join: boolean
-          notify_on_match_cancel: boolean
-          notify_on_match_edit: boolean
-          notify_on_match_start: boolean
-          notify_on_reminder_24h: boolean
-          notify_on_reminder_2h: boolean
-          notify_on_reminder_in_progress: boolean
-          notify_on_result: boolean
-          notify_push: boolean
           phone_e164: string
           photo_url: string | null
-          push_token: string | null
-          role: string
-          status: string
-          updated_at: string
         }[]
       }
       get_leaderboard: {
@@ -2184,8 +2170,8 @@ export type Database = {
           inviter_id: string
           inviter_name: string
           match_id: string
+          match_status: string
           start_at: string
-          status: string
           team: string
           title: string
         }[]
