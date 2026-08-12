@@ -71,16 +71,18 @@ export async function inviteFriendToMatch(
   return data as string
 }
 
-export async function respondMatchInvitation(invitationId: string, accept: boolean): Promise<void> {
+export async function respondMatchInvitation(
+  invitationId: string,
+  accept: boolean,
+  meta?: { matchId: string; team: string }
+): Promise<void> {
   const { error } = await supabase.rpc('respond_match_invitation', {
     p_invitation_id: invitationId,
     p_accept: accept,
   })
   if (error) throw new Error(mapInviteRpcError(error.message))
   if (accept) {
-    // team is not returned by the RPC; emit with a placeholder team so the
-    // event still fires (the match detail will reflect the joined team).
-    trackMatchInviteAccepted(invitationId, '')
+    trackMatchInviteAccepted(meta?.matchId ?? invitationId, meta?.team ?? '')
   }
 }
 

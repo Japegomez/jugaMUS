@@ -39,6 +39,8 @@ type EditMatchTeamModalProps = {
   team?: string
   /** Free slots on this team (registered + text + pending < 2). */
   freeSlots?: number
+  /** Used in the WhatsApp invite message when inviting from this modal. */
+  matchTitle?: string
   onClose: () => void
   onSubmit: (values: EditMatchTeamFormValues) => void | Promise<void>
   loading?: boolean
@@ -63,6 +65,7 @@ type EditMatchTeamFormProps = {
   matchId?: string
   team?: string
   freeSlots?: number
+  matchTitle?: string
   onClose: () => void
   onSubmit: (values: EditMatchTeamFormValues) => void | Promise<void>
   loading?: boolean
@@ -75,6 +78,7 @@ function EditMatchTeamForm({
   matchId,
   team,
   freeSlots,
+  matchTitle,
   onClose,
   onSubmit,
   loading,
@@ -148,6 +152,7 @@ function EditMatchTeamForm({
               matchId={matchId!}
               team={team!}
               teamLabel={teamLabel}
+              matchTitle={matchTitle}
               freeSlots={freeSlots ?? 0}
             />
           ) : (
@@ -201,37 +206,52 @@ function InviteFriendsTab({
   matchId,
   team,
   teamLabel,
+  matchTitle,
   freeSlots,
 }: {
   matchId: string
   team: string
   teamLabel: string
+  matchTitle?: string
   freeSlots: number
 }) {
-  const { data: friends, isPending } = useMyFriends()
+  const { data: friends, isLoading } = useMyFriends()
   const invite = useInviteFriendToMatch()
+  const [invitedIds, setInvitedIds] = useState<string[]>([])
+  const [invitingId, setInvitingId] = useState<string | null>(null)
+
+  const remainingSlots = Math.max(0, freeSlots - invitedIds.length)
 
   const handleInvite = async (friendId: string) => {
+    if (remainingSlots <= 0 || invitedIds.includes(friendId)) return
+    setInvitingId(friendId)
     try {
       await invite.mutateAsync({ matchId, inviteeId: friendId, team })
+      setInvitedIds((prev) => (prev.includes(friendId) ? prev : [...prev, friendId]))
       const url = buildMatchHttpsInviteUrl(matchId)
       const message = buildInviteShareMessage({
         kind: 'match',
-        title: teamLabel,
+        title: matchTitle?.trim() || 'Partida',
         url,
-        meta: 'Te he invitado a unirte a mi equipo en esta partida',
+        meta: `Te he invitado a unirte a ${teamLabel} en esta partida`,
       })
-      await shareInviteViaWhatsApp(message)
+      try {
+        await shareInviteViaWhatsApp(message)
+      } catch (shareErr) {
+        console.warn('share_invite_failed', shareErr)
+      }
     } catch (err) {
       Alert.alert('No se pudo invitar', err instanceof Error ? err.message : 'Error')
+    } finally {
+      setInvitingId(null)
     }
   }
 
-  if (freeSlots <= 0) {
+  if (remainingSlots <= 0) {
     return <Text style={styles.empty}>{teamLabel} ya está completo.</Text>
   }
 
-  if (isPending) {
+  if (isLoading) {
     return <Text style={styles.empty}>Cargando amigos…</Text>
   }
 
@@ -247,28 +267,32 @@ function InviteFriendsTab({
   return (
     <View style={styles.friendsList}>
       <Text style={styles.teamHint}>Invita a un amigo a unirse a {teamLabel}</Text>
-      {friends.map((f) => (
-        <View key={f.user_id} style={styles.friendRow}>
-          <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
-          <View style={styles.friendInfo}>
-            <Text style={styles.friendName} numberOfLines={1}>
-              {f.display_name}
-            </Text>
-            {f.city ? (
-              <Text style={styles.friendCity} numberOfLines={1}>
-                {f.city}
+      {friends.map((f) => {
+        const alreadyInvited = invitedIds.includes(f.user_id)
+        return (
+          <View key={f.user_id} style={styles.friendRow}>
+            <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
+            <View style={styles.friendInfo}>
+              <Text style={styles.friendName} numberOfLines={1}>
+                {f.display_name}
               </Text>
-            ) : null}
+              {f.city ? (
+                <Text style={styles.friendCity} numberOfLines={1}>
+                  {f.city}
+                </Text>
+              ) : null}
+            </View>
+            <Button
+              title={alreadyInvited ? 'Invitado' : 'Invitar'}
+              onPress={() => void handleInvite(f.user_id)}
+              loading={invitingId === f.user_id}
+              disabled={alreadyInvited || remainingSlots <= 0 || invitingId !== null}
+              style={styles.inviteBtn}
+              textStyle={styles.inviteBtnText}
+            />
           </View>
-          <Button
-            title="Invitar"
-            onPress={() => void handleInvite(f.user_id)}
-            loading={invite.isPending}
-            style={styles.inviteBtn}
-            textStyle={styles.inviteBtnText}
-          />
-        </View>
-      ))}
+        )
+      })}
     </View>
   )
 }
@@ -281,6 +305,7 @@ export function EditMatchTeamModal({
   matchId,
   team,
   freeSlots,
+  matchTitle,
   onClose,
   onSubmit,
   loading,
@@ -300,6 +325,7 @@ export function EditMatchTeamModal({
           matchId={matchId}
           team={team}
           freeSlots={freeSlots}
+          matchTitle={matchTitle}
           onClose={onClose}
           onSubmit={onSubmit}
           loading={loading}

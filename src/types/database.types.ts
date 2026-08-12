@@ -1851,12 +1851,6 @@ export type Database = {
           status: string
           updated_at: string
         }[]
-        SetofOptions: {
-          from: '*'
-          to: 'profiles'
-          isOneToOne: false
-          isSetofReturn: true
-        }
       }
       get_leaderboard: {
         Args: { p_city?: string; p_limit?: number }
@@ -2208,9 +2202,20 @@ export type Database = {
         Args: { p_invitation_id: string; p_accept: boolean }
         Returns: undefined
       }
+      search_users_by_display_name: {
+        Args: { p_query: string; p_limit?: number }
+        Returns: {
+          user_id: string
+          display_name: string
+          city: string | null
+          photo_url: string | null
+          friendship_status: string | null
+          friendship_direction: string | null
+        }[]
+      }
       send_friend_request: {
         Args: { p_addressee_id: string; p_message?: string }
-        Returns: string
+        Returns: { friendship_id: string; status: string }[]
       }
       record_tournament_match_result_as_referee: {
         Args: {

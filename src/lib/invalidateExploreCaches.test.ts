@@ -25,4 +25,14 @@ describe('idsFromRealtimeRow', () => {
       tournamentId: 't4',
     })
   })
+
+  it('maps match_invitations row', () => {
+    expect(idsFromRealtimeRow('match_invitations', { match_id: 'm5' })).toEqual({
+      matchId: 'm5',
+    })
+  })
+
+  it('maps friendships row to empty ids', () => {
+    expect(idsFromRealtimeRow('friendships', { id: 'f1' })).toEqual({})
+  })
 })

@@ -32,6 +32,8 @@ export function SubmitResultModal({
   const hintParts = [`Tu equipo: ${viewerTeamLabel}`]
   if (rivalAutoConfirms) {
     hintParts.push('El rival no tiene cuenta: el marcador se confirmará al guardar.')
+  } else {
+    hintParts.push('El rival deberá validar el marcador.')
   }
 
   return (

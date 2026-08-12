@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -16,7 +17,7 @@ import { CreateFab } from '@/components/ui/CreateFab'
 import { Button } from '@/components/ui/Button'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StatusDot, type StatusDotTone } from '@/components/ui/StatusDot'
-import { TOURNAMENT_STATUS } from '@/constants'
+import { MATCH_STATUS, TOURNAMENT_STATUS } from '@/constants'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useMyMatchesDashboard } from '@/hooks/useMatches'
 import { useMyMatchInvitations, useRespondMatchInvitation } from '@/hooks/useMatchInvitations'
@@ -290,10 +291,10 @@ export default function MatchesScreen() {
 
   const createFab = <CreateFab />
   const topPadding = screenTopPadding(insets.top)
-  const listItems = useMemo(
-    () => (data ? buildMatchesListItems(data, invitations ?? []) : []),
-    [data, invitations]
-  )
+  const listItems = useMemo(() => {
+    const activeInvites = (invitations ?? []).filter((inv) => inv.status !== MATCH_STATUS.CANCELLED)
+    return data ? buildMatchesListItems(data, activeInvites) : []
+  }, [data, invitations])
 
   if (!userId) {
     return (
@@ -362,14 +363,34 @@ export default function MatchesScreen() {
                 onOpen={() => router.push(`/(tabs)/matches/${item.invitation.match_id}` as Href)}
                 onAccept={() =>
                   void respondInvitation
-                    .mutateAsync({ invitationId: item.invitation.invitation_id, accept: true })
+                    .mutateAsync({
+                      invitationId: item.invitation.invitation_id,
+                      accept: true,
+                      matchId: item.invitation.match_id,
+                      team: item.invitation.team,
+                    })
                     .then(() => router.push(`/(tabs)/matches/${item.invitation.match_id}` as Href))
-                    .catch(() => undefined)
+                    .catch((err) => {
+                      Alert.alert(
+                        'No se pudo aceptar',
+                        err instanceof Error ? err.message : 'Error'
+                      )
+                    })
                 }
                 onReject={() =>
                   void respondInvitation
-                    .mutateAsync({ invitationId: item.invitation.invitation_id, accept: false })
-                    .catch(() => undefined)
+                    .mutateAsync({
+                      invitationId: item.invitation.invitation_id,
+                      accept: false,
+                      matchId: item.invitation.match_id,
+                      team: item.invitation.team,
+                    })
+                    .catch((err) => {
+                      Alert.alert(
+                        'No se pudo rechazar',
+                        err instanceof Error ? err.message : 'Error'
+                      )
+                    })
                 }
               />
             )

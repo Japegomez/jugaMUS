@@ -9,6 +9,7 @@ export const AnalyticsEvents = {
   MATCH_JOINED: 'match_joined',
   MATCH_COMPLETED: 'match_completed',
   FRIEND_REQUEST_SENT: 'friend_request_sent',
+  FRIEND_REQUEST_ACCEPTED: 'friend_request_accepted',
   MATCH_INVITE_SENT: 'match_invite_sent',
   MATCH_INVITE_ACCEPTED: 'match_invite_accepted',
 } as const
@@ -68,6 +69,10 @@ export function trackMatchJoined(matchId: string, team: string): void {
 
 export function trackFriendRequestSent(addresseeId: string): void {
   captureEvent(AnalyticsEvents.FRIEND_REQUEST_SENT, { addressee_id: addresseeId })
+}
+
+export function trackFriendRequestAccepted(addresseeId: string): void {
+  captureEvent(AnalyticsEvents.FRIEND_REQUEST_ACCEPTED, { addressee_id: addresseeId })
 }
 
 export function trackMatchInviteSent(matchId: string, inviteeId: string, team: string): void {

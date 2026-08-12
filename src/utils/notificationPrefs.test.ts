@@ -96,8 +96,15 @@ describe('friend / match-invitation preferences', () => {
   })
 
   it('reminder timing updates preserve the new preferences', () => {
-    expect(buildReminderTimingUpdates(allOn, '24h', false)).toEqual({
+    const mixed = {
       ...allOn,
+      notify_on_friend_request: false,
+      notify_on_match_invitation: false,
+      notify_on_reminder_2h: true,
+      notify_on_reminder_24h: true,
+    }
+    expect(buildReminderTimingUpdates(mixed, '24h', false)).toEqual({
+      ...mixed,
       notify_on_reminder_24h: false,
     })
   })

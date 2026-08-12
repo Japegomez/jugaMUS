@@ -66,14 +66,14 @@ describe('matchInvitations.service', () => {
 
   it('respondMatchInvitation tracks accepted event', async () => {
     mockRpc({ data: null, error: null })
-    await respondMatchInvitation('inv-1', true)
+    await respondMatchInvitation('inv-1', true, { matchId: 'm-1', team: 'B' })
     expect(supabase.rpc).toHaveBeenCalledWith('respond_match_invitation', {
       p_invitation_id: 'inv-1',
       p_accept: true,
     })
     expect(posthog.capture).toHaveBeenCalledWith('match_invite_accepted', {
-      match_id: 'inv-1',
-      team: '',
+      match_id: 'm-1',
+      team: 'B',
     })
   })
 

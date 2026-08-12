@@ -13,6 +13,12 @@ export function mapResultRpcError(message: string): string {
   if (message.includes('invalid_scores')) return 'Marcador no válido.'
   if (message.includes('result_already_exists'))
     return 'Ya hay un resultado registrado para esta partida.'
+  if (message.includes('has_pending_rival_invites')) {
+    return 'Hay invitaciones pendientes. El resultado quedará a la espera de validación del rival.'
+  }
+  if (message.includes('has_other_participants')) {
+    return 'Hay otros jugadores registrados. Usa el flujo de validación de resultado.'
+  }
   return message
 }
 

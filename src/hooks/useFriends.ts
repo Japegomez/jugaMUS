@@ -9,32 +9,46 @@ import {
   listMyFriends,
   removeFriend,
   respondFriendRequest,
+  searchUsersByDisplayName,
   sendFriendRequest,
   type FriendRequestRow,
   type FriendSummary,
   type FriendshipStatus,
+  type UserSearchHit,
 } from '@/services/friends.service'
 
 // ─── Query keys ──────────────────────────────────────────────────────────────
 
+const FRIENDS_KEY = 'friends' as const
+const FRIEND_REQUESTS_KEY = 'friend-requests' as const
+const FRIENDSHIP_WITH_USER_KEY = 'friendship-with-user' as const
+const USER_SEARCH_KEY = 'user-search' as const
+
 export function friendsQueryKey(userId: string) {
-  return ['friends', userId] as const
+  return [FRIENDS_KEY, userId] as const
 }
 
 export function friendRequestsQueryKey(userId: string, direction: 'sent' | 'received') {
-  return ['friend-requests', userId, direction] as const
+  return [FRIEND_REQUESTS_KEY, userId, direction] as const
 }
 
 export function friendshipWithUserQueryKey(userId: string, otherUserId: string) {
-  return ['friendship-with-user', userId, otherUserId] as const
+  return [FRIENDSHIP_WITH_USER_KEY, userId, otherUserId] as const
+}
+
+export function userSearchQueryKey(userId: string, query: string) {
+  return [USER_SEARCH_KEY, userId, query] as const
 }
 
 function invalidateFriendsQueries(queryClient: ReturnType<typeof useQueryClient>, userId?: string) {
   if (!userId) return
   queryClient.invalidateQueries({ queryKey: friendsQueryKey(userId) })
-  queryClient.invalidateQueries({ queryKey: ['friend-requests', userId] })
-  queryClient.invalidateQueries({ queryKey: ['friendship-with-user', userId] })
+  queryClient.invalidateQueries({ queryKey: [FRIEND_REQUESTS_KEY, userId] })
+  queryClient.invalidateQueries({ queryKey: [FRIENDSHIP_WITH_USER_KEY, userId] })
+  queryClient.invalidateQueries({ queryKey: [USER_SEARCH_KEY, userId] })
 }
+
+export { invalidateFriendsQueries }
 
 // ─── Queries ────────────────────────────────────────────────────────────────
 
@@ -65,6 +79,17 @@ export function useFriendshipWithUser(otherUserId: string | undefined) {
     queryFn: () => getFriendshipWithUser(otherUserId!),
     enabled: Boolean(userId && otherUserId),
     staleTime: QUERY_STALE_TIME,
+  })
+}
+
+export function useSearchUsersByDisplayName(query: string) {
+  const userId = useAuthStore((s) => s.session?.user.id)
+  const trimmed = query.trim()
+  return useQuery<UserSearchHit[]>({
+    queryKey: userSearchQueryKey(userId ?? '', trimmed),
+    queryFn: () => searchUsersByDisplayName(trimmed),
+    enabled: Boolean(userId) && trimmed.length >= 2,
+    staleTime: 15_000,
   })
 }
 
@@ -108,4 +133,4 @@ export function useRemoveFriend() {
   })
 }
 
-export type { FriendSummary, FriendRequestRow, FriendshipStatus }
+export type { FriendSummary, FriendRequestRow, FriendshipStatus, UserSearchHit }

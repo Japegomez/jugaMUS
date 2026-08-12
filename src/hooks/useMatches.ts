@@ -33,6 +33,7 @@ import {
   type PublicLeaguesListFilters,
 } from '@/services/leagues.service'
 import { useAuthStore } from '@/hooks/useAuth'
+import { invalidateMatchInvitationQueries } from '@/hooks/useMatchInvitations'
 import { invalidateTournamentQueries } from '@/hooks/useTournaments'
 import { invalidatePlayerStatsCaches } from '@/hooks/useStats'
 import {
@@ -310,6 +311,11 @@ export function useCancelMatch() {
       queryClient.invalidateQueries({
         queryKey: [...matchQueryKey(updated.id), 'match_result'],
         exact: false,
+      })
+      // Pending invites are cancelled with the match; refresh invitee/creator lists.
+      invalidateMatchInvitationQueries(queryClient, {
+        userId: sessionUserId,
+        matchId: updated.id,
       })
       if (sessionUserId) {
         queryClient.invalidateQueries({

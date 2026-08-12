@@ -37,9 +37,9 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 - **Sesión Auth (jul. 2026):** JWT/sesión local persistida se revalida con `getUser()` al arranque y al volver a primer plano; si el refresh falla (salvo error de red), logout local y aviso «Tu sesión ha caducado…». Timeout por background largo sigue vigente.
 - **Torneos — auto-cancel sin cuadro (jul. 2026):** en `registration` pasado `start_at` sin `bracket_generated_at` → `cancelled` (+ notificación al organizador). Crear/editar: título/ciudad/lugar opcionales (defaults «Torneo» / «Ciudad por definir»). Aviso al guardar. Migraciones `070`/`071`.
 - **Torneos — inscripción y cancelación (jul. 2026):** `entry_fee` en torneo (default 0); flag `entry_fee_paid` por pareja; el organizador puede **cancelar** un torneo (`cancel_tournament`, mig. `073`–`076`). Mis partidas lista torneos donde el usuario organiza o juega (partidas de cuadro solo si participa).
-- **PostHog producto (jul./ago. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`); `friend_request_sent`, `match_invite_sent`, `match_invite_accepted` (v1.8). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
+- **PostHog producto (jul./ago. 2026):** eventos `user_signed_up`, `match_created`, `match_joined`, `match_completed` (este último solo al pasar a `finished`, idempotente por `match_id`); `friend_request_sent`, `friend_request_accepted` (auto-aceptación), `match_invite_sent`, `match_invite_accepted` (v1.8). KPIs de panel deben usar estos eventos / `Application Opened`, no `$pageview`.
 - **Torneos — cuadro interactivo (jul. 2026):** cada pareja en tarjeta propia; tap en pareja para registrar resultado y avanzar (modal rápido o ficha de partido). Etiquetas de ronda (cuartos, semifinal, final). Confirmación destructiva al organizar cuadro. Al cancelar torneo se cancelan **todos** los partidos del cuadro (`082`). Fix auto-cancel al poblar la final (`081`). Notificación «Validar resultado» solo si el resultado queda `pending_validation` (`083`).
-- **Amigos e invitaciones a partidas (ago. 2026, v1.8):** solicitudes de amistad con mensaje opcional desde perfil ajeno; lista desplegable de amigos y solicitudes en perfil propio (aceptar/rechazar/cancelar/eliminar). Invitar amigos a pareja o rival al crear partida o desde «Editar pareja» (pestaña Añadir amigo); invitaciones pendientes ocupan plaza de roster (partida `planned` con invitados empieza a `start_at`). Mis Partidas muestra sección Invitaciones; ficha muestra banner Aceptar/Rechazar y comparte deeplink WhatsApp. Rechazar invitación en partida iniciada/finalizada cancela la partida; rivales invitados fuerzan resultado `pending_validation`. Migraciones `108`–`110`.
+- **Amigos e invitaciones a partidas (ago. 2026, v1.8):** solicitudes de amistad con mensaje opcional (máx. 200) desde perfil ajeno o búsqueda por nombre; cooldown tras rechazo reciente; lista de amigos/solicitudes en perfil propio. Invitar amigos a pareja/rival al crear o editar equipo (solo partida standalone `planned`/`in_progress` del creador); pendientes ocupan plaza; compartir vía modal en ficha tras crear. Mis Partidas: Invitaciones; ficha: banner Aceptar/Rechazar. Rechazar en partida iniciada/finalizada (o con resultado confirmado) cancela y voidea resultado; rivales invitados fuerzan `pending_validation`. Migraciones `108`–`116`.
 - **Versión app (ago. 2026):** **1.8.0** (`app.json`, `package.json`).
 - **Security hardening ligas/stats (ago. 2026, mig. `106`):** `process_league_lifecycle` solo vía pg_cron (REVOKE a PUBLIC/authenticated). `enqueue_player_stats_recompute` no ejecutable por clientes. `get_player_stats` recalcula ELO/agregados solo para el propio usuario o admin; el resto lee stats cacheadas (mitiga amplificación cross-user).
 - **UI responsive (jul. 2026):** helpers `useResponsiveLayout` / `ScrollableModalBody` para escalado tipográfico y modales con scroll seguro en pantallas pequeñas.
@@ -162,15 +162,16 @@ Solo dos roles en el MVP:
 
 **Amigos e invitaciones (v1.8)**
 
-- Al crear o editar la pareja de una partida standalone, el creador puede invitar amigos confirmados a equipo A o B
-- Las invitaciones pendientes ocupan plaza de roster (la partida `planned` empieza a `start_at` aunque queden pendientes)
-- Mis Partidas muestra sección «Invitaciones»; la ficha muestra banner Aceptar/Rechazar y deeplink WhatsApp
-- Rechazar (o cancelar) una invitación en partida `in_progress`/`finished`/`finished_no_result` cancela la partida
+- Al crear o editar la pareja de una partida standalone (`planned`/`in_progress`, creador), se pueden invitar amigos confirmados a equipo A o B (capacidad acotada; pestaña «Añadir amigo» solo si aplica)
+- Las invitaciones pendientes ocupan plaza de roster (la partida `planned` empieza a `start_at` aunque queden pendientes); al aceptar se revalida capacidad
+- Mis Partidas muestra sección «Invitaciones»; la ficha muestra banner Aceptar/Rechazar y modal de compartir (WhatsApp/enlace)
+- Rechazar (o cancelar) una invitación en partida `in_progress`/`finished`/`finished_no_result` (o con resultado confirmado) cancela la partida y voidea el resultado
 - Rivales invitados (pendientes o aceptados) fuerzan resultado `pending_validation` (también en partidas pasadas)
+- Solicitudes de amistad: mensaje ≤200; cooldown tras rechazo reciente; búsqueda por nombre (`111`); eliminar amigo cancela invitaciones pendientes entre el par (`114`)
 
 ### F5 - Descubrir y filtrar (Fase 1 + 6)
 
-- Listado de partidas, torneos y ligas públicas ordenado por fecha
+- Listado de partidas, torneos y ligas **públicas y privadas con contraseña** ordenado por fecha (filtro de visibilidad; las privadas aparecen en Descubrir y requieren contraseña para desbloquear la vista)
 - Filtros: tipo (partidas / torneos / ligas), fecha, ciudad/pueblo, plazas libres, visibilidad, estado
 - Búsqueda por texto en el campo título
 - Paginación de 20 elementos por página
@@ -247,7 +248,7 @@ Solo dos roles en el MVP:
 - Open Elo: retos entre parejas; ranking Elo de pareja; fecha de fin opcional
 - Partidos de liga reutilizan `matches` con `league_id`; mismos flujos de resultado/marcador que partidas normales cuando aplica
 - Privadas con contraseña + grants; admin puede leer sin contraseña
-- Listado en Descubrir (filtro Ligas); invitaciones/compartir según visibilidad
+- Listado en Descubrir (filtro Ligas): ligas públicas y privadas con contraseña; la contraseña desbloquea la vista
 - Lifecycle y recordatorios vía cron (`process_league_lifecycle`, mig. `102`/`106`)
 
 ### F11 - Estadísticas, logros y clasificación (Fase 6)
@@ -728,7 +729,7 @@ Supabase (PostgreSQL + Auth + Storage)
 
 **Contacto**
 
-- CA_CONTACT1: Con teléfono visible en perfil ajeno, en iOS/Android se puede abrir la ficha nativa de nuevo contacto
+- CA_CONTACT1: Con teléfono visible en perfil ajeno, en iOS/Android se puede abrir la ficha nativa de nuevo contacto; en web se puede copiar el número al portapapeles
 
 ---
 

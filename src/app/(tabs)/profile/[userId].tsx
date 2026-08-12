@@ -22,6 +22,7 @@ import {
   useCancelFriendRequest,
   useFriendshipWithUser,
   useRespondFriendRequest,
+  type FriendshipStatus as FriendshipStatusRow,
 } from '@/hooks/useFriends'
 import { useViewableUserMatches } from '@/hooks/useMatches'
 import { useViewableUserProfile } from '@/hooks/useProfile'
@@ -220,7 +221,7 @@ export default function UserProfileScreen() {
   )
 }
 
-type FriendshipStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled' | null
+type FriendshipStatusValue = FriendshipStatusRow['status']
 
 function FriendActionButton({
   status,
@@ -232,7 +233,7 @@ function FriendActionButton({
   onReject,
   onCancel,
 }: {
-  status: FriendshipStatus
+  status: FriendshipStatusValue
   direction: 'sent' | 'received' | null
   pending: boolean
   busy: boolean
@@ -250,7 +251,11 @@ function FriendActionButton({
   }
   if (status === 'accepted') {
     return (
-      <View style={styles.friendBtn} accessibilityLabel="Sois amigos">
+      <View
+        style={styles.friendBtn}
+        accessible
+        accessibilityRole="text"
+        accessibilityLabel="Sois amigos">
         <Ionicons name="checkmark-circle-outline" size={22} color={Colors.primary} />
       </View>
     )

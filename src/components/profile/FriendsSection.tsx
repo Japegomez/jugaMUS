@@ -1,10 +1,27 @@
-import { useState } from 'react'
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type ViewStyle,
+} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { useRouter } from 'expo-router'
 import type { Href } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { SendFriendRequestModal } from '@/components/profile/SendFriendRequestModal'
 import { Button } from '@/components/ui/Button'
 import {
   useCancelFriendRequest,
@@ -12,67 +29,313 @@ import {
   useMyFriends,
   useRemoveFriend,
   useRespondFriendRequest,
+  useSearchUsersByDisplayName,
   type FriendRequestRow,
   type FriendSummary,
+  type UserSearchHit,
 } from '@/hooks/useFriends'
 import { Colors } from '@/theme/colors'
 import { Fonts } from '@/theme/typography'
 
-export function FriendsSection() {
-  const [open, setOpen] = useState(false)
+const FAB_SIZE = 56
+const FAB_GAP_ABOVE_TAB_BAR = 6
+const PANEL_WIDTH = Math.min(360, Math.round(Dimensions.get('window').width * 0.86))
+const SEARCH_DEBOUNCE_MS = 300
+
+type FriendsSectionProps = {
+  bottom?: number
+  right?: number
+}
+
+type InviteTarget = { userId: string; displayName: string } | null
+
+export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const tabBarHeight = useBottomTabBarHeight()
+  const [open, setOpen] = useState(false)
+  const [searchText, setSearchText] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [inviteTarget, setInviteTarget] = useState<InviteTarget>(null)
+  const [slide] = useState(() => new Animated.Value(PANEL_WIDTH))
+  const bottomOffset = bottom ?? tabBarHeight + FAB_GAP_ABOVE_TAB_BAR
+
   const { data: friends, isPending: friendsPending } = useMyFriends()
   const { data: received, isPending: receivedPending } = useMyFriendRequests('received')
   const { data: sent, isPending: sentPending } = useMyFriendRequests('sent')
+  const {
+    data: searchHits,
+    isFetching: searchFetching,
+    isError: searchError,
+  } = useSearchUsersByDisplayName(debouncedQuery)
 
   const receivedCount = received?.length ?? 0
   const sentCount = sent?.length ?? 0
   const friendsCount = friends?.length ?? 0
   const totalPending = receivedCount + sentCount
+  const showSearchResults = debouncedQuery.trim().length >= 2
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchText.trim()), SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [searchText])
+
+  useEffect(() => {
+    if (!open) return
+    slide.setValue(PANEL_WIDTH)
+    Animated.timing(slide, {
+      toValue: 0,
+      duration: 240,
+      useNativeDriver: true,
+    }).start()
+  }, [open, slide])
+
+  const clearDrawerState = () => {
+    setSearchText('')
+    setDebouncedQuery('')
+  }
+
+  const animateDrawerClosed = (onClosed?: () => void) => {
+    Animated.timing(slide, {
+      toValue: PANEL_WIDTH,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) return
+      clearDrawerState()
+      setOpen(false)
+      onClosed?.()
+    })
+  }
+
+  const closeDrawer = () => {
+    animateDrawerClosed(() => setInviteTarget(null))
+  }
+
+  /** iOS cannot present a second RN Modal on top of the friends drawer Modal. */
+  const openInviteFromSearch = (hit: UserSearchHit) => {
+    const target = { userId: hit.user_id, displayName: hit.display_name }
+    animateDrawerClosed(() => {
+      const showInvite = () => setInviteTarget(target)
+      // Give iOS time to dismiss the drawer Modal before presenting pageSheet.
+      if (Platform.OS === 'ios') {
+        setTimeout(showInvite, 120)
+      } else {
+        showInvite()
+      }
+    })
+  }
+
+  const openFriendProfile = (uid: string) => {
+    animateDrawerClosed(() => {
+      setInviteTarget(null)
+      router.push(`/(tabs)/profile/${uid}` as Href)
+    })
+  }
 
   return (
-    <View style={s.card}>
-      <Pressable
-        style={s.header}
-        onPress={() => setOpen((v) => !v)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        accessibilityLabel="Amigos y solicitudes">
-        <Text style={s.cardTitle}>Amigos</Text>
-        <View style={s.headerRight}>
-          <Text style={s.count}>
-            {friendsCount}
-            {totalPending > 0 ? ` · ${totalPending} pendientes` : ''}
-          </Text>
-          <Ionicons
-            name={open ? 'chevron-up-outline' : 'chevron-down-outline'}
-            size={20}
-            color={Colors.textSecondary}
+    <>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={closeDrawer}>
+        <View style={s.backdropContainer}>
+          <Pressable
+            style={s.backdrop}
+            onPress={closeDrawer}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar menú de amigos"
           />
-        </View>
-      </Pressable>
+          <Animated.View
+            style={[
+              s.panel,
+              {
+                width: PANEL_WIDTH,
+                paddingTop: Math.max(insets.top, 16),
+                paddingBottom: Math.max(insets.bottom, 16),
+                transform: [{ translateX: slide }],
+              },
+            ]}>
+            <View style={s.panelHeader}>
+              <View style={s.panelTitleBlock}>
+                <Text style={s.panelTitle}>Amigos</Text>
+                <Text style={s.panelSubtitle}>
+                  {friendsCount} {friendsCount === 1 ? 'amigo' : 'amigos'}
+                  {totalPending > 0 ? ` · ${totalPending} pendientes` : ''}
+                </Text>
+              </View>
+              <Pressable
+                onPress={closeDrawer}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar"
+                hitSlop={8}
+                style={s.closeBtn}>
+                <Ionicons name="close" size={22} color={Colors.textPrimary} />
+              </Pressable>
+            </View>
 
-      {open ? (
-        <View style={s.body}>
-          <FriendsList
-            friends={friends ?? []}
-            pending={friendsPending}
-            onOpenProfile={(uid) => router.push(`/(tabs)/profile/${uid}` as Href)}
-          />
-          <RequestsList
-            title="Solicitudes recibidas"
-            requests={received ?? []}
-            pending={receivedPending}
-            variant="received"
-          />
-          <RequestsList
-            title="Solicitudes enviadas"
-            requests={sent ?? []}
-            pending={sentPending}
-            variant="sent"
-          />
+            <View style={s.searchWrap}>
+              <Ionicons name="search" size={18} color={Colors.textSecondary} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Buscar por nombre…"
+                placeholderTextColor={Colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                style={s.searchInput}
+                accessibilityLabel="Buscar usuarios por nombre"
+              />
+              {searchText.length > 0 ? (
+                <Pressable
+                  onPress={() => setSearchText('')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Limpiar búsqueda"
+                  hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <ScrollView
+              style={s.panelScroll}
+              contentContainerStyle={s.panelScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled">
+              {showSearchResults ? (
+                <UserSearchResults
+                  hits={searchHits ?? []}
+                  loading={searchFetching}
+                  error={searchError}
+                  onInvite={openInviteFromSearch}
+                  onOpenProfile={openFriendProfile}
+                />
+              ) : (
+                <>
+                  <Text style={s.searchHint}>Escribe al menos 2 letras para buscar usuarios.</Text>
+                  <FriendsList
+                    friends={friends ?? []}
+                    pending={friendsPending}
+                    onOpenProfile={openFriendProfile}
+                  />
+                  <RequestsList
+                    title="Solicitudes recibidas"
+                    requests={received ?? []}
+                    pending={receivedPending}
+                    variant="received"
+                  />
+                  <RequestsList
+                    title="Solicitudes enviadas"
+                    requests={sent ?? []}
+                    pending={sentPending}
+                    variant="sent"
+                  />
+                </>
+              )}
+            </ScrollView>
+          </Animated.View>
         </View>
-      ) : null}
+      </Modal>
+
+      <SendFriendRequestModal
+        visible={Boolean(inviteTarget)}
+        addresseeId={inviteTarget?.userId ?? ''}
+        addresseeName={inviteTarget?.displayName ?? ''}
+        onClose={() => setInviteTarget(null)}
+      />
+
+      <View style={[s.fabWrap, { bottom: bottomOffset, right }]} pointerEvents="box-none">
+        <Pressable
+          style={({ pressed }) => [s.fab, pressed && s.fabPressed]}
+          onPress={() => setOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            totalPending > 0
+              ? `Amigos, ${totalPending} solicitudes pendientes`
+              : 'Abrir menú de amigos'
+          }>
+          <Ionicons name="people" size={26} color={Colors.white} />
+          {totalPending > 0 ? (
+            <View style={s.badge}>
+              <Text style={s.badgeText}>{totalPending > 9 ? '9+' : String(totalPending)}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
+    </>
+  )
+}
+
+function UserSearchResults({
+  hits,
+  loading,
+  error,
+  onInvite,
+  onOpenProfile,
+}: {
+  hits: UserSearchHit[]
+  loading: boolean
+  error: boolean
+  onInvite: (hit: UserSearchHit) => void
+  onOpenProfile: (uid: string) => void
+}) {
+  if (loading && hits.length === 0) {
+    return (
+      <View style={s.searchStatus}>
+        <ActivityIndicator color={Colors.primary} />
+        <Text style={s.empty}>Buscando…</Text>
+      </View>
+    )
+  }
+  if (error) {
+    return <Text style={s.empty}>No se pudo buscar usuarios. Inténtalo de nuevo.</Text>
+  }
+  if (hits.length === 0) {
+    return <Text style={s.empty}>No hay usuarios con ese nombre.</Text>
+  }
+
+  return (
+    <View style={s.subGroup}>
+      <Text style={s.subTitle}>Resultados</Text>
+      <View style={s.list}>
+        {hits.map((hit) => {
+          const canInvite = hit.friendship_status == null
+          const actionLabel =
+            hit.friendship_status === 'accepted'
+              ? 'Amigos'
+              : hit.friendship_status === 'pending'
+                ? 'Pendiente'
+                : 'Invitar'
+
+          return (
+            <View key={hit.user_id} style={s.row}>
+              <Pressable
+                style={s.friendProfileTap}
+                onPress={() => onOpenProfile(hit.user_id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Ver perfil de ${hit.display_name}`}>
+                <AvatarCircle uri={hit.photo_url} name={hit.display_name} size={40} />
+                <View style={s.rowInfo}>
+                  <Text style={s.rowName} numberOfLines={1}>
+                    {hit.display_name}
+                  </Text>
+                  {hit.city ? (
+                    <Text style={s.rowSub} numberOfLines={1}>
+                      {hit.city}
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+              <Button
+                title={actionLabel}
+                variant={canInvite ? 'primary' : 'outline'}
+                onPress={() => onInvite(hit)}
+                disabled={!canInvite}
+                style={s.inviteBtn}
+                textStyle={s.smallBtnText}
+              />
+            </View>
+          )
+        })}
+      </View>
     </View>
   )
 }
@@ -111,7 +374,7 @@ function FriendsList({
   if (friends.length === 0) {
     return (
       <Text style={s.empty}>
-        Aún no tienes amigos. Envía una solicitud desde el perfil de un usuario.
+        Aún no tienes amigos. Busca por nombre o envía una solicitud desde el perfil de un usuario.
       </Text>
     )
   }
@@ -163,12 +426,20 @@ function RequestsList({
 }) {
   const respond = useRespondFriendRequest()
   const cancel = useCancelFriendRequest()
+  const [busyIds, setBusyIds] = useState<Set<string>>(() => new Set())
 
-  const handle = async (fn: () => Promise<unknown>, errTitle: string) => {
+  const withBusy = async (friendshipId: string, fn: () => Promise<unknown>, errTitle: string) => {
+    setBusyIds((prev) => new Set(prev).add(friendshipId))
     try {
       await fn()
     } catch (err) {
       Alert.alert(errTitle, err instanceof Error ? err.message : 'Error')
+    } finally {
+      setBusyIds((prev) => {
+        const next = new Set(prev)
+        next.delete(friendshipId)
+        return next
+      })
     }
   }
 
@@ -203,12 +474,13 @@ function RequestsList({
                 <Button
                   title="Aceptar"
                   onPress={() =>
-                    void handle(
+                    void withBusy(
+                      r.friendship_id,
                       () => respond.mutateAsync({ friendshipId: r.friendship_id, accept: true }),
                       'No se pudo aceptar'
                     )
                   }
-                  loading={respond.isPending}
+                  loading={busyIds.has(r.friendship_id)}
                   style={s.smallBtn}
                   textStyle={s.smallBtnText}
                 />
@@ -216,12 +488,13 @@ function RequestsList({
                   title="Rechazar"
                   variant="outline"
                   onPress={() =>
-                    void handle(
+                    void withBusy(
+                      r.friendship_id,
                       () => respond.mutateAsync({ friendshipId: r.friendship_id, accept: false }),
                       'No se pudo rechazar'
                     )
                   }
-                  loading={respond.isPending}
+                  loading={busyIds.has(r.friendship_id)}
                   style={s.smallBtn}
                   textStyle={s.smallBtnText}
                 />
@@ -231,9 +504,13 @@ function RequestsList({
                 title="Cancelar"
                 variant="outline"
                 onPress={() =>
-                  void handle(() => cancel.mutateAsync(r.friendship_id), 'No se pudo cancelar')
+                  void withBusy(
+                    r.friendship_id,
+                    () => cancel.mutateAsync(r.friendship_id),
+                    'No se pudo cancelar'
+                  )
                 }
-                loading={cancel.isPending}
+                loading={busyIds.has(r.friendship_id)}
                 style={s.smallBtn}
                 textStyle={s.smallBtnText}
               />
@@ -245,29 +522,125 @@ function RequestsList({
   )
 }
 
+const webFixedBackdrop = { position: 'fixed' } as unknown as ViewStyle
+
 const s = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  header: {
+  backdropContainer: {
+    flex: 1,
     flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    ...(Platform.OS === 'web' ? webFixedBackdrop : null),
+  },
+  panel: {
+    height: '100%',
+    backgroundColor: Colors.background,
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.border,
+    paddingHorizontal: 16,
+    zIndex: 2,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+  },
+  panelTitleBlock: { flex: 1, gap: 2 },
+  panelTitle: {
+    fontSize: 20,
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
+  },
+  panelSubtitle: {
+    fontSize: 13,
+    fontFamily: Fonts.regular,
+    color: Colors.textSecondary,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+  },
+  searchWrap: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 44,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: Fonts.regular,
+    color: Colors.textPrimary,
+    paddingVertical: 10,
+  },
+  searchHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    paddingBottom: 4,
+  },
+  searchStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingVertical: 8,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardTitle: {
-    fontSize: 13,
-    fontFamily: Fonts.semiBold,
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  panelScroll: { flex: 1 },
+  panelScrollContent: { gap: 20, paddingTop: 16, paddingBottom: 24 },
+  fabWrap: {
+    position: 'absolute',
+    zIndex: 10,
   },
-  count: { fontSize: 13, color: Colors.textSecondary, fontFamily: Fonts.regular },
-  body: { gap: 16, paddingBottom: 8 },
+  fab: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as const } : null),
+  },
+  fabPressed: {
+    opacity: 0.9,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    backgroundColor: Colors.danger,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: Colors.white,
+    fontSize: 11,
+    fontFamily: Fonts.bold,
+    lineHeight: 13,
+  },
   list: { gap: 8 },
   row: {
     flexDirection: 'row',
@@ -280,8 +653,9 @@ const s = StyleSheet.create({
   rowInfo: { flex: 1, gap: 2 },
   rowName: { fontSize: 15, fontFamily: Fonts.medium, color: Colors.textPrimary },
   rowSub: { fontSize: 13, color: Colors.textSecondary },
-  rowActions: { flexDirection: 'row', gap: 8 },
+  rowActions: { flexDirection: 'column', gap: 6 },
   smallBtn: { minHeight: 36, paddingHorizontal: 12 },
+  inviteBtn: { minHeight: 36, paddingHorizontal: 12, alignSelf: 'center' },
   smallBtnText: { fontSize: 13 },
   subGroup: { gap: 6 },
   subTitle: {

@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 12/08/2026 (docs v1.8: amigos, invitaciones a partidas, prefs notif. `108`–`110`)
+> Actualizado: 12/08/2026 (v1.8 follow-ups: search amigos, invite UX/security, mig. `111`–`116`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -542,9 +542,16 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Mis Partidas: sección Invitaciones; ficha: banner Aceptar/Rechazar + deeplink WhatsApp
 - [x] Resultado `pending_validation` cuando hay rivales invitados (también en partidas pasadas); rechazo cancela partida iniciada/finalizada
 - [x] Preferencias push: `notify_on_friend_request` / `notify_on_match_invitation` (perfil + `enqueue_notification` + Edge Function) — mig. `110`
-- [x] PostHog: `friend_request_sent`, `match_invite_sent`, `match_invite_accepted`
+- [x] PostHog: `friend_request_sent`, `friend_request_accepted`, `match_invite_sent`, `match_invite_accepted`
 - [x] Versión app → **1.8.0** (`app.json`, `package.json`)
-- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`)
+- [x] Búsqueda de usuarios por `display_name` (RPC) — mig. `111`
+- [x] Listado de mis invitaciones excluye canceladas — mig. `112`
+- [x] Rechazar invitación con resultado confirmado: void + cancelar partida — mig. `113`
+- [x] Review follow-ups amigos/invites: cooldown tras rechazo, mensaje ≤200, capacidad al aceptar, auth en `list_match_invitations`, `match_effective_roster_filled` SECURITY DEFINER, grants `badge_showcase`, cancel invites al eliminar amigo — mig. `114`/`115`
+- [x] `send_friend_request` devuelve status; `get_profile_with_phone` sin prefs/badge sensibles — mig. `116`
+- [x] UX create/detail: capacidad de invites, `isSubmitting` de punta a punta, modal compartir en ficha, invite tab solo en partida standalone editable
+- [x] Contrato Descubrir: públicas + privadas con contraseña (docs README/REQUIREMENTS); CA_CONTACT1 incluye copia en web
+- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`)
 
 ---
 

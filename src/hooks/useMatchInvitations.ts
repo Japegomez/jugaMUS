@@ -23,6 +23,20 @@ export function matchInvitationsQueryKey(matchId: string) {
   return [...matchQueryKey(matchId), 'invitations'] as const
 }
 
+export function invalidateMatchInvitationQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  opts: { userId?: string; matchId?: string } = {}
+) {
+  const { userId, matchId } = opts
+  if (userId) {
+    queryClient.invalidateQueries({ queryKey: myMatchInvitationsQueryKey(userId) })
+  }
+  if (matchId) {
+    queryClient.invalidateQueries({ queryKey: matchInvitationsQueryKey(matchId) })
+    queryClient.invalidateQueries({ queryKey: matchQueryKey(matchId) })
+  }
+}
+
 // ─── Queries ────────────────────────────────────────────────────────────────
 
 export function useMyMatchInvitations() {
@@ -71,8 +85,18 @@ export function useRespondMatchInvitation() {
   const queryClient = useQueryClient()
   const userId = useAuthStore((s) => s.session?.user.id)
   return useMutation({
-    mutationFn: ({ invitationId, accept }: { invitationId: string; accept: boolean }) =>
-      respondMatchInvitation(invitationId, accept),
+    mutationFn: ({
+      invitationId,
+      accept,
+      matchId,
+      team,
+    }: {
+      invitationId: string
+      accept: boolean
+      matchId?: string
+      team?: string
+    }) =>
+      respondMatchInvitation(invitationId, accept, matchId && team ? { matchId, team } : undefined),
     onSuccess: () => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: myMatchInvitationsQueryKey(userId) })

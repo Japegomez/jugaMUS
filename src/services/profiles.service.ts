@@ -79,13 +79,35 @@ export async function getProfile(userId: string): Promise<ProfileRow> {
   const { data, error } = await supabase
     .from('profiles')
     .select(
-      'id, display_name, city, photo_url, badge_showcase, role, status, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress, notify_on_friend_request, notify_on_match_invitation, created_at, updated_at'
+      'id, display_name, city, photo_url, badge_showcase, role, status, created_at, updated_at'
     )
     .eq('id', userId)
     .single()
 
   if (error) throw new Error(error.message)
-  return { ...(data as Omit<ProfileRow, 'phone_e164'>), phone_e164: '' }
+  return {
+    id: data.id,
+    display_name: data.display_name,
+    city: data.city,
+    photo_url: data.photo_url,
+    badge_showcase: (data.badge_showcase as string[] | null) ?? [],
+    role: data.role,
+    status: data.status,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    phone_e164: '',
+    notify_push: true,
+    notify_on_join: true,
+    notify_on_match_start: true,
+    notify_on_match_edit: true,
+    notify_on_match_cancel: true,
+    notify_on_result: true,
+    notify_on_reminder_24h: true,
+    notify_on_reminder_2h: true,
+    notify_on_reminder_in_progress: true,
+    notify_on_friend_request: true,
+    notify_on_match_invitation: true,
+  }
 }
 
 export async function getPublicProfile(profileId: string): Promise<PublicProfileRow | null> {

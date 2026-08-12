@@ -17,6 +17,7 @@ import {
   listMyFriends,
   removeFriend,
   respondFriendRequest,
+  searchUsersByDisplayName,
   sendFriendRequest,
 } from '@/services/friends.service'
 
@@ -37,7 +38,7 @@ describe('friends.service', () => {
   })
 
   it('sendFriendRequest sends empty message as undefined and tracks event', async () => {
-    mockRpc({ data: 'fs-1', error: null })
+    mockRpc({ data: [{ friendship_id: 'fs-1', status: 'pending' }], error: null })
     const id = await sendFriendRequest('user-2', '   ')
     expect(id).toBe('fs-1')
     expect(supabase.rpc).toHaveBeenCalledWith('send_friend_request', {
@@ -49,8 +50,22 @@ describe('friends.service', () => {
     })
   })
 
+  it('sendFriendRequest tracks accepted when auto-accept occurs', async () => {
+    mockRpc({ data: [{ friendship_id: 'fs-auto', status: 'accepted' }], error: null })
+    const id = await sendFriendRequest('user-2')
+    expect(id).toBe('fs-auto')
+    expect(posthog.capture).toHaveBeenCalledWith('friend_request_accepted', {
+      addressee_id: 'user-2',
+    })
+  })
+
+  it('sendFriendRequest rejects when rpc returns null data', async () => {
+    mockRpc({ data: null, error: null })
+    await expect(sendFriendRequest('user-2')).rejects.toThrow('No se pudo enviar la solicitud')
+  })
+
   it('sendFriendRequest trims a non-empty message', async () => {
-    mockRpc({ data: 'fs-2', error: null })
+    mockRpc({ data: [{ friendship_id: 'fs-2', status: 'pending' }], error: null })
     await sendFriendRequest('user-3', '  hola  ')
     expect(lastRpcArgs()).toEqual({ p_addressee_id: 'user-3', p_message: 'hola' })
   })
@@ -105,12 +120,22 @@ describe('friends.service', () => {
     expect(friends).toEqual([{ user_id: 'u1', display_name: 'A' }])
   })
 
+  it('listMyFriends returns [] when rpc data is null', async () => {
+    mockRpc({ data: null, error: null })
+    await expect(listMyFriends()).resolves.toEqual([])
+  })
+
   it('listMyFriendRequests forwards direction', async () => {
     mockRpc({ data: [], error: null })
     await listMyFriendRequests('sent')
     expect(supabase.rpc).toHaveBeenCalledWith('list_my_friend_requests', {
       p_direction: 'sent',
     })
+  })
+
+  it('listMyFriendRequests returns [] when rpc data is null', async () => {
+    mockRpc({ data: null, error: null })
+    await expect(listMyFriendRequests('received')).resolves.toEqual([])
   })
 
   it('getFriendshipWithUser returns null status when no row', async () => {
@@ -130,5 +155,42 @@ describe('friends.service', () => {
       status: 'pending',
       direction: 'sent',
     })
+  })
+
+  it('searchUsersByDisplayName returns empty for short queries without rpc', async () => {
+    const hits = await searchUsersByDisplayName('a')
+    expect(hits).toEqual([])
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('searchUsersByDisplayName maps friendship fields', async () => {
+    mockRpc({
+      data: [
+        {
+          user_id: 'u2',
+          display_name: 'Ana',
+          city: 'Madrid',
+          photo_url: null,
+          friendship_status: 'pending',
+          friendship_direction: 'sent',
+        },
+      ],
+      error: null,
+    })
+    const hits = await searchUsersByDisplayName('an')
+    expect(supabase.rpc).toHaveBeenCalledWith('search_users_by_display_name', {
+      p_query: 'an',
+      p_limit: 20,
+    })
+    expect(hits).toEqual([
+      {
+        user_id: 'u2',
+        display_name: 'Ana',
+        city: 'Madrid',
+        photo_url: null,
+        friendship_status: 'pending',
+        friendship_direction: 'sent',
+      },
+    ])
   })
 })

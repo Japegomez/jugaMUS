@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   quality:
-    permissions: {}
+    permissions:
+      contents: read
     uses: ./.github/workflows/quality.yml
 
   release-tag:

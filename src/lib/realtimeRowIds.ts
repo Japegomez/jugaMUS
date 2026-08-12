@@ -4,6 +4,8 @@ export type RealtimeListTable =
   | 'match_results'
   | 'tournaments'
   | 'tournament_pairs'
+  | 'friendships'
+  | 'match_invitations'
 
 /** Map a changed row to match/tournament detail query keys. */
 export function idsFromRealtimeRow(
@@ -21,6 +23,7 @@ export function idsFromRealtimeRow(
     }
     case 'match_participants':
     case 'match_results':
+    case 'match_invitations':
       return {
         matchId: typeof record.match_id === 'string' ? record.match_id : undefined,
       }
@@ -32,6 +35,8 @@ export function idsFromRealtimeRow(
       return {
         tournamentId: typeof record.tournament_id === 'string' ? record.tournament_id : undefined,
       }
+    case 'friendships':
+      return {}
     default:
       return {}
   }

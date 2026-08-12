@@ -26,6 +26,7 @@ import { MatchPasswordModal } from '@/components/matches/MatchPasswordModal'
 import { CancelMatchModal } from '@/components/matches/CancelMatchModal'
 import { IncompleteRosterStartModal } from '@/components/matches/IncompleteRosterStartModal'
 import { LeaveMatchModal } from '@/components/matches/LeaveMatchModal'
+import { ShareMatchInviteModal } from '@/components/matches/ShareMatchInviteModal'
 import { DisputeResultModal } from '@/components/matches/DisputeResultModal'
 import { ResultCard } from '@/components/matches/ResultCard'
 import { RecordResultModal } from '@/components/matches/RecordResultModal'
@@ -46,7 +47,12 @@ import {
   useStartMatch,
   useUpdateMatchTeam,
 } from '@/hooks/useMatches'
-import { useMyMatchInvitations, useRespondMatchInvitation } from '@/hooks/useMatchInvitations'
+import {
+  useMatchInvitations,
+  useMyMatchInvitations,
+  useRespondMatchInvitation,
+  type MatchInvitationRow,
+} from '@/hooks/useMatchInvitations'
 import { useLeague, useRecordLeagueMatchAsReferee } from '@/hooks/useLeagues'
 import { useTournament, useRecordTournamentMatchAsReferee } from '@/hooks/useTournaments'
 import { useMatchResult, useSubmitConfirmation, useSubmitResult } from '@/hooks/useResults'
@@ -284,6 +290,7 @@ interface TeamSectionProps {
   teamLabel: string
   freeSlots: number
   participants: ParticipantWithProfile[]
+  pendingInvites: MatchInvitationRow[]
   rosterText: {
     team_a_player_1: string | null
     team_a_player_2: string | null
@@ -306,11 +313,23 @@ function TextPlayerRow({ name }: { name: string }) {
   )
 }
 
+function PendingInviteRow({ name }: { name: string }) {
+  return (
+    <View style={pendingInvite_s.row}>
+      <Text style={pendingInvite_s.name} numberOfLines={1}>
+        {name}
+      </Text>
+      <Text style={pendingInvite_s.badge}>Pendiente</Text>
+    </View>
+  )
+}
+
 function TeamSection({
   team,
   teamLabel,
   freeSlots,
   participants,
+  pendingInvites,
   rosterText,
   matchId,
   canRevealPhone,
@@ -320,6 +339,7 @@ function TeamSection({
   onEdit,
 }: TeamSectionProps) {
   const entries = collectTeamRosterEntries(rosterText, participants, team)
+  const hasRoster = entries.length > 0 || pendingInvites.length > 0
 
   return (
     <View style={team_s.wrap}>
@@ -342,28 +362,36 @@ function TeamSection({
           </Text>
         </View>
       </View>
-      {entries.length === 0 ? (
+      {!hasRoster ? (
         <Text style={team_s.empty}>Sin jugadores aún</Text>
       ) : (
-        entries.map((entry) => {
-          if (entry.kind === 'text') {
-            return <TextPlayerRow key={`text-${team}-${entry.name}`} name={entry.name} />
-          }
+        <>
+          {entries.map((entry) => {
+            if (entry.kind === 'text') {
+              return <TextPlayerRow key={`text-${team}-${entry.name}`} name={entry.name} />
+            }
 
-          // Guard defensivo: evita crash si el roster viene incompleto.
-          if (!entry.participant) return null
+            // Guard defensivo: evita crash si el roster viene incompleto.
+            if (!entry.participant) return null
 
-          return (
-            <ParticipantCard
-              key={entry.participant.id}
-              participant={entry.participant}
-              matchId={matchId}
-              canRevealPhone={canRevealPhone}
-              currentUserId={currentUserId}
-              onReportUser={onReportUser}
+            return (
+              <ParticipantCard
+                key={entry.participant.id}
+                participant={entry.participant}
+                matchId={matchId}
+                canRevealPhone={canRevealPhone}
+                currentUserId={currentUserId}
+                onReportUser={onReportUser}
+              />
+            )
+          })}
+          {pendingInvites.map((invite) => (
+            <PendingInviteRow
+              key={invite.invitation_id}
+              name={invite.invitee_name || 'Amigo invitado'}
             />
-          )
-        })
+          ))}
+        </>
       )}
     </View>
   )
@@ -395,6 +423,28 @@ const textPlayer_s = StyleSheet.create({
     borderColor: Colors.border,
   },
   name: { fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textPrimary },
+})
+
+const pendingInvite_s = StyleSheet.create({
+  row: {
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  name: { flex: 1, fontSize: 15, fontFamily: Fonts.semiBold, color: Colors.textSecondary },
+  badge: {
+    fontSize: 12,
+    fontFamily: Fonts.semiBold,
+    color: Colors.statusPending,
+  },
 })
 
 // ─── Join Modal ───────────────────────────────────────────────────────────────
@@ -497,12 +547,13 @@ const jm = StyleSheet.create({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
-  const { id, openResult, gamesA, gamesB, confirmResult } = useLocalSearchParams<{
+  const { id, openResult, gamesA, gamesB, confirmResult, shareInvite } = useLocalSearchParams<{
     id: string
     openResult?: string
     gamesA?: string
     gamesB?: string
     confirmResult?: string
+    shareInvite?: string
   }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -535,6 +586,7 @@ export default function MatchDetailScreen() {
     refetch: refetchResult,
   } = useMatchResult(id)
   const { data: myInvitations } = useMyMatchInvitations()
+  const { data: matchInvitations } = useMatchInvitations(id)
   const respondInvitation = useRespondMatchInvitation()
 
   useFocusEffect(
@@ -572,6 +624,7 @@ export default function MatchDetailScreen() {
   const [editTeamVisible, setEditTeamVisible] = useState(false)
   const [editingTeam, setEditingTeam] = useState<string | null>(null)
   const [passwordModalDismissed, setPasswordModalDismissed] = useState(false)
+  const [shareInviteVisible, setShareInviteVisible] = useState(false)
 
   const needsPrivateAccess = Boolean(
     match &&
@@ -657,8 +710,14 @@ export default function MatchDetailScreen() {
     const active = match.participants.filter((p) => p.left_at === null)
     const myParticipation = active.find((p) => p.user_id === userId)
     const otherRegistered = active.filter((p) => p.user_id !== userId)
+    const hasOutstandingAccountInvites = (matchInvitations ?? []).some(
+      (inv) => inv.status === 'pending'
+    )
     const isPersonalMatch =
-      !match.tournament_id && match.creator_id === userId && otherRegistered.length === 0
+      !match.tournament_id &&
+      match.creator_id === userId &&
+      otherRegistered.length === 0 &&
+      !hasOutstandingAccountInvites
 
     const frame = requestAnimationFrame(() => {
       setLockedScoreboardPrefill(prefill)
@@ -670,7 +729,16 @@ export default function MatchDetailScreen() {
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [match, scoreboardPrefill, submitResultVisible, recordResultVisible, userId, id, router])
+  }, [
+    match,
+    scoreboardPrefill,
+    submitResultVisible,
+    recordResultVisible,
+    userId,
+    id,
+    router,
+    matchInvitations,
+  ])
 
   // Deep link / redirect: ?confirmResult=1 opens the result confirmation modal
   // when the viewer is on the rival team of a pending_validation result.
@@ -692,6 +760,16 @@ export default function MatchDetailScreen() {
     })
     return () => cancelAnimationFrame(frame)
   }, [confirmResult, match, resultBundle, userId, router])
+
+  useEffect(() => {
+    const flag = Array.isArray(shareInvite) ? shareInvite[0] : shareInvite
+    if (flag !== '1') return
+    const frame = requestAnimationFrame(() => {
+      setShareInviteVisible(true)
+      router.setParams({ shareInvite: undefined } as never)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [shareInvite, router])
 
   if (isLoading) {
     return (
@@ -721,7 +799,14 @@ export default function MatchDetailScreen() {
 
   const slotsA = freeTeamSlots(match, match.participants, TEAM.A)
   const slotsB = freeTeamSlots(match, match.participants, TEAM.B)
-  const hasSlots = slotsA > 0 || slotsB > 0
+  const pendingInvites = (matchInvitations ?? []).filter(
+    (inv) => inv.status === 'pending' && match.status !== MATCH_STATUS.CANCELLED
+  )
+  const pendingInvitesA = pendingInvites.filter((inv) => inv.team === TEAM.A)
+  const pendingInvitesB = pendingInvites.filter((inv) => inv.team === TEAM.B)
+  const displaySlotsA = Math.max(0, slotsA - pendingInvitesA.length)
+  const displaySlotsB = Math.max(0, slotsB - pendingInvitesB.length)
+  const hasSlots = displaySlotsA > 0 || displaySlotsB > 0
   const canJoin =
     isPlanned &&
     hasSlots &&
@@ -743,7 +828,15 @@ export default function MatchDetailScreen() {
   const rivalHasRegisteredParticipants = activeParticipants.some(
     (p) => p.user_id && p.team !== myParticipation?.team
   )
-  const isPersonalMatch = !match.tournament_id && isCreator && otherRegistered.length === 0
+  const rivalHasPendingInvites = pendingInvitesB.length > 0
+  // Pending account invites block direct close (record_match_result_direct);
+  // those matches must go through submit_match_result / pending_validation.
+  const hasOutstandingAccountInvites = pendingInvites.length > 0
+  const isPersonalMatch =
+    !match.tournament_id &&
+    isCreator &&
+    otherRegistered.length === 0 &&
+    !hasOutstandingAccountInvites
 
   // Las partidas de liga round-robin se quedan "planned" hasta que se juegan;
   // el backend las auto-inicia al recibir el resultado.
@@ -811,8 +904,15 @@ export default function MatchDetailScreen() {
     !myResultConfirmation
   )
 
+  const matchId = Array.isArray(id) ? id[0] : id
+  // list_my_match_invitations only returns pending invites; `status` is match status.
   const myPendingInvitation =
-    (myInvitations ?? []).find((inv) => inv.match_id === id && inv.status === 'pending') ?? null
+    (myInvitations ?? []).find(
+      (inv) =>
+        inv.match_id === matchId &&
+        inv.status !== MATCH_STATUS.CANCELLED &&
+        match.status !== MATCH_STATUS.CANCELLED
+    ) ?? null
 
   const handleAcceptInvitation = async () => {
     if (!myPendingInvitation) return
@@ -820,6 +920,8 @@ export default function MatchDetailScreen() {
       await respondInvitation.mutateAsync({
         invitationId: myPendingInvitation.invitation_id,
         accept: true,
+        matchId: myPendingInvitation.match_id,
+        team: myPendingInvitation.team,
       })
       const refreshed = await refetchMatch()
       const refreshedResult = await refetchResult()
@@ -846,6 +948,8 @@ export default function MatchDetailScreen() {
       await respondInvitation.mutateAsync({
         invitationId: myPendingInvitation.invitation_id,
         accept: false,
+        matchId: myPendingInvitation.match_id,
+        team: myPendingInvitation.team,
       })
     } catch (err) {
       Alert.alert('No se pudo rechazar', err instanceof Error ? err.message : 'Error')
@@ -860,6 +964,12 @@ export default function MatchDetailScreen() {
   const status = matchStatusDisplay(match)
   const teamAName = resolveTeamName(match, TEAM.A, match.participants)
   const teamBName = resolveTeamName(match, TEAM.B, match.participants)
+  const inviteTeamLabel =
+    myPendingInvitation?.team === TEAM.A
+      ? teamAName
+      : myPendingInvitation?.team === TEAM.B
+        ? teamBName
+        : null
 
   const { canEdit: canEditTeam, teams: editableTeams } = canEditMatchTeam(
     match,
@@ -1106,6 +1216,52 @@ export default function MatchDetailScreen() {
           </Pressable>
         </View>
 
+        {myPendingInvitation ? (
+          <View style={s.inviteBanner}>
+            <Text style={s.inviteBannerText}>
+              {myPendingInvitation.inviter_name} te ha invitado a unirte a{' '}
+              {inviteTeamLabel ?? 'esta partida'}.
+            </Text>
+            <View style={s.inviteBannerActions}>
+              <Button
+                title="Aceptar"
+                onPress={() => void handleAcceptInvitation()}
+                loading={respondInvitation.isPending}
+                style={s.inviteBtn}
+              />
+              <Button
+                title="Rechazar"
+                variant="outline"
+                onPress={() => void handleRejectInvitation()}
+                disabled={respondInvitation.isPending}
+                style={s.inviteBtn}
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {canValidateResult && latestResult ? (
+          <View style={s.inviteBanner}>
+            <Text style={s.inviteBannerText}>
+              {submitterDisplayName(match.participants, latestResult.submitted_by_user_id)} ha
+              propuesto el resultado {latestResult.team_a_games}–{latestResult.team_b_games}.
+              Aprueba o disputa el marcador.
+            </Text>
+            <View style={s.inviteBannerActions}>
+              <Button title="Aprobar" onPress={handleApproveResultPress} style={s.inviteBtn} />
+              <Button
+                title="Disputar"
+                variant="outline"
+                onPress={() => {
+                  setApproveResultVisible(false)
+                  setDisputeResultVisible(true)
+                }}
+                style={s.inviteBtn}
+              />
+            </View>
+          </View>
+        ) : null}
+
         {/* Header */}
         <View style={s.headerRow}>
           <View style={s.headerText}>
@@ -1159,30 +1315,6 @@ export default function MatchDetailScreen() {
           />
         </View>
 
-        {myPendingInvitation ? (
-          <View style={s.inviteBanner}>
-            <Text style={s.inviteBannerText}>
-              {myPendingInvitation.inviter_name} te ha invitado a participar en la partida y unirte
-              a {myPendingInvitation.team === TEAM.A ? 'su equipo' : 'al equipo rival'}.
-            </Text>
-            <View style={s.inviteBannerActions}>
-              <Button
-                title="Aceptar"
-                onPress={() => void handleAcceptInvitation()}
-                loading={respondInvitation.isPending}
-                style={s.inviteBtn}
-              />
-              <Button
-                title="Rechazar"
-                variant="outline"
-                onPress={() => void handleRejectInvitation()}
-                disabled={respondInvitation.isPending}
-                style={s.inviteBtn}
-              />
-            </View>
-          </View>
-        ) : null}
-
         {!needsPrivateAccess ? (
           <ShareInviteButton
             kind="match"
@@ -1220,8 +1352,9 @@ export default function MatchDetailScreen() {
               <TeamSection
                 team={TEAM.A}
                 teamLabel={teamAName}
-                freeSlots={slotsA}
+                freeSlots={displaySlotsA}
                 participants={match.participants}
+                pendingInvites={pendingInvitesA}
                 rosterText={{
                   team_a_player_1: match.team_a_player_1,
                   team_a_player_2: match.team_a_player_2,
@@ -1247,8 +1380,9 @@ export default function MatchDetailScreen() {
               <TeamSection
                 team={TEAM.B}
                 teamLabel={teamBName}
-                freeSlots={slotsB}
+                freeSlots={displaySlotsB}
                 participants={match.participants}
+                pendingInvites={pendingInvitesB}
                 rosterText={{
                   team_a_player_1: match.team_a_player_1,
                   team_a_player_2: match.team_a_player_2,
@@ -1396,25 +1530,6 @@ export default function MatchDetailScreen() {
               style={s.actionBtn}
             />
           ) : null}
-
-          {canValidateResult ? (
-            <>
-              <Button
-                title="Aprobar resultado"
-                onPress={handleApproveResultPress}
-                style={s.actionBtn}
-              />
-              <Button
-                title="Disputar resultado"
-                variant="secondary"
-                onPress={() => {
-                  setApproveResultVisible(false)
-                  setDisputeResultVisible(true)
-                }}
-                style={s.actionBtn}
-              />
-            </>
-          ) : null}
         </View>
 
         {userId && !isCreator ? (
@@ -1439,8 +1554,8 @@ export default function MatchDetailScreen() {
         visible={joinModalVisible}
         onClose={() => setJoinModalVisible(false)}
         onJoin={handleJoin}
-        slotsA={slotsA}
-        slotsB={slotsB}
+        slotsA={displaySlotsA}
+        slotsB={displaySlotsB}
         teamAName={teamAName}
         teamBName={teamBName}
         loading={joinMatch.isPending}
@@ -1459,6 +1574,14 @@ export default function MatchDetailScreen() {
         onClose={() => setIncompleteRosterStartVisible(false)}
       />
 
+      <ShareMatchInviteModal
+        visible={shareInviteVisible}
+        matchId={Array.isArray(id) ? id[0] : id}
+        title={match.title}
+        meta={`${match.city} · ${formatDate(match.start_at)}`}
+        onClose={() => setShareInviteVisible(false)}
+      />
+
       <LeaveMatchModal
         visible={leaveMatchVisible}
         onClose={() => setLeaveMatchVisible(false)}
@@ -1471,9 +1594,16 @@ export default function MatchDetailScreen() {
         teamLabel={editTeamLabel}
         customTeamName={editCustomTeamName}
         slots={editTeamSlots}
-        matchId={id}
+        matchId={
+          !match.tournament_id && !match.league_id && isCreator && (isPlanned || isInProgress)
+            ? id
+            : undefined
+        }
         team={editingTeam ?? undefined}
-        freeSlots={editingTeam === TEAM.A ? slotsA : editingTeam === TEAM.B ? slotsB : 0}
+        freeSlots={
+          editingTeam === TEAM.A ? displaySlotsA : editingTeam === TEAM.B ? displaySlotsB : 0
+        }
+        matchTitle={match.title}
         onClose={closeEditTeam}
         onSubmit={handleEditTeam}
         loading={updateMatchTeam.isPending}
@@ -1497,7 +1627,7 @@ export default function MatchDetailScreen() {
           teamAName={teamAName}
           teamBName={teamBName}
           durationTargetGames={match.duration_target_games}
-          rivalAutoConfirms={!rivalHasRegisteredParticipants}
+          rivalAutoConfirms={!rivalHasRegisteredParticipants && !rivalHasPendingInvites}
           loading={submitResultMut.isPending}
           initialTeamAGames={resultPrefill?.teamAGames}
           initialTeamBGames={resultPrefill?.teamBGames}
@@ -1660,7 +1790,7 @@ const s = StyleSheet.create({
     backgroundColor: Colors.wonBackground,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.primary,
     gap: 10,

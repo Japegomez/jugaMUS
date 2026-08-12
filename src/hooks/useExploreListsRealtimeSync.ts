@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 
 import { useAuthStore } from '@/hooks/useAuth'
+import { invalidateFriendsQueries } from '@/hooks/useFriends'
+import { invalidateMatchInvitationQueries } from '@/hooks/useMatchInvitations'
 import {
   idsFromRealtimeRow,
   invalidateAllExploreListQueries,
@@ -17,6 +19,8 @@ const REALTIME_TABLES: readonly RealtimeListTable[] = [
   'match_results',
   'tournaments',
   'tournament_pairs',
+  'friendships',
+  'match_invitations',
 ]
 
 function readRecord(payload: {
@@ -28,7 +32,8 @@ function readRecord(payload: {
 
 /**
  * Subscribes to Postgres changes and invalidates React Query caches for
- * Descubrir, Mis partidas, profile history, and tournament/match detail screens.
+ * Descubrir, Mis partidas, profile history, tournament/match detail screens,
+ * friends, and match invitations.
  */
 export function useExploreListsRealtimeSync(): void {
   const queryClient = useQueryClient()
@@ -37,6 +42,8 @@ export function useExploreListsRealtimeSync(): void {
   const pendingRef = useRef<{
     matchId?: string
     tournamentId?: string
+    friendships?: boolean
+    matchInvitations?: boolean
   }>({})
 
   useEffect(() => {
@@ -46,11 +53,26 @@ export function useExploreListsRealtimeSync(): void {
       debounceRef.current = null
       const pending = pendingRef.current
       pendingRef.current = {}
-      invalidateAllExploreListQueries(queryClient, {
-        userId,
-        matchId: pending.matchId,
-        tournamentId: pending.tournamentId,
-      })
+
+      if (pending.friendships) {
+        invalidateFriendsQueries(queryClient, userId)
+      }
+
+      if (pending.matchInvitations) {
+        invalidateMatchInvitationQueries(queryClient, {
+          userId,
+          matchId: pending.matchId,
+        })
+      }
+
+      // Match/tournament list+detail sync (also when an invite changes roster/status).
+      if (pending.matchId || pending.tournamentId || pending.matchInvitations) {
+        invalidateAllExploreListQueries(queryClient, {
+          userId,
+          matchId: pending.matchId,
+          tournamentId: pending.tournamentId,
+        })
+      }
     }
 
     const scheduleInvalidate = (
@@ -60,9 +82,24 @@ export function useExploreListsRealtimeSync(): void {
         old?: Record<string, unknown>
       }
     ) => {
-      const ids = idsFromRealtimeRow(table, readRecord(payload))
-      if (ids.matchId) pendingRef.current.matchId = ids.matchId
-      if (ids.tournamentId) pendingRef.current.tournamentId = ids.tournamentId
+      if (table === 'friendships') {
+        pendingRef.current.friendships = true
+      } else if (table === 'match_invitations') {
+        pendingRef.current.matchInvitations = true
+        const ids = idsFromRealtimeRow(table, readRecord(payload))
+        if (ids.matchId) pendingRef.current.matchId = ids.matchId
+      } else {
+        const ids = idsFromRealtimeRow(table, readRecord(payload))
+        if (ids.matchId) pendingRef.current.matchId = ids.matchId
+        if (ids.tournamentId) pendingRef.current.tournamentId = ids.tournamentId
+        // Match cancel cancels pending invites via trigger; refresh invite lists promptly.
+        if (table === 'matches') {
+          const row = readRecord(payload)
+          if (row?.status === 'cancelled') {
+            pendingRef.current.matchInvitations = true
+          }
+        }
+      }
 
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(flush, DEBOUNCE_MS)

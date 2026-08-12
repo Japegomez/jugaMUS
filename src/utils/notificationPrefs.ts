@@ -14,6 +14,8 @@ export type NotificationPrefState = {
 
 export type NotificationPrefField = keyof NotificationPrefState
 
+type EventField = Exclude<NotificationPrefField, 'notify_push'>
+
 const EVENT_FIELDS = [
   'notify_on_join',
   'notify_on_match_start',
@@ -25,7 +27,24 @@ const EVENT_FIELDS = [
   'notify_on_reminder_in_progress',
   'notify_on_friend_request',
   'notify_on_match_invitation',
-] as const satisfies ReadonlyArray<Exclude<NotificationPrefField, 'notify_push'>>
+] as const satisfies ReadonlyArray<EventField>
+
+/** Compile-time guard: EVENT_FIELDS must list every EventField member. */
+type _AssertEventFieldsComplete =
+  Exclude<EventField, (typeof EVENT_FIELDS)[number]> extends never ? true : never
+const _eventFieldsComplete: _AssertEventFieldsComplete = true
+void _eventFieldsComplete
+
+function eventPrefsFrom(
+  profile: NotificationPrefState,
+  override?: Partial<Pick<NotificationPrefState, EventField>>
+): Omit<NotificationPrefState, 'notify_push'> {
+  const next = {} as Omit<NotificationPrefState, 'notify_push'>
+  for (const field of EVENT_FIELDS) {
+    next[field] = override?.[field] ?? profile[field]
+  }
+  return next
+}
 
 const ALL_ON: NotificationPrefState = {
   notify_push: true,
@@ -70,19 +89,9 @@ export function buildNotifUpdates(
     return value ? { ...ALL_ON } : { ...ALL_OFF }
   }
 
-  return withMasterPush({
-    notify_on_join: profile.notify_on_join,
-    notify_on_match_start: profile.notify_on_match_start,
-    notify_on_match_edit: profile.notify_on_match_edit,
-    notify_on_match_cancel: profile.notify_on_match_cancel,
-    notify_on_result: profile.notify_on_result,
-    notify_on_reminder_24h: profile.notify_on_reminder_24h,
-    notify_on_reminder_2h: profile.notify_on_reminder_2h,
-    notify_on_reminder_in_progress: profile.notify_on_reminder_in_progress,
-    notify_on_friend_request: profile.notify_on_friend_request,
-    notify_on_match_invitation: profile.notify_on_match_invitation,
-    [field]: value,
-  })
+  return withMasterPush(
+    eventPrefsFrom(profile, { [field]: value } as Partial<Pick<NotificationPrefState, EventField>>)
+  )
 }
 
 /** Toggle 24h / 2h reminder chips (independent; both can be on). */
@@ -91,16 +100,10 @@ export function buildReminderTimingUpdates(
   timing: '24h' | '2h',
   enabled: boolean
 ): NotificationPrefState {
-  return withMasterPush({
-    notify_on_join: profile.notify_on_join,
-    notify_on_match_start: profile.notify_on_match_start,
-    notify_on_match_edit: profile.notify_on_match_edit,
-    notify_on_match_cancel: profile.notify_on_match_cancel,
-    notify_on_result: profile.notify_on_result,
-    notify_on_reminder_24h: timing === '24h' ? enabled : profile.notify_on_reminder_24h,
-    notify_on_reminder_2h: timing === '2h' ? enabled : profile.notify_on_reminder_2h,
-    notify_on_reminder_in_progress: profile.notify_on_reminder_in_progress,
-    notify_on_friend_request: profile.notify_on_friend_request,
-    notify_on_match_invitation: profile.notify_on_match_invitation,
-  })
+  return withMasterPush(
+    eventPrefsFrom(profile, {
+      notify_on_reminder_24h: timing === '24h' ? enabled : profile.notify_on_reminder_24h,
+      notify_on_reminder_2h: timing === '2h' ? enabled : profile.notify_on_reminder_2h,
+    })
+  )
 }

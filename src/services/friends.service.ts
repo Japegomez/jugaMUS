@@ -1,4 +1,4 @@
-import { trackFriendRequestSent } from '@/lib/analytics'
+import { trackFriendRequestAccepted, trackFriendRequestSent } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -27,6 +27,15 @@ export type FriendshipStatus = {
   direction: 'sent' | 'received' | null
 }
 
+export type UserSearchHit = {
+  user_id: string
+  display_name: string
+  city: string | null
+  photo_url: string | null
+  friendship_status: 'pending' | 'accepted' | null
+  friendship_direction: 'sent' | 'received' | null
+}
+
 // ─── Error mapping ────────────────────────────────────────────────────────────
 
 function mapFriendRpcError(message: string): string {
@@ -43,6 +52,9 @@ function mapFriendRpcError(message: string): string {
   if (message.includes('not_addressee')) return 'No puedes responder a esta solicitud'
   if (message.includes('not_requester')) return 'Solo puedes cancelar tus propias solicitudes'
   if (message.includes('not_pending')) return 'Esta solicitud ya no está pendiente'
+  if (message.includes('request_recently_rejected')) {
+    return 'Esta solicitud fue rechazada hace poco. Espera un tiempo antes de volver a enviarla'
+  }
   return message
 }
 
@@ -54,9 +66,24 @@ export async function sendFriendRequest(addresseeId: string, message?: string): 
     p_message: message?.trim() ? message.trim() : undefined,
   })
   if (error) throw new Error(mapFriendRpcError(error.message))
-  if (!data) throw new Error('No se pudo enviar la solicitud')
-  trackFriendRequestSent(addresseeId)
-  return data as string
+  const row = Array.isArray(data) ? data[0] : data
+  const friendshipId =
+    row && typeof row === 'object' && 'friendship_id' in row
+      ? (row as { friendship_id: string; status?: string }).friendship_id
+      : typeof data === 'string'
+        ? data
+        : null
+  if (!friendshipId) throw new Error('No se pudo enviar la solicitud')
+  const status =
+    row && typeof row === 'object' && 'status' in row
+      ? (row as { status?: string }).status
+      : 'pending'
+  if (status === 'accepted') {
+    trackFriendRequestAccepted(addresseeId)
+  } else {
+    trackFriendRequestSent(addresseeId)
+  }
+  return friendshipId
 }
 
 export async function respondFriendRequest(friendshipId: string, accept: boolean): Promise<void> {
@@ -95,6 +122,44 @@ export async function listMyFriendRequests(
   })
   if (error) throw new Error(mapFriendRpcError(error.message))
   return (data ?? []) as FriendRequestRow[]
+}
+
+export async function searchUsersByDisplayName(
+  query: string,
+  limit = 20
+): Promise<UserSearchHit[]> {
+  const trimmed = query.trim()
+  if (trimmed.length < 2) return []
+
+  const { data, error } = await supabase.rpc('search_users_by_display_name', {
+    p_query: trimmed,
+    p_limit: limit,
+  })
+  if (error) throw new Error(mapFriendRpcError(error.message))
+
+  return (
+    (data ?? []) as Array<{
+      user_id: string
+      display_name: string
+      city: string | null
+      photo_url: string | null
+      friendship_status: string | null
+      friendship_direction: string | null
+    }>
+  ).map((row) => ({
+    user_id: row.user_id,
+    display_name: row.display_name,
+    city: row.city,
+    photo_url: row.photo_url,
+    friendship_status:
+      row.friendship_status === 'pending' || row.friendship_status === 'accepted'
+        ? row.friendship_status
+        : null,
+    friendship_direction:
+      row.friendship_direction === 'sent' || row.friendship_direction === 'received'
+        ? row.friendship_direction
+        : null,
+  }))
 }
 
 export async function getFriendshipWithUser(otherUserId: string): Promise<FriendshipStatus> {
