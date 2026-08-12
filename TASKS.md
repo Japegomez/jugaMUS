@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 11/08/2026 (docs v1.7: ligas, stats, contactos, delete-account `105`)
+> Actualizado: 12/08/2026 (docs v1.8: amigos, invitaciones a partidas, prefs notif. `108`–`110`)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -25,6 +25,7 @@
 | Hotfix cuadro torneos  | Completada | Cuadro por parejas, lifecycle BD, marcador responsive; v1.4.5                    |
 | Minor partidas pasadas | Completada | Crear partida con resultado si `start_at` pasado; orden parejas; locales; v1.5.0 |
 | Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
+| Release 1.8            | Completada | Amigos, invitaciones a partidas, prefs notif. friend/invite; v1.8.0              |
 
 ---
 
@@ -533,6 +534,17 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Security: lifecycle ligas solo cron + gate refresh stats — mig. `106`
 - [x] Dependabot #140/#141 + versión app → **1.7.0**
 - [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`) en `develop`
+
+### Release 1.8 — amigos e invitaciones a partidas (ago. 2026)
+
+- [x] Sistema de amigos: solicitudes con mensaje, aceptar/rechazar/cancelar, eliminar amistad — mig. `108` / `110`
+- [x] Invitaciones a partidas (pareja/rival) al crear o editar equipo; pendientes ocupan plaza de roster — mig. `109`
+- [x] Mis Partidas: sección Invitaciones; ficha: banner Aceptar/Rechazar + deeplink WhatsApp
+- [x] Resultado `pending_validation` cuando hay rivales invitados (también en partidas pasadas); rechazo cancela partida iniciada/finalizada
+- [x] Preferencias push: `notify_on_friend_request` / `notify_on_match_invitation` (perfil + `enqueue_notification` + Edge Function) — mig. `110`
+- [x] PostHog: `friend_request_sent`, `match_invite_sent`, `match_invite_accepted`
+- [x] Versión app → **1.8.0** (`app.json`, `package.json`)
+- [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`)
 
 ---
 
