@@ -16,6 +16,7 @@ import { requestAppStoreRating } from '@/lib/storeReview'
 import { DeleteAccountModal } from '@/components/DeleteAccountModal'
 import { FeedbackModal } from '@/components/FeedbackModal'
 import { AvatarCircle } from '@/components/profile/AvatarCircle'
+import { FriendsSection } from '@/components/profile/FriendsSection'
 import { MatchHistoryList } from '@/components/profile/MatchHistoryList'
 import { ProfileStatsCard } from '@/components/stats/ProfileStatsCard'
 import { BadgeUnlockPopup } from '@/components/stats/BadgeUnlockPopup'
@@ -203,6 +204,8 @@ export default function ProfileScreen() {
           }
         />
       </View>
+
+      <FriendsSection />
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Notificaciones</Text>
