@@ -7,6 +7,7 @@ import {
   getFriendshipWithUser,
   listMyFriendRequests,
   listMyFriends,
+  removeFriend,
   respondFriendRequest,
   sendFriendRequest,
   type FriendRequestRow,
@@ -94,6 +95,15 @@ export function useCancelFriendRequest() {
   const userId = useAuthStore((s) => s.session?.user.id)
   return useMutation({
     mutationFn: (friendshipId: string) => cancelFriendRequest(friendshipId),
+    onSuccess: () => invalidateFriendsQueries(queryClient, userId),
+  })
+}
+
+export function useRemoveFriend() {
+  const queryClient = useQueryClient()
+  const userId = useAuthStore((s) => s.session?.user.id)
+  return useMutation({
+    mutationFn: (otherUserId: string) => removeFriend(otherUserId),
     onSuccess: () => invalidateFriendsQueries(queryClient, userId),
   })
 }

@@ -534,6 +534,8 @@ export type Database = {
           notify_on_reminder_2h: boolean
           notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
+          notify_on_friend_request: boolean
+          notify_on_match_invitation: boolean
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
@@ -556,6 +558,8 @@ export type Database = {
           notify_on_reminder_2h?: boolean
           notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
+          notify_on_friend_request?: boolean
+          notify_on_match_invitation?: boolean
           notify_push?: boolean
           phone_e164: string
           photo_url?: string | null
@@ -578,6 +582,8 @@ export type Database = {
           notify_on_reminder_2h?: boolean
           notify_on_reminder_in_progress?: boolean
           notify_on_result?: boolean
+          notify_on_friend_request?: boolean
+          notify_on_match_invitation?: boolean
           notify_push?: boolean
           phone_e164?: string
           photo_url?: string | null
@@ -1805,6 +1811,8 @@ export type Database = {
           notify_on_reminder_2h: boolean
           notify_on_reminder_in_progress: boolean
           notify_on_result: boolean
+          notify_on_friend_request: boolean
+          notify_on_match_invitation: boolean
           notify_push: boolean
           phone_e164: string
           photo_url: string | null
@@ -2111,6 +2119,10 @@ export type Database = {
       }
       cancel_friend_request: {
         Args: { p_friendship_id: string }
+        Returns: undefined
+      }
+      remove_friend: {
+        Args: { p_other_user_id: string }
         Returns: undefined
       }
       cancel_match_invitation: {

@@ -10,6 +10,7 @@ import {
   useCancelFriendRequest,
   useMyFriendRequests,
   useMyFriends,
+  useRemoveFriend,
   useRespondFriendRequest,
   type FriendRequestRow,
   type FriendSummary,
@@ -85,6 +86,25 @@ function FriendsList({
   pending: boolean
   onOpenProfile: (uid: string) => void
 }) {
+  const removeFriend = useRemoveFriend()
+
+  const handleRemove = (userId: string, displayName: string) => {
+    Alert.alert('Eliminar amigo', `¿Seguro que quieres eliminar a ${displayName} de tus amigos?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          void removeFriend
+            .mutateAsync(userId)
+            .catch((err) =>
+              Alert.alert('No se pudo eliminar', err instanceof Error ? err.message : 'Error')
+            )
+        },
+      },
+    ])
+  }
+
   if (pending && friends.length === 0) {
     return <Text style={s.empty}>Cargando amigos…</Text>
   }
@@ -98,24 +118,33 @@ function FriendsList({
   return (
     <View style={s.list}>
       {friends.map((f) => (
-        <Pressable
-          key={f.user_id}
-          style={s.row}
-          onPress={() => onOpenProfile(f.user_id)}
-          accessibilityRole="button"
-          accessibilityLabel={`Ver perfil de ${f.display_name}`}>
-          <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
-          <View style={s.rowInfo}>
-            <Text style={s.rowName} numberOfLines={1}>
-              {f.display_name}
-            </Text>
-            {f.city ? (
-              <Text style={s.rowSub} numberOfLines={1}>
-                {f.city}
+        <View key={f.user_id} style={s.row}>
+          <Pressable
+            style={s.friendProfileTap}
+            onPress={() => onOpenProfile(f.user_id)}
+            accessibilityRole="button"
+            accessibilityLabel={`Ver perfil de ${f.display_name}`}>
+            <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
+            <View style={s.rowInfo}>
+              <Text style={s.rowName} numberOfLines={1}>
+                {f.display_name}
               </Text>
-            ) : null}
-          </View>
-        </Pressable>
+              {f.city ? (
+                <Text style={s.rowSub} numberOfLines={1}>
+                  {f.city}
+                </Text>
+              ) : null}
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => handleRemove(f.user_id, f.display_name)}
+            accessibilityRole="button"
+            accessibilityLabel={`Eliminar a ${f.display_name} de tus amigos`}
+            disabled={removeFriend.isPending}
+            style={s.removeBtn}>
+            <Ionicons name="trash-outline" size={18} color={Colors.danger} />
+          </Pressable>
+        </View>
       ))}
     </View>
   )
@@ -246,6 +275,8 @@ const s = StyleSheet.create({
     gap: 12,
     paddingVertical: 4,
   },
+  friendProfileTap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minWidth: 0 },
+  removeBtn: { padding: 8 },
   rowInfo: { flex: 1, gap: 2 },
   rowName: { fontSize: 15, fontFamily: Fonts.medium, color: Colors.textPrimary },
   rowSub: { fontSize: 13, color: Colors.textSecondary },

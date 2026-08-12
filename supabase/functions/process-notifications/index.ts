@@ -36,6 +36,8 @@ interface ProfileRow {
   notify_on_reminder_24h: boolean
   notify_on_reminder_2h: boolean
   notify_on_reminder_in_progress: boolean
+  notify_on_friend_request: boolean
+  notify_on_match_invitation: boolean
 }
 
 /** Maps queue `type` values to profile event preference columns. */
@@ -61,6 +63,10 @@ function isNotificationAllowed(type: string, profile: ProfileRow): boolean {
       return profile.notify_on_reminder_2h
     case 'reminder_5h_in_progress':
       return profile.notify_on_reminder_in_progress
+    case 'friend_request_received':
+      return profile.notify_on_friend_request
+    case 'match_invitation_received':
+      return profile.notify_on_match_invitation
     default:
       return true
   }
@@ -139,7 +145,7 @@ Deno.serve(async (req) => {
   const { data: profiles, error: profileErr } = await supabase
     .from('profiles')
     .select(
-      'id, push_token, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress'
+      'id, push_token, notify_push, notify_on_join, notify_on_match_start, notify_on_match_edit, notify_on_match_cancel, notify_on_result, notify_on_reminder_24h, notify_on_reminder_2h, notify_on_reminder_in_progress, notify_on_friend_request, notify_on_match_invitation'
     )
     .in('id', userIds)
 

@@ -15,6 +15,7 @@ import {
   getFriendshipWithUser,
   listMyFriendRequests,
   listMyFriends,
+  removeFriend,
   respondFriendRequest,
   sendFriendRequest,
 } from '@/services/friends.service'
@@ -78,6 +79,24 @@ describe('friends.service', () => {
     await expect(cancelFriendRequest('fs-9')).rejects.toThrow(
       'Solo puedes cancelar tus propias solicitudes'
     )
+  })
+
+  it('removeFriend forwards the other user id', async () => {
+    mockRpc({ data: null, error: null })
+    await removeFriend('u-other')
+    expect(supabase.rpc).toHaveBeenCalledWith('remove_friend', {
+      p_other_user_id: 'u-other',
+    })
+  })
+
+  it('removeFriend maps friendship_not_found', async () => {
+    mockRpc({ data: null, error: { message: 'friendship_not_found' } })
+    await expect(removeFriend('u-other')).rejects.toThrow('Solicitud no encontrada')
+  })
+
+  it('removeFriend maps cannot_remove_self', async () => {
+    mockRpc({ data: null, error: { message: 'cannot_remove_self' } })
+    await expect(removeFriend('u-self')).rejects.toThrow('No puedes eliminarte a ti mismo')
   })
 
   it('listMyFriends returns the rpc data array', async () => {

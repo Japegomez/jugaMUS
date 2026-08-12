@@ -8,6 +8,8 @@ export type NotificationPrefState = {
   notify_on_reminder_24h: boolean
   notify_on_reminder_2h: boolean
   notify_on_reminder_in_progress: boolean
+  notify_on_friend_request: boolean
+  notify_on_match_invitation: boolean
 }
 
 export type NotificationPrefField = keyof NotificationPrefState
@@ -21,6 +23,8 @@ const EVENT_FIELDS = [
   'notify_on_reminder_24h',
   'notify_on_reminder_2h',
   'notify_on_reminder_in_progress',
+  'notify_on_friend_request',
+  'notify_on_match_invitation',
 ] as const satisfies ReadonlyArray<Exclude<NotificationPrefField, 'notify_push'>>
 
 const ALL_ON: NotificationPrefState = {
@@ -33,6 +37,8 @@ const ALL_ON: NotificationPrefState = {
   notify_on_reminder_24h: true,
   notify_on_reminder_2h: true,
   notify_on_reminder_in_progress: true,
+  notify_on_friend_request: true,
+  notify_on_match_invitation: true,
 }
 
 const ALL_OFF: NotificationPrefState = {
@@ -45,6 +51,8 @@ const ALL_OFF: NotificationPrefState = {
   notify_on_reminder_24h: false,
   notify_on_reminder_2h: false,
   notify_on_reminder_in_progress: false,
+  notify_on_friend_request: false,
+  notify_on_match_invitation: false,
 }
 
 function withMasterPush(events: Omit<NotificationPrefState, 'notify_push'>): NotificationPrefState {
@@ -71,6 +79,8 @@ export function buildNotifUpdates(
     notify_on_reminder_24h: profile.notify_on_reminder_24h,
     notify_on_reminder_2h: profile.notify_on_reminder_2h,
     notify_on_reminder_in_progress: profile.notify_on_reminder_in_progress,
+    notify_on_friend_request: profile.notify_on_friend_request,
+    notify_on_match_invitation: profile.notify_on_match_invitation,
     [field]: value,
   })
 }
@@ -90,5 +100,7 @@ export function buildReminderTimingUpdates(
     notify_on_reminder_24h: timing === '24h' ? enabled : profile.notify_on_reminder_24h,
     notify_on_reminder_2h: timing === '2h' ? enabled : profile.notify_on_reminder_2h,
     notify_on_reminder_in_progress: profile.notify_on_reminder_in_progress,
+    notify_on_friend_request: profile.notify_on_friend_request,
+    notify_on_match_invitation: profile.notify_on_match_invitation,
   })
 }

@@ -38,6 +38,8 @@ function mapFriendRpcError(message: string): string {
   if (message.includes('request_already_pending'))
     return 'Ya hay una solicitud pendiente entre vosotros'
   if (message.includes('friendship_not_found')) return 'Solicitud no encontrada'
+  if (message.includes('cannot_remove_self')) return 'No puedes eliminarte a ti mismo'
+  if (message.includes('user_id_required')) return 'Selecciona un usuario'
   if (message.includes('not_addressee')) return 'No puedes responder a esta solicitud'
   if (message.includes('not_requester')) return 'Solo puedes cancelar tus propias solicitudes'
   if (message.includes('not_pending')) return 'Esta solicitud ya no está pendiente'
@@ -68,6 +70,13 @@ export async function respondFriendRequest(friendshipId: string, accept: boolean
 export async function cancelFriendRequest(friendshipId: string): Promise<void> {
   const { error } = await supabase.rpc('cancel_friend_request', {
     p_friendship_id: friendshipId,
+  })
+  if (error) throw new Error(mapFriendRpcError(error.message))
+}
+
+export async function removeFriend(otherUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('remove_friend', {
+    p_other_user_id: otherUserId,
   })
   if (error) throw new Error(mapFriendRpcError(error.message))
 }
