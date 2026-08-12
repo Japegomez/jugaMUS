@@ -1471,6 +1471,9 @@ export default function MatchDetailScreen() {
         teamLabel={editTeamLabel}
         customTeamName={editCustomTeamName}
         slots={editTeamSlots}
+        matchId={id}
+        team={editingTeam ?? undefined}
+        freeSlots={editingTeam === TEAM.A ? slotsA : editingTeam === TEAM.B ? slotsB : 0}
         onClose={closeEditTeam}
         onSubmit={handleEditTeam}
         loading={updateMatchTeam.isPending}
