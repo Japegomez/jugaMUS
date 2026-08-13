@@ -103,7 +103,7 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
                              │
 ┌────────────────────────────▼────────────────────────────────┐
 │              SERVICIOS EXTERNOS E INFRAESTRUCTURA            │
-│  Sentry · PostHog · Expo EAS · GitHub Actions · Push (FCM/APNs) │
+│  Sentry · PostHog · Expo EAS · GitHub Actions · Push · Turnstile │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -149,6 +149,7 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 | 🛡️ **Sentry**                  | Monitorización de errores y rendimiento                          |
 | 📊 **PostHog**                 | Analítica de producto                                            |
 | 🔔 **Expo Push Notifications** | Notificaciones en Android (FCM) e iOS (APNs)                     |
+| 🧩 **Cloudflare Turnstile**    | CAPTCHA en login, registro y recuperación de contraseña          |
 | 🌿 **GitFlow**                 | Estrategia de ramas: `main`, `develop`, `feature/*`, `release/*` |
 
 ---
@@ -160,12 +161,15 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 - Inicio de sesión con **Google**, **Apple ID** y **correo electrónico**
 - Registro con aceptación de términos legales y política de privacidad
 - Recuperación de contraseña y persistencia de sesión entre reinicios
+- **Cloudflare Turnstile** al enviar login, registro o recuperación (no en Google/Apple)
+- Contraseña con mayúscula, minúscula, dígito y símbolo; cambio desde el perfil con la contraseña actual
 - **Eliminación de cuenta** conforme al RGPD, con anonimización del historial compartido (partidas, ligas y torneos)
 - Cierre de sesión con confirmación explícita
 
 ### 👤 Perfil de usuario
 
 - Datos personales: nombre, teléfono con validación internacional, localidad y foto de perfil
+- Cambio de contraseña en edición de perfil (exige la actual)
 - Preferencias granulares de **notificaciones push** por tipo de evento
 - Historial personal de partidas con indicadores de victoria y derrota
 - Resumen de **estadísticas / ELO**, logros destacados y pantalla de stats detallada
@@ -236,6 +240,7 @@ La aplicación sigue una **arquitectura cliente-servidor** con separación clara
 ### 🔒 Seguridad y cumplimiento
 
 - Autenticación OAuth2 con flujo PKCE y tokens de corta duración
+- **Turnstile** (Cloudflare) como desafío anti-bots en los formularios de email
 - Políticas de acceso a datos por usuario y por rol en base de datos
 - Protección de datos personales: teléfono visible solo entre participantes de la misma partida
 - Cumplimiento RGPD: consentimiento, minimización de datos y derecho de supresión

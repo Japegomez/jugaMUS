@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 13/08/2026 (Turnstile al pulsar; política de contraseña; cambio de contraseña en perfil)
+> Actualizado: 13/08/2026 (hotfix v1.8.1: Turnstile, política de contraseña, cambio de contraseña)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -27,6 +27,7 @@
 | Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
 | Hotfix tests TDD       | Completada | Characterization tests + coverage gates + docs; v1.7.1                           |
 | Release 1.8            | Completada | Amigos, invitaciones a partidas, prefs notif. friend/invite; v1.8.0              |
+| Hotfix auth/Turnstile  | Completada | CAPTCHA Turnstile, política de contraseña, cambio en perfil; v1.8.1              |
 
 ---
 
@@ -572,12 +573,18 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Contrato Descubrir: públicas + privadas con contraseña (docs README/REQUIREMENTS); CA_CONTACT1 incluye copia en web
 - [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`)
 - [x] Merge `main` (hotfix v1.7.1) en `develop` para desbloquear PR #158
-- [x] Cloudflare Turnstile en login/registro/recuperación (modal al enviar)
+
+### Hotfix v1.8.1 — Turnstile y contraseñas (ago. 2026)
+
+- [x] Cloudflare Turnstile en login/registro/recuperación (modal al enviar; no OAuth)
+  - Site key `EXPO_PUBLIC_TURNSTILE_SITE_KEY`; secret solo en Supabase Auth → Bot and Abuse Protection.
   - Expo Go: hostname del widget **`localhost`**. Release: **`musapp-731e1.web.app`** + página `invite-hosting/public/turnstile.html`.
   - Pendiente operativo: `eas env:create` del site key, hostnames en Cloudflare, `firebase deploy --only hosting` de `turnstile.html`, activar CAPTCHA en Supabase **después** de tener el site key en la app; rebuild nativo por `react-native-webview`.
 - [x] Política de contraseña: min 8 + mayúscula + minúscula + dígito + símbolo
 - [x] Cambio de contraseña en Editar perfil (exige actual; recovery no)
 - [x] Security RLS/RPC lockdown mig. `118`; `search_path` helpers de torneo mig. `119`
+- [x] Versión app → **1.8.1** (`app.json`, `package.json`)
+- [x] README: Turnstile en autenticación, stack y seguridad
 
 ---
 
