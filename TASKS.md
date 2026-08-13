@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 13/08/2026 (hotfix v1.8.1: Turnstile, política de contraseña, cambio de contraseña)
+> Actualizado: 13/08/2026 (hotfix v1.8.1 cerrado: operación Turnstile lista)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -27,7 +27,7 @@
 | Release 1.7            | Completada | Contactos, stats/ELO/badges, ligas, CI permissions, deps; v1.7.0                 |
 | Hotfix tests TDD       | Completada | Characterization tests + coverage gates + docs; v1.7.1                           |
 | Release 1.8            | Completada | Amigos, invitaciones a partidas, prefs notif. friend/invite; v1.8.0              |
-| Hotfix auth/Turnstile  | Completada | CAPTCHA Turnstile, política de contraseña, cambio en perfil; v1.8.1              |
+| Hotfix auth/Turnstile  | Completada | CAPTCHA Turnstile, política de contraseña, cambio en perfil; ops lista; v1.8.1   |
 
 ---
 
@@ -262,7 +262,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Configurar EAS Submit para publicación automática en Google Play
   - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON` (clave JSON de **cuenta de servicio** en Google Cloud: `type`, `private_key`, `client_email` — **no** `google-services.json` de Firebase). Variables EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`.
   - PRs mergeados en `develop`: slug EAS `musapp`, `appVersionSource: remote`, `app.config.js` + `GOOGLE_SERVICES_JSON`, validación JSON Play submit, `npm ci` antes de `eas submit`.
-- [x] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`, **`EXPO_PUBLIC_TURNSTILE_SITE_KEY`** (site key pública; el secret va en Supabase).
+- [x] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco), **`EXPO_PUBLIC_TURNSTILE_SITE_KEY`** (CAPTCHA Auth activo; secret en Supabase). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`.
   - Confirmar con `eas env:list --environment production`; **nuevo build** tras añadirlas.
 - [x] Configurar EAS Submit para publicación automática en App Store
   - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
@@ -579,7 +579,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Cloudflare Turnstile en login/registro/recuperación (modal al enviar; no OAuth)
   - Site key `EXPO_PUBLIC_TURNSTILE_SITE_KEY`; secret solo en Supabase Auth → Bot and Abuse Protection.
   - Expo Go: hostname del widget **`localhost`**. Release: **`musapp-731e1.web.app`** + página `invite-hosting/public/turnstile.html`.
-  - Pendiente operativo: `eas env:create` del site key, hostnames en Cloudflare, `firebase deploy --only hosting` de `turnstile.html`, activar CAPTCHA en Supabase **después** de tener el site key en la app; rebuild nativo por `react-native-webview`.
+- [x] Operación Turnstile: site key en EAS `production`, hostnames Cloudflare (`localhost`, `musapp-731e1.web.app`), `turnstile.html` en Firebase Hosting, CAPTCHA activo en Supabase Auth, rebuild nativo con `react-native-webview`
 - [x] Política de contraseña: min 8 + mayúscula + minúscula + dígito + símbolo
 - [x] Cambio de contraseña en Editar perfil (exige actual; recovery no)
 - [x] Security RLS/RPC lockdown mig. `118`; `search_path` helpers de torneo mig. `119`
