@@ -20,7 +20,11 @@ import { APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@/constants/app'
 import { useAuthStore } from '@/hooks/useAuth'
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 import { supabase } from '@/lib/supabase'
-import { updatePasswordSchema, type UpdatePasswordFormValues } from '@/utils/authSchemas'
+import {
+  AUTH_PASSWORD_HINT,
+  updatePasswordSchema,
+  type UpdatePasswordFormValues,
+} from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
@@ -239,7 +243,9 @@ export default function UpdatePasswordScreen() {
         </View>
 
         <Text style={[styles.heading, { fontSize: font(26) }]}>Nueva contraseña</Text>
-        <Text style={styles.sub}>Elige una contraseña nueva para tu cuenta.</Text>
+        <Text style={styles.sub}>
+          Elige una contraseña nueva para tu cuenta. {AUTH_PASSWORD_HINT}
+        </Text>
 
         {formError ? (
           <View style={styles.formError} accessibilityRole="alert">

@@ -16,6 +16,8 @@ import { signInWithOAuthProvider } from '@/lib/oauth'
 import { clearSessionBackgroundMarker } from '@/lib/sessionBackground'
 import { SESSION_EXPIRED_MESSAGE, validateAuthSession } from '@/lib/validateAuthSession'
 import { supabase } from '@/lib/supabase'
+import { CAPTCHA_FAILED_MESSAGE } from '@/lib/turnstile'
+import { AUTH_PASSWORD_HINT } from '@/utils/authSchemas'
 
 let authSubscription: { unsubscribe: () => void } | null = null
 
@@ -31,10 +33,28 @@ function userFacingAuthError(error: { message: string; status?: number; code?: s
     return new Error('La nueva contraseña debe ser distinta de la actual')
   }
   if (code === 'weak_password' || /weak_password|password.*strength|at least/i.test(msg)) {
-    return new Error('La contraseña no cumple los requisitos de seguridad')
+    return new Error(AUTH_PASSWORD_HINT)
+  }
+  if (
+    code === 'current_password_mismatch' ||
+    /incorrect current password|current_password_mismatch/i.test(msg)
+  ) {
+    return new Error('La contraseña actual no es correcta')
+  }
+  if (
+    code === 'current_password_required' ||
+    /current password required|current_password_required/i.test(msg)
+  ) {
+    return new Error('Introduce tu contraseña actual para cambiarla')
   }
   if (code === 'reauthentication_needed' || /reauthentication_needed|reauthenticate/i.test(msg)) {
     return new Error('Debes volver a verificar tu identidad para cambiar la contraseña')
+  }
+  if (
+    code === 'captcha_failed' ||
+    /captcha verification|failed captcha|invalid captcha|captcha_failed/i.test(msg)
+  ) {
+    return new Error(CAPTCHA_FAILED_MESSAGE)
   }
   if (st === 429 || /429|rate limit|too many requests|too_many|over_email_send/i.test(msg)) {
     return new Error(
@@ -65,6 +85,7 @@ export interface SignUpParams {
   email: string
   password: string
   displayName: string
+  captchaToken?: string
 }
 
 export interface AuthState {
@@ -81,12 +102,16 @@ export interface AuthState {
   setPendingInviteHref: (href: string | null) => void
   clearLastAuthMessage: () => void
   initializeAuth: () => void
-  signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithPassword: (
+    email: string,
+    password: string,
+    captchaToken?: string
+  ) => Promise<{ error: Error | null }>
   signUp: (params: SignUpParams) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   deleteAccount: () => Promise<{ error: Error | null }>
-  resetPassword: (email: string) => Promise<{ error: Error | null }>
-  updatePassword: (password: string) => Promise<{ error: Error | null }>
+  resetPassword: (email: string, captchaToken?: string) => Promise<{ error: Error | null }>
+  updatePassword: (password: string, currentPassword?: string) => Promise<{ error: Error | null }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signInWithApple: () => Promise<{ error: Error | null }>
   /** Revalidates the persisted session with Auth; signs out locally if it is stale. */
@@ -202,8 +227,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     authSubscription = data.subscription
   },
 
-  signInWithPassword: async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  signInWithPassword: async (email, password, captchaToken) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      ...(captchaToken ? { options: { captchaToken } } : {}),
+    })
     if (error) {
       return { error: userFacingAuthError(error) }
     }
@@ -220,7 +249,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return { error: null }
   },
 
-  signUp: async ({ email, password, displayName }) => {
+  signUp: async ({ email, password, displayName, captchaToken }) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -230,6 +259,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           display_name: displayName,
           phone_e164: '+34000000000',
         },
+        ...(captchaToken ? { captchaToken } : {}),
       },
     })
     if (error) {
@@ -268,17 +298,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return { error: null }
   },
 
-  resetPassword: async (email) => {
+  resetPassword: async (email, captchaToken) => {
     const redirectTo = getPasswordResetRedirectUrl()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+      ...(captchaToken ? { captchaToken } : {}),
+    })
     if (error) {
       return { error: userFacingAuthError(error) }
     }
     return { error: null }
   },
 
-  updatePassword: async (password) => {
-    const { error } = await supabase.auth.updateUser({ password })
+  updatePassword: async (password, currentPassword) => {
+    const { error } = await supabase.auth.updateUser({
+      password,
+      ...(currentPassword ? { current_password: currentPassword } : {}),
+    })
     if (error) {
       return {
         error: userFacingAuthError({
@@ -287,6 +323,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           code: error.code,
         }),
       }
+    }
+    if (currentPassword) {
+      return { error: null }
     }
     await clearSessionBackgroundMarker()
     await supabase.auth.signOut()

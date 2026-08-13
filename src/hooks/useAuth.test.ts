@@ -42,6 +42,7 @@ jest.mock('expo-apple-authentication', () => ({
 import { identifyUser } from '@/lib/analytics'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/hooks/useAuth'
+import { AUTH_PASSWORD_HINT } from '@/utils/authSchemas'
 
 const mockSupabase = supabase as unknown as ReturnType<typeof createSupabaseMock>
 
@@ -115,6 +116,32 @@ describe('useAuthStore', () => {
       expect(error).toBeNull()
       expect(identifyUser).toHaveBeenCalledWith('user-1')
     })
+
+    it('forwards captchaToken to Auth', async () => {
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: { id: 'user-1' }, session: null },
+        error: null,
+      })
+
+      await useAuthStore.getState().signInWithPassword('a@b.com', 'pass', 'cf-token')
+
+      expect(mockSupabase.auth.signInWithPassword).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        password: 'pass',
+        options: { captchaToken: 'cf-token' },
+      })
+    })
+
+    it('maps captcha failures to a Spanish message', async () => {
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: { message: 'captcha verification process failed', code: 'captcha_failed' },
+      })
+
+      const { error } = await useAuthStore.getState().signInWithPassword('a@b.com', 'pass', 'bad')
+
+      expect(error?.message).toBe('Completa la verificación de seguridad e inténtalo de nuevo.')
+    })
   })
 
   describe('signUp', () => {
@@ -130,7 +157,41 @@ describe('useAuthStore', () => {
         displayName: 'Test User',
       })
 
-      expect(error?.message).toBe('La contraseña no cumple los requisitos de seguridad')
+      expect(error?.message).toBe(AUTH_PASSWORD_HINT)
+    })
+
+    it('forwards captchaToken on signUp', async () => {
+      mockSupabase.auth.signUp.mockResolvedValue({
+        data: { user: { id: 'user-1' }, session: null },
+        error: null,
+      })
+
+      await useAuthStore.getState().signUp({
+        email: 'a@b.com',
+        password: 'ValidPass1',
+        displayName: 'Test User',
+        captchaToken: 'cf-token',
+      })
+
+      expect(mockSupabase.auth.signUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({ captchaToken: 'cf-token' }),
+        })
+      )
+    })
+  })
+
+  describe('resetPassword', () => {
+    it('forwards captchaToken to recover', async () => {
+      mockSupabase.auth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null })
+
+      const { error } = await useAuthStore.getState().resetPassword('a@b.com', 'cf-token')
+
+      expect(error).toBeNull()
+      expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('a@b.com', {
+        redirectTo: 'jugamus://auth/update-password',
+        captchaToken: 'cf-token',
+      })
     })
   })
 
@@ -144,6 +205,36 @@ describe('useAuthStore', () => {
       const { error } = await useAuthStore.getState().updatePassword('OldPass123')
 
       expect(error?.message).toBe('La nueva contraseña debe ser distinta de la actual')
+    })
+
+    it('sends current_password and keeps the session when provided', async () => {
+      mockSupabase.auth.updateUser.mockResolvedValue({
+        data: { user: { id: 'user-1' } },
+        error: null,
+      })
+
+      const { error } = await useAuthStore.getState().updatePassword('NewPass1', 'OldPass1')
+
+      expect(error).toBeNull()
+      expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith({
+        password: 'NewPass1',
+        current_password: 'OldPass1',
+      })
+      expect(mockSupabase.auth.signOut).not.toHaveBeenCalled()
+    })
+
+    it('maps current_password_mismatch', async () => {
+      mockSupabase.auth.updateUser.mockResolvedValue({
+        data: { user: null },
+        error: {
+          message: 'Current password required when setting new password.',
+          code: 'current_password_mismatch',
+        },
+      })
+
+      const { error } = await useAuthStore.getState().updatePassword('NewPass1', 'wrong')
+
+      expect(error?.message).toBe('La contraseña actual no es correcta')
     })
   })
 })

@@ -1,9 +1,10 @@
 # Invite Hosting (Firebase)
 
-Static HTTPS endpoints for WhatsApp invite links:
+Static HTTPS endpoints for WhatsApp invite links and the Turnstile challenge page:
 
 - `https://musapp-731e1.web.app/m/{matchId}`
 - `https://musapp-731e1.web.app/t/{tournamentId}`
+- `https://musapp-731e1.web.app/turnstile.html` (native captcha WebView in release builds)
 
 With the app installed and App/Universal Links verified, the OS opens jugaMUS. Otherwise `redirect.html` sends the browser to Play Store / App Store.
 

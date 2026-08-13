@@ -11,12 +11,14 @@ App móvil para jugadores de mus en España que permite encontrar contrincantes 
 ### Decisiones clave
 
 - **Marca y legal (may. 2026):** nombre comercial **jugaMUS** (`APP_DISPLAY_NAME`; nombre en launcher vía `app.json`). Deep link scheme `jugamus`. Términos y privacidad con texto estático y disclaimer «Texto legal definitivo pendiente de revisión jurídica.» hasta revisión legal.
-- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura ≥60% líneas en `src/{utils,lib,services,hooks}`). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. `GITHUB_TOKEN` con mínimo privilegio: `contents: read` por defecto; `contents: write` solo en el job de etiquetado de release (`eas.yml`). Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**. iOS: `ascAppId` `6775626292`.
+- **CI/CD (jun.–ago. 2026):** workflow reutilizable `quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, tests, cobertura ≥60% líneas en `src/{utils,lib,services,hooks}`). `eas.yml` en push a `main`: quality → tag `v{version}-{YYYYMMDD.HHmm}` → build Android/iOS → submit Play + TestFlight. `GITHUB_TOKEN` con mínimo privilegio: `contents: read` por defecto; `contents: write` solo en el job de etiquetado de release (`eas.yml`). Dependabot (npm + github-actions): version updates a **`develop`**, sin majors ni patch/minor del stack Expo/RN (upgrade de SDK con `npx expo upgrade`), grupos prod/dev + security, cooldown. Política de vulnerabilidades en `SECURITY.md`. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON`. EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`, **`EXPO_PUBLIC_SUPABASE_URL`** / **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_INVITE_HOST`**, **`EXPO_PUBLIC_TURNSTILE_SITE_KEY`**. iOS: `ascAppId` `6775626292`.
 - **Legal / Play (may. 2026):** URLs públicas de privacidad y eliminación de cuenta vía **GitHub Pages** (`docs/` en `main`, carpeta `/docs`). Contacto de soporte / seguridad: `japenago@gmail.com`. Package Android: `com.javiwacho.musapp`; slug EAS `musapp`.
 - **Partidas (may. 2026):** el creador puede cancelar partidas en `planned` e `in_progress` desde la ficha (no hace falta ser participante). En web, las confirmaciones destructivas (cancelar, abandonar, aprobar resultado) usan **modales** en lugar de `Alert.alert`, que no es fiable en Expo Web. **Empezar partida (jul. 2026):** el creador puede pasar una partida `planned` a `in_progress` manualmente (sin modal de confirmación; sí aviso si la plantilla está incompleta); se fija `start_at` al instante actual.
 - **Plantilla mixta (may. 2026):** en crear/editar se pueden añadir compañeros/rivales **por nombre** además de cuentas registradas; las plazas (UI, explore y cron) cuentan texto + confirmados (máx. 2 por equipo). El creador puede registrar marcador **sin validación rival** solo si no hay otros participantes con cuenta y la partida está **`in_progress`** (`record_match_result_direct`). Tras aprobar un resultado rival, un trigger en BD confirma el resultado y finaliza la partida (`018`).
 - **Eliminación de cuenta (may.–ago. 2026):** derecho de supresión RGPD vía Edge Function `delete-account`. Se borran auth, perfil, avatar y datos personales (reportes, cola de notificaciones). El **historial compartido se anonimiza**, no se elimina: referencias de partidas, **ligas y torneos** (creador, parejas, retos, grants) pasan al perfil interno **Usuario eliminado** (sentinel) o a texto «Usuario eliminado» (mig. `023`–`025`, `105`). CORS de la función: orígenes de producción + loopback local (`localhost` / `127.0.0.1`) para desarrollo web.
-- **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422).
+- **Recuperación de contraseña (jul. 2026):** el email de reset redirige a `jugamus://auth/update-password` (debe estar en Redirect URLs de Supabase). Pantalla dedicada para nueva contraseña; errores visibles en web (sin depender de `Alert.alert`); tras éxito, cierre de sesión y CTA a login. No reutilizar la misma contraseña (`same_password` → 422). La sesión de recovery **no** exige contraseña actual.
+- **Política de contraseña (ago. 2026):** mínimo 8 caracteres con mayúscula, minúscula, dígito y símbolo (Auth dashboard + `authPasswordSchema` / `AUTH_PASSWORD_HINT`). Cambio de contraseña en Editar perfil exige la actual (`current_password`) y mantiene la sesión.
+- **CAPTCHA Turnstile (ago. 2026):** desafío al pulsar enviar en login, registro y recuperación (no OAuth). Site key `EXPO_PUBLIC_TURNSTILE_SITE_KEY`; secret en Supabase Auth. Expo Go: hostname `localhost`. Release nativo: página `https://musapp-731e1.web.app/turnstile.html`.
 - **Notificaciones en perfil (may./jul./ago. 2026):** preferencias **push** («Todas») y por **evento** en perfil; sin notificaciones por correo; enlaces legales (términos, privacidad) en la misma pantalla. Eventos: unión; partida/torneo inicio, edición y cancelación (separados); resultado pendiente de validar; resultado pendiente de enviar (aviso ~5 h en curso); recordatorios 24 h y/o 2 h antes (chips multi-selección); **solicitudes de amistad** e **invitaciones a partidas** (`notify_on_friend_request` / `notify_on_match_invitation`, mig. `110`). `enqueue_notification` y `process-notifications` respetan `notify_push` + `notify_on_*` (migraciones `077`–`079`, `110`).
 - **Branding (may. 2026):** icono y splash con diseño minimalista de baraja española (basto); color de fondo `#1a5f4a` en splash e icono adaptativo Android.
 - **UI Ultra Limpio (may. 2026):** rediseño visual con tokens en `src/theme/` (fondo blanco, verde `#1A5F4A`, tipografía DM Sans). Listas principales (Mis partidas, Descubrir) con filas y punto de estado; previews con `ciudad · lugar`; cabecera Mis partidas sin contador de activas; FAB speed-dial encima de la tab bar; tab bar activa en verde brand.
@@ -99,9 +101,9 @@ Solo dos roles en el MVP:
 
 - Login con Google
 - Login con Apple ID (obligatorio por requisitos de App Store)
-- Login con email y contraseña
+- Login con email y contraseña (Turnstile al enviar; complejidad: mayúscula, minúscula, dígito y símbolo)
 - Registro con aceptación de términos y política de privacidad
-- Recuperación de contraseña para usuarios de email (pantalla `auth/update-password` tras el enlace; login con la nueva contraseña)
+- Recuperación de contraseña para usuarios de email (pantalla `auth/update-password` tras el enlace; login con la nueva contraseña; Turnstile al enviar el email)
 - Gestión de sesiones con JWT y refresh tokens (gestionado por Supabase Auth)
 - Estado de sesión persistente entre cierres de la app
 - Eliminación de cuenta (RGPD): borrado de identidad + anonimización del historial en partidas, ligas y torneos
@@ -109,6 +111,7 @@ Solo dos roles en el MVP:
 ### F2 - Perfil de usuario (Fase 1)
 
 - Nombre a mostrar (obligatorio)
+- Cambio de contraseña en edición de perfil (contraseña actual + nueva que cumple la política)
 - Teléfono (obligatorio, validación formato E.164; en la app: selector de prefijo por país + validación genérica ITU-T, ej. `+34612345678` u otros países del listado)
 - Localidad/pueblo (opcional, informativo)
 - Foto de perfil (opcional, comprimida automáticamente a ≤ 500KB)
@@ -633,6 +636,9 @@ Supabase (PostgreSQL + Auth + Storage)
 - CA_AUTH2: Un usuario puede autenticarse con Google
 - CA_AUTH3: Un usuario puede autenticarse con Apple ID
 - CA_AUTH4: Un usuario puede recuperar su contraseña por email, fijar una nueva en `auth/update-password` e iniciar sesión después
+- CA_AUTH4b: Login, registro y «olvidé contraseña» piden Turnstile al pulsar enviar (no al abrir la pantalla; no aplica a Google/Apple)
+- CA_AUTH4c: El registro y el cambio de contraseña rechazan secretos sin mayúscula, minúscula, dígito y símbolo
+- CA_AUTH4d: En Editar perfil, cambiar la contraseña exige la actual y no cierra la sesión
 - CA_AUTH5: La sesión persiste entre cierres de la app (refresh token); tras ≥6 h en segundo plano, al volver a primer plano se cierra la sesión con aviso
 - CA_AUTH6: Un usuario con `status: suspended` no puede iniciar sesión
 - CA_AUTH7: Un usuario puede eliminar su cuenta; se borra la identidad y se anonimiza su huella en partidas, ligas y torneos (perfil sentinel «Usuario eliminado»)

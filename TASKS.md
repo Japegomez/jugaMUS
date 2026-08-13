@@ -1,6 +1,6 @@
 # Tareas - jugaMUS
 
-> Actualizado: 12/08/2026 (merge main hotfix v1.7.1; timeout sesión 6 h; invites `117`)
+> Actualizado: 13/08/2026 (Turnstile al pulsar; política de contraseña; cambio de contraseña en perfil)
 > Metodología: Kanban personal. Actualizar al inicio y al final de cada sesión de trabajo.
 
 ---
@@ -65,14 +65,19 @@
   - Migraciones `006`/`007` en repo: RLS sin recursión en `match_participants` + backfill `profiles` desde `auth.users` (evitar 500 tras login).
 - [x] Pantalla de login con email/contraseña
   - Mensajes claros si Supabase devuelve 429 (rate limit por IP en plan gratuito).
+  - Cloudflare Turnstile al pulsar **Entrar** (no al abrir la pantalla). Site key `EXPO_PUBLIC_TURNSTILE_SITE_KEY`; secret solo en Supabase Auth → Bot and Abuse Protection.
 - [x] Pantalla de registro con aceptación de términos y política de privacidad
   - Textos estáticos en `src/app/(auth)/terms.tsx` y `privacy.tsx` con disclaimer jurídico; **revisión legal pendiente** antes de release.
   - Confirmación por email configurada según entorno (desactivada en dev; producción según política del proyecto).
+  - Contraseña: mínimo 8 + mayúscula + minúscula + dígito + símbolo (`AUTH_PASSWORD_HINT`; alineado con Auth dashboard).
+  - Turnstile al pulsar **Registrarme**.
 - [x] Pantalla de recuperación de contraseña
   - Email → redirect `jugamus://auth/update-password` (`getPasswordResetRedirectUrl`).
   - Pantalla `src/app/auth/update-password.tsx`: nueva contraseña, errores inline (web; `Alert` no fiable), ✕ → login, éxito → CTA «Ir al login».
   - Tras guardar: `updateUser` + `signOut`; gate `passwordRecoveryPending` se limpia en login normal (evita redirigir otra vez a update-password).
+  - Recovery **no** pide contraseña actual (sesión de recovery en GoTrue).
   - Supabase Redirect URLs: añadir `jugamus://auth/update-password` (además de `auth/callback`).
+  - Turnstile al pulsar **Enviar enlace**.
 - [x] Login con Google (OAuth via Supabase)
   - Requiere MANUAL-1 y MANUAL-2 del plan (Google Cloud + Supabase provider).
   - Redirects típicos: `exp://**` (Expo Go), `jugamus://auth/callback`, y en web el `http://localhost:PUERTO/` del `expo start --web`.
@@ -99,6 +104,7 @@
 
 - [x] Pantalla de perfil (vista propia)
 - [x] Pantalla de edición de perfil
+  - Cambio de contraseña con contraseña actual (`updateUser` + `current_password`; la sesión se mantiene).
 - [x] Campo de teléfono con validación E.164 (selector de país + número; validación genérica `+` y 7–15 dígitos)
 - [x] Subida de foto de perfil a Supabase Storage (compresión ≤ 500 KB; bucket `avatars` migración `008`; subida sin `Blob.arrayBuffer` en iOS/Hermes)
 - [x] Preferencias de notificación (push; sin email, migración `057`)
@@ -255,7 +261,7 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Configurar EAS Submit para publicación automática en Google Play
   - Workflow `.github/workflows/eas.yml`: push a `main` → `eas build` → `eas submit` Android. Secrets GitHub: `EXPO_TOKEN`, `GOOGLE_PLAY_SERVICE_KEY_JSON` (clave JSON de **cuenta de servicio** en Google Cloud: `type`, `private_key`, `client_email` — **no** `google-services.json` de Firebase). Variables EAS `production`: `GOOGLE_SERVICES_JSON`, `SENTRY_AUTH_TOKEN`.
   - PRs mergeados en `develop`: slug EAS `musapp`, `appVersionSource: remote`, `app.config.js` + `GOOGLE_SERVICES_JSON`, validación JSON Play submit, `npm ci` antes de `eas submit`.
-- [x] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`.
+- [x] **Variables EAS `production` obligatorias para el bundle:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (sin ellas la app en release queda en pantalla en blanco). Opcional: `EXPO_PUBLIC_SENTRY_DSN`, `EXPO_PUBLIC_POSTHOG_API_KEY`, **`EXPO_PUBLIC_TURNSTILE_SITE_KEY`** (site key pública; el secret va en Supabase).
   - Confirmar con `eas env:list --environment production`; **nuevo build** tras añadirlas.
 - [x] Configurar EAS Submit para publicación automática en App Store
   - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
@@ -566,6 +572,12 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Contrato Descubrir: públicas + privadas con contraseña (docs README/REQUIREMENTS); CA_CONTACT1 incluye copia en web
 - [x] Documentación alineada (`REQUIREMENTS.md`, `TASKS.md`, `README.md`)
 - [x] Merge `main` (hotfix v1.7.1) en `develop` para desbloquear PR #158
+- [x] Cloudflare Turnstile en login/registro/recuperación (modal al enviar)
+  - Expo Go: hostname del widget **`localhost`**. Release: **`musapp-731e1.web.app`** + página `invite-hosting/public/turnstile.html`.
+  - Pendiente operativo: `eas env:create` del site key, hostnames en Cloudflare, `firebase deploy --only hosting` de `turnstile.html`, activar CAPTCHA en Supabase **después** de tener el site key en la app; rebuild nativo por `react-native-webview`.
+- [x] Política de contraseña: min 8 + mayúscula + minúscula + dígito + símbolo
+- [x] Cambio de contraseña en Editar perfil (exige actual; recovery no)
+- [x] Security RLS/RPC lockdown mig. `118`; `search_path` helpers de torneo mig. `119`
 
 ---
 
@@ -682,3 +694,4 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - `process_league_lifecycle`: REVOKE PUBLIC/authenticated + cron `match-state-transitions` (igual que torneos).
   - Fix typo REVOKE en migración `104` (`enqueue_player_stats_recompute`) + REVOKE defensivo en `106`.
   - `get_player_stats`: refresh-on-read (ELO + agregados) solo para `auth.uid()` o admin; resto lee cache.
+- [x] **Security RLS/RPC (ago. 2026, mig. `118`/`119`):** RLS en cola de stats; SELECT de `match_invitations` y `player_stats` acotado; REVOKE de RPCs de lifecycle/`enqueue_notification`; `search_path` en helpers de torneo. HaveIBeenPwned no disponible en plan Free.

@@ -14,9 +14,11 @@ import { Link, useRouter, type Href } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { APP_DISPLAY_NAME } from '@/constants/app'
+import { TurnstileChallengeModal } from '@/components/auth/TurnstileChallengeModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
+import { useTurnstileCaptcha } from '@/hooks/useTurnstileCaptcha'
 import { supabase } from '@/lib/supabase'
 import { loginSchema, type LoginFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
@@ -33,6 +35,7 @@ export default function LoginScreen() {
   const lastAuthMessage = useAuthStore((s) => s.lastAuthMessage)
   const clearLastAuthMessage = useAuthStore((s) => s.clearLastAuthMessage)
   const [formError, setFormError] = useState<string | null>(null)
+  const captcha = useTurnstileCaptcha()
 
   const {
     control,
@@ -51,7 +54,13 @@ export default function LoginScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null)
-    const { error } = await signInWithPassword(values.email, values.password)
+    const captchaResult = await captcha.solve()
+    if (captchaResult.cancelled) return
+    if (captchaResult.error) {
+      setFormError(captchaResult.error)
+      return
+    }
+    const { error } = await signInWithPassword(values.email, values.password, captchaResult.token)
     if (error) {
       setFormError(error.message)
     }
@@ -155,7 +164,12 @@ export default function LoginScreen() {
           <Text style={styles.linkText}>¿Has olvidado la contraseña?</Text>
         </Link>
 
-        <Button title="Entrar" onPress={onSubmit} loading={isSubmitting} style={styles.btn} />
+        <Button
+          title="Entrar"
+          onPress={onSubmit}
+          loading={isSubmitting || captcha.visible}
+          style={styles.btn}
+        />
 
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
@@ -186,6 +200,12 @@ export default function LoginScreen() {
           </Link>
         </View>
       </ScrollView>
+      <TurnstileChallengeModal
+        visible={captcha.visible}
+        resetNonce={captcha.resetNonce}
+        onSuccess={captcha.complete}
+        onCancel={captcha.cancel}
+      />
     </KeyboardAvoidingView>
   )
 }

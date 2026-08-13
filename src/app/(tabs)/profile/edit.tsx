@@ -14,6 +14,11 @@ import { MunicipalityPicker } from '@/components/ui/MunicipalityPicker'
 import { PhoneInput } from '@/components/ui/PhoneInput'
 import { useAuthStore } from '@/hooks/useAuth'
 import { useProfile, useUpdateProfile, useUploadAvatar } from '@/hooks/useProfile'
+import {
+  AUTH_PASSWORD_HINT,
+  changePasswordSchema,
+  type ChangePasswordFormValues,
+} from '@/utils/authSchemas'
 import { phoneE164Schema } from '@/utils/validators'
 import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
@@ -33,12 +38,16 @@ export default function EditProfileScreen() {
   const insets = useSafeAreaInsets()
   const { font, space } = useResponsiveLayout()
   const sessionUserId = useAuthStore((s) => s.session?.user.id)
+  const updatePassword = useAuthStore((s) => s.updatePassword)
   const { data: profile, isLoading } = useProfile(sessionUserId)
   const updateProfile = useUpdateProfile()
   const uploadAvatar = useUploadAvatar()
 
   const [avatarUri, setAvatarUri] = useState<string | null>(null)
   const [pendingMimeType, setPendingMimeType] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSuccess, setPasswordSuccess] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   const {
     control,
@@ -51,6 +60,20 @@ export default function EditProfileScreen() {
       display_name: '',
       phone_e164: '',
       city: '',
+    },
+  })
+
+  const {
+    control: passwordControl,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPassword,
+    formState: { errors: passwordErrors, isDirty: passwordDirty },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: '',
+      password: '',
+      confirmPassword: '',
     },
   })
 
@@ -115,6 +138,23 @@ export default function EditProfileScreen() {
   }
 
   const isSaving = updateProfile.isPending || uploadAvatar.isPending
+
+  const onChangePassword = handlePasswordSubmit(async (values) => {
+    setPasswordError(null)
+    setPasswordSuccess(false)
+    setChangingPassword(true)
+    try {
+      const { error } = await updatePassword(values.password, values.currentPassword)
+      if (error) {
+        setPasswordError(error.message)
+        return
+      }
+      resetPassword()
+      setPasswordSuccess(true)
+    } finally {
+      setChangingPassword(false)
+    }
+  })
 
   if (isLoading) {
     return (
@@ -221,14 +261,100 @@ export default function EditProfileScreen() {
       <Button
         title="Guardar cambios"
         loading={isSaving}
-        disabled={!isDirty && !avatarUri}
+        disabled={(!isDirty && !avatarUri) || changingPassword}
         onPress={handleSubmit(onSubmit)}
       />
+
+      <View style={styles.passwordSection}>
+        <Text style={[styles.sectionTitle, { fontSize: font(18) }]}>Contraseña</Text>
+        <Text style={styles.passwordHint}>{AUTH_PASSWORD_HINT}</Text>
+
+        {passwordError ? (
+          <View style={styles.formError} accessibilityRole="alert">
+            <Text style={styles.formErrorText}>{passwordError}</Text>
+          </View>
+        ) : null}
+        {passwordSuccess ? (
+          <View style={styles.formSuccess} accessibilityRole="alert">
+            <Text style={styles.formSuccessText}>Contraseña actualizada</Text>
+          </View>
+        ) : null}
+
+        <Controller
+          control={passwordControl}
+          name="currentPassword"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              label="Contraseña actual"
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              showPasswordToggle
+              value={value}
+              onBlur={onBlur}
+              onChangeText={(text) => {
+                setPasswordError(null)
+                setPasswordSuccess(false)
+                onChange(text)
+              }}
+              error={passwordErrors.currentPassword?.message}
+            />
+          )}
+        />
+        <Controller
+          control={passwordControl}
+          name="password"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              label="Nueva contraseña"
+              autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              showPasswordToggle
+              value={value}
+              onBlur={onBlur}
+              onChangeText={(text) => {
+                setPasswordError(null)
+                setPasswordSuccess(false)
+                onChange(text)
+              }}
+              error={passwordErrors.password?.message}
+            />
+          )}
+        />
+        <Controller
+          control={passwordControl}
+          name="confirmPassword"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              label="Confirmar nueva contraseña"
+              autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              showPasswordToggle
+              value={value}
+              onBlur={onBlur}
+              onChangeText={(text) => {
+                setPasswordError(null)
+                setPasswordSuccess(false)
+                onChange(text)
+              }}
+              error={passwordErrors.confirmPassword?.message}
+            />
+          )}
+        />
+        <Button
+          title="Cambiar contraseña"
+          loading={changingPassword}
+          disabled={!passwordDirty || isSaving}
+          onPress={onChangePassword}
+        />
+      </View>
 
       <Button
         title="Cancelar"
         variant="outline"
-        disabled={isSaving}
+        disabled={isSaving || changingPassword}
         onPress={goBack}
       />
     </KeyboardAwareScrollView>
@@ -298,5 +424,48 @@ const styles = StyleSheet.create({
   },
   fields: {
     gap: 8,
+  },
+  passwordSection: {
+    gap: 8,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  sectionTitle: {
+    fontFamily: Fonts.bold,
+    color: Colors.primary,
+  },
+  passwordHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  formError: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  formErrorText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.danger,
+  },
+  formSuccess: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  formSuccessText: {
+    fontSize: 14,
+    fontFamily: Fonts.medium,
+    color: Colors.primary,
   },
 })
