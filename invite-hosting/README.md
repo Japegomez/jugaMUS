@@ -1,9 +1,10 @@
 # Invite Hosting (Firebase)
 
-Static HTTPS endpoints for WhatsApp invite links:
+Static HTTPS endpoints for WhatsApp invite links and the Turnstile challenge page:
 
 - `https://musapp-731e1.web.app/m/{matchId}`
 - `https://musapp-731e1.web.app/t/{tournamentId}`
+- `https://musapp-731e1.web.app/turnstile.html` (native captcha WebView in release builds)
 
 With the app installed and App/Universal Links verified, the OS opens jugaMUS. Otherwise `redirect.html` sends the browser to Play Store / App Store.
 
@@ -14,7 +15,7 @@ With the app installed and App/Universal Links verified, the OS opens jugaMUS. O
 3. From this folder: `firebase deploy --only hosting`.
 4. Set app env:
    - Local `.env.local`: `EXPO_PUBLIC_INVITE_HOST=musapp-731e1.web.app`
-   - EAS: `eas env:create --name EXPO_PUBLIC_INVITE_HOST --value "musapp-731e1.web.app" --environment production --visibility plain`
+   - EAS: `eas env:create --name EXPO_PUBLIC_INVITE_HOST --value "musapp-731e1.web.app" --environment production --visibility plaintext`
 5. Ship a new native build (EAS) so associated domains / intent filters are in the binary.
 
 ## Verify

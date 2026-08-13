@@ -12,9 +12,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Link } from 'expo-router'
 
+import { TurnstileChallengeModal } from '@/components/auth/TurnstileChallengeModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
+import { useTurnstileCaptcha } from '@/hooks/useTurnstileCaptcha'
 import { forgotPasswordSchema, type ForgotPasswordFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
@@ -23,6 +25,7 @@ import { Fonts } from '@/theme/typography'
 export default function ForgotPasswordScreen() {
   const { authTopPadding, font } = useResponsiveLayout()
   const resetPassword = useAuthStore((s) => s.resetPassword)
+  const captcha = useTurnstileCaptcha()
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -36,9 +39,15 @@ export default function ForgotPasswordScreen() {
   })
 
   const onSubmit = handleSubmit(async (values) => {
+    const captchaResult = await captcha.solve()
+    if (captchaResult.cancelled) return
+    if (captchaResult.error) {
+      Alert.alert('Recuperación', captchaResult.error)
+      return
+    }
     setSubmitting(true)
     try {
-      const { error } = await resetPassword(values.email)
+      const { error } = await resetPassword(values.email, captchaResult.token)
       if (error) {
         Alert.alert('Recuperación', error.message)
         return
@@ -95,7 +104,7 @@ export default function ForgotPasswordScreen() {
           <Button
             title="Enviar enlace"
             onPress={onSubmit}
-            loading={submitting}
+            loading={submitting || captcha.visible}
             style={styles.btn}
           />
         ) : null}
@@ -104,6 +113,12 @@ export default function ForgotPasswordScreen() {
           <Text style={styles.linkText}>Volver al inicio de sesión</Text>
         </Link>
       </ScrollView>
+      <TurnstileChallengeModal
+        visible={captcha.visible}
+        resetNonce={captcha.resetNonce}
+        onSuccess={captcha.complete}
+        onCancel={captcha.cancel}
+      />
     </KeyboardAvoidingView>
   )
 }

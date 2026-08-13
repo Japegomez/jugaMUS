@@ -1,5 +1,22 @@
 import { z } from 'zod'
 
+/** Matches Supabase Auth: min 8 + lowercase + uppercase + digits + symbols. */
+export const AUTH_PASSWORD_HINT =
+  'Mínimo 8 caracteres, con mayúscula, minúscula, un número y un símbolo.'
+
+/** Letters, digits, and the symbol set documented by Supabase Auth / GoTrue. */
+const AUTH_PASSWORD_ALLOWED = /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{}|;:,.<>?]+$/
+const AUTH_PASSWORD_SYMBOL = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/
+
+const authPasswordSchema = z
+  .string()
+  .min(8, 'La contraseña debe tener al menos 8 caracteres')
+  .regex(/[a-z]/, AUTH_PASSWORD_HINT)
+  .regex(/[A-Z]/, AUTH_PASSWORD_HINT)
+  .regex(/[0-9]/, AUTH_PASSWORD_HINT)
+  .regex(AUTH_PASSWORD_SYMBOL, AUTH_PASSWORD_HINT)
+  .regex(AUTH_PASSWORD_ALLOWED, AUTH_PASSWORD_HINT)
+
 export const loginSchema = z.object({
   email: z.string().trim().email('Email no válido'),
   password: z.string().min(1, 'Introduce la contraseña'),
@@ -11,7 +28,7 @@ export const registerSchema = z
   .object({
     displayName: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
     email: z.string().trim().email('Email no válido'),
-    password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    password: authPasswordSchema,
     confirmPassword: z.string(),
     acceptTerms: z.boolean().refine((v) => v === true, {
       message: 'Debes aceptar los términos y la política de privacidad',
@@ -32,7 +49,7 @@ export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>
 
 export const updatePasswordSchema = z
   .object({
-    password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    password: authPasswordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -41,3 +58,20 @@ export const updatePasswordSchema = z
   })
 
 export type UpdatePasswordFormValues = z.infer<typeof updatePasswordSchema>
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Introduce tu contraseña actual'),
+    password: authPasswordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  })
+  .refine((data) => data.password !== data.currentPassword, {
+    message: 'La nueva contraseña debe ser distinta de la actual',
+    path: ['password'],
+  })
+
+export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>

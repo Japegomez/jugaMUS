@@ -350,7 +350,13 @@ export default function CreateMatchScreen() {
       ...invitesB.slice(0, inviteCapacityB).map((fid) => ({ fid, team: TEAM.B })),
     ]
 
+    if (!sessionUserId) {
+      showAlert('Error', 'Debes iniciar sesión para crear una partida.')
+      return
+    }
+
     setIsSubmitting(true)
+    let createdMatchId: string | null = null
     try {
       const match = await createMatch.mutateAsync({
         data: {
@@ -372,6 +378,7 @@ export default function CreateMatchScreen() {
         },
         password: values.visibility === MATCH_VISIBILITY.PRIVATE ? values.password : undefined,
       })
+      createdMatchId = match.id
       if (!isPastResultMode && hasIncompleteMatchRoster(effectiveRoster)) {
         await acknowledgeAlert(
           AUTO_CANCEL_INCOMPLETE_ROSTER_ALERT.title,
@@ -405,7 +412,7 @@ export default function CreateMatchScreen() {
         if (hasRivalInvites && rivalInvitesOk) {
           await submitResult.mutateAsync({
             matchId: match.id,
-            submittedByUserId: sessionUserId!,
+            submittedByUserId: sessionUserId,
             submittedByTeam: TEAM.A,
             teamAGames: pastResult.teamAGames,
             teamBGames: pastResult.teamBGames,
@@ -445,7 +452,19 @@ export default function CreateMatchScreen() {
         },
       } as Href)
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo crear la partida')
+      const message = err instanceof Error ? err.message : 'Ha ocurrido un error'
+      if (createdMatchId) {
+        Alert.alert('Partida creada', `${message}. Puedes continuar desde la ficha de la partida.`)
+        router.replace({
+          pathname: '/(tabs)/matches/[id]',
+          params: { id: createdMatchId },
+        } as Href)
+      } else {
+        Alert.alert(
+          'Error',
+          message === 'Ha ocurrido un error' ? 'No se pudo crear la partida' : message
+        )
+      }
     } finally {
       setIsSubmitting(false)
     }

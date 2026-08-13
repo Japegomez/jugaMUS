@@ -149,6 +149,11 @@ describe('analytics helpers', () => {
       match_id: 'm1',
       team: 'B',
     })
+
+    trackMatchInviteAccepted(undefined, 'A')
+    expect(posthog.capture).toHaveBeenCalledWith('match_invite_accepted', {
+      team: 'A',
+    })
   })
 
   describe('trackMatchCompletedIfFinished', () => {

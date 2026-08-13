@@ -53,6 +53,15 @@ describe('generateRoundRobinFixtures', () => {
       const count = fixtures.filter((f) => f.pairAId === id || f.pairBId === id).length
       expect(count).toBe(2)
     }
+    const pairs = fixtures.map((f) => [f.pairAId, f.pairBId].sort().join('|'))
+    expect(new Set(pairs).size).toBe(pairs.length)
+    const expected = new Set<string>()
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        expected.add([ids[i], ids[j]].sort().join('|'))
+      }
+    }
+    expect(new Set(pairs)).toEqual(expected)
   })
 
   it('returns empty for fewer than 2 pairs', () => {

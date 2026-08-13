@@ -78,7 +78,7 @@ describe('profiles.service', () => {
       await expect(getProfile('u1')).rejects.toThrow('Perfil no encontrado')
     })
 
-    it('queries profiles table for other users with empty phone', async () => {
+    it('queries profiles table for other users without phone or prefs', async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: 'viewer' } },
         error: null,
@@ -108,8 +108,19 @@ describe('profiles.service', () => {
       const profile = await getProfile('u2')
 
       expect(mockSupabase.from).toHaveBeenCalledWith('profiles')
-      expect(profile.phone_e164).toBe('')
-      expect(profile.display_name).toBe('Otro')
+      expect(profile).toEqual({
+        id: 'u2',
+        display_name: 'Otro',
+        city: 'Barcelona',
+        photo_url: null,
+        badge_showcase: [],
+        role: 'user',
+        status: 'active',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      })
+      expect(profile).not.toHaveProperty('phone_e164')
+      expect(profile).not.toHaveProperty('notify_push')
     })
 
     it('throws on profiles query error', async () => {

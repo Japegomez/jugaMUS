@@ -9,6 +9,7 @@ import { profileQueryKey, useProfile, useUpdateProfile } from '@/hooks/useProfil
 jest.mock('@/services/profiles.service', () => ({
   getProfile: jest.fn(),
   updateProfile: jest.fn(),
+  isOwnProfile: (row: object) => 'phone_e164' in row && 'notify_push' in row,
 }))
 
 import { getProfile, updateProfile } from '@/services/profiles.service'
@@ -33,7 +34,12 @@ describe('useProfile', () => {
   })
 
   it('loads profile for session user', async () => {
-    const profile = { id: 'user-1', display_name: 'Ana' }
+    const profile = {
+      id: 'user-1',
+      display_name: 'Ana',
+      phone_e164: '+34600000000',
+      notify_push: true,
+    }
     mockGetProfile.mockResolvedValue(profile)
 
     const { result } = renderHookWithClient(() => useProfile())

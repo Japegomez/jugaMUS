@@ -13,10 +13,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useRouter } from 'expo-router'
 
+import { TurnstileChallengeModal } from '@/components/auth/TurnstileChallengeModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useAuthStore } from '@/hooks/useAuth'
-import { registerSchema, type RegisterFormValues } from '@/utils/authSchemas'
+import { useTurnstileCaptcha } from '@/hooks/useTurnstileCaptcha'
+import { AUTH_PASSWORD_HINT, registerSchema, type RegisterFormValues } from '@/utils/authSchemas'
 import { Colors } from '@/theme/colors'
 import { useResponsiveLayout } from '@/theme/responsive'
 import { Fonts } from '@/theme/typography'
@@ -25,6 +27,7 @@ export default function RegisterScreen() {
   const router = useRouter()
   const { authTopPadding, font } = useResponsiveLayout()
   const signUp = useAuthStore((s) => s.signUp)
+  const captcha = useTurnstileCaptcha()
   const [submitting, setSubmitting] = useState(false)
 
   const {
@@ -43,12 +46,19 @@ export default function RegisterScreen() {
   })
 
   const onSubmit = handleSubmit(async (values) => {
+    const captchaResult = await captcha.solve()
+    if (captchaResult.cancelled) return
+    if (captchaResult.error) {
+      Alert.alert('Registro', captchaResult.error)
+      return
+    }
     setSubmitting(true)
     try {
       const { error } = await signUp({
         email: values.email,
         password: values.password,
         displayName: values.displayName,
+        captchaToken: captchaResult.token,
       })
       if (error) {
         Alert.alert('Registro', error.message)
@@ -106,6 +116,8 @@ export default function RegisterScreen() {
             />
           )}
         />
+
+        <Text style={styles.passwordHint}>{AUTH_PASSWORD_HINT}</Text>
 
         <Controller
           control={control}
@@ -170,7 +182,12 @@ export default function RegisterScreen() {
           )}
         />
 
-        <Button title="Registrarme" onPress={onSubmit} loading={submitting} style={styles.btn} />
+        <Button
+          title="Registrarme"
+          onPress={onSubmit}
+          loading={submitting || captcha.visible}
+          style={styles.btn}
+        />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
@@ -179,6 +196,12 @@ export default function RegisterScreen() {
           </Link>
         </View>
       </ScrollView>
+      <TurnstileChallengeModal
+        visible={captcha.visible}
+        resetNonce={captcha.resetNonce}
+        onSuccess={captcha.complete}
+        onCancel={captcha.cancel}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -199,6 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.textSecondary,
     marginBottom: 24,
+  },
+  passwordHint: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 18,
   },
   btn: { marginTop: 8 },
   termsBlock: {

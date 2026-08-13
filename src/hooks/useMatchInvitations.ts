@@ -102,9 +102,13 @@ export function useCancelMatchInvitation() {
   const queryClient = useQueryClient()
   const userId = useAuthStore((s) => s.session?.user.id)
   return useMutation({
-    mutationFn: (invitationId: string) => cancelMatchInvitation(invitationId),
-    onSuccess: () => {
-      invalidateMatchInvitationQueries(queryClient, { userId })
+    mutationFn: ({ invitationId }: { invitationId: string; matchId?: string }) =>
+      cancelMatchInvitation(invitationId),
+    onSuccess: (_data, variables) => {
+      invalidateMatchInvitationQueries(queryClient, {
+        userId,
+        matchId: variables.matchId,
+      })
       if (userId) {
         invalidateMyMatchesDashboard(queryClient, userId)
       }

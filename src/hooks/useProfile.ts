@@ -3,10 +3,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getProfile,
   getViewableUserProfile,
+  isOwnProfile,
   updateProfile,
   uploadAvatar,
 } from '@/services/profiles.service'
-import type { ProfileUpdate } from '@/services/profiles.service'
+import type { ProfileRow, ProfileUpdate } from '@/services/profiles.service'
 import { useAuthStore } from '@/hooks/useAuth'
 
 export function profileQueryKey(userId: string) {
@@ -24,7 +25,11 @@ export function useProfile(userId?: string) {
 
   return useQuery({
     queryKey: profileQueryKey(resolvedId ?? ''),
-    queryFn: () => getProfile(resolvedId!),
+    queryFn: async (): Promise<ProfileRow> => {
+      const row = await getProfile(resolvedId!)
+      if (!isOwnProfile(row)) throw new Error('Perfil no encontrado')
+      return row
+    },
     enabled: Boolean(resolvedId),
   })
 }
@@ -63,7 +68,9 @@ export function useUploadAvatar() {
     mutationFn: async (input: { uri: string; mimeType?: string | null }) => {
       if (!sessionUserId) throw new Error('No autenticado')
       await uploadAvatar(sessionUserId, input.uri, input.mimeType)
-      return getProfile(sessionUserId)
+      const row = await getProfile(sessionUserId)
+      if (!isOwnProfile(row)) throw new Error('Perfil no encontrado')
+      return row
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(profileQueryKey(updated.id), updated)

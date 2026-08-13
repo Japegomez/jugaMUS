@@ -12,6 +12,7 @@ import {
   useMyFriendRequests,
   useMyFriends,
   useRespondFriendRequest,
+  useSearchUsersByDisplayName,
   useSendFriendRequest,
   userSearchQueryKey,
 } from '@/hooks/useFriends'
@@ -31,6 +32,7 @@ import {
   listMyFriendRequests,
   listMyFriends,
   respondFriendRequest,
+  searchUsersByDisplayName,
   sendFriendRequest,
 } from '@/services/friends.service'
 
@@ -38,6 +40,7 @@ const mockListMyFriends = listMyFriends as jest.Mock
 const mockListMyFriendRequests = listMyFriendRequests as jest.Mock
 const mockSendFriendRequest = sendFriendRequest as jest.Mock
 const mockRespondFriendRequest = respondFriendRequest as jest.Mock
+const mockSearchUsers = searchUsersByDisplayName as jest.Mock
 
 describe('friends query keys', () => {
   it('builds stable keys', () => {
@@ -156,5 +159,34 @@ describe('useRespondFriendRequest', () => {
     })
 
     expect(mockRespondFriendRequest).toHaveBeenCalledWith('fr1', true)
+  })
+})
+
+describe('useSearchUsersByDisplayName', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useAuthStore.setState({ session: { user: { id: 'user-1' } } as never })
+  })
+
+  afterEach(() => {
+    useAuthStore.setState({ session: null })
+  })
+
+  it('does not search for a one-character query', async () => {
+    const { result } = renderHookWithClient(() => useSearchUsersByDisplayName('a'))
+
+    expect(result.current.fetchStatus).toBe('idle')
+    expect(mockSearchUsers).not.toHaveBeenCalled()
+  })
+
+  it('searches when the trimmed query has at least two characters', async () => {
+    const hits = [{ user_id: 'u2', display_name: 'Ana' }]
+    mockSearchUsers.mockResolvedValue(hits)
+
+    const { result } = renderHookWithClient(() => useSearchUsersByDisplayName('ana'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mockSearchUsers).toHaveBeenCalledWith('ana')
+    expect(result.current.data).toEqual(hits)
   })
 })

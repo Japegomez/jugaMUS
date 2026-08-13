@@ -279,6 +279,7 @@ export default function MatchesScreen() {
   const { data: invitations } = useMyMatchInvitations()
   const respondInvitation = useRespondMatchInvitation()
   const [isUserRefreshing, setIsUserRefreshing] = useState(false)
+  const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null)
 
   const onUserRefresh = useCallback(async () => {
     setIsUserRefreshing(true)
@@ -361,12 +362,14 @@ export default function MatchesScreen() {
             return (
               <MatchInvitationRow
                 invitation={item.invitation}
-                loading={respondInvitation.isPending}
+                loading={respondingInvitationId === item.invitation.invitation_id}
                 onOpen={() => router.push(`/(tabs)/matches/${item.invitation.match_id}` as Href)}
-                onAccept={() =>
+                onAccept={() => {
+                  const invitationId = item.invitation.invitation_id
+                  setRespondingInvitationId(invitationId)
                   void respondInvitation
                     .mutateAsync({
-                      invitationId: item.invitation.invitation_id,
+                      invitationId,
                       accept: true,
                       matchId: item.invitation.match_id,
                       team: item.invitation.team,
@@ -378,11 +381,14 @@ export default function MatchesScreen() {
                         err instanceof Error ? err.message : 'Error'
                       )
                     })
-                }
-                onReject={() =>
+                    .finally(() => setRespondingInvitationId(null))
+                }}
+                onReject={() => {
+                  const invitationId = item.invitation.invitation_id
+                  setRespondingInvitationId(invitationId)
                   void respondInvitation
                     .mutateAsync({
-                      invitationId: item.invitation.invitation_id,
+                      invitationId,
                       accept: false,
                       matchId: item.invitation.match_id,
                       team: item.invitation.team,
@@ -393,7 +399,8 @@ export default function MatchesScreen() {
                         err instanceof Error ? err.message : 'Error'
                       )
                     })
-                }
+                    .finally(() => setRespondingInvitationId(null))
+                }}
               />
             )
           }

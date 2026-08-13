@@ -37,6 +37,8 @@ type EditMatchTeamModalProps = {
    * "Añadir amigo" tab is shown so the creator can invite friends. */
   matchId?: string
   team?: string
+  /** User ids already occupying a slot (participants + pending invites). */
+  occupiedUserIds?: string[]
   /** Free slots on this team (registered + text + pending < 2). */
   freeSlots?: number
   /** Used in the WhatsApp invite message when inviting from this modal. */
@@ -64,6 +66,7 @@ type EditMatchTeamFormProps = {
   slots: MatchTeamEditSlot[]
   matchId?: string
   team?: string
+  occupiedUserIds?: string[]
   freeSlots?: number
   matchTitle?: string
   onClose: () => void
@@ -77,6 +80,7 @@ function EditMatchTeamForm({
   slots,
   matchId,
   team,
+  occupiedUserIds,
   freeSlots,
   matchTitle,
   onClose,
@@ -154,6 +158,7 @@ function EditMatchTeamForm({
               teamLabel={teamLabel}
               matchTitle={matchTitle}
               freeSlots={freeSlots ?? 0}
+              occupiedUserIds={occupiedUserIds ?? []}
             />
           ) : (
             <>
@@ -208,12 +213,14 @@ function InviteFriendsTab({
   teamLabel,
   matchTitle,
   freeSlots,
+  occupiedUserIds,
 }: {
   matchId: string
   team: string
   teamLabel: string
   matchTitle?: string
   freeSlots: number
+  occupiedUserIds: string[]
 }) {
   const { data: friends, isLoading } = useMyFriends()
   const invite = useInviteFriendToMatch()
@@ -221,9 +228,11 @@ function InviteFriendsTab({
   const [invitingId, setInvitingId] = useState<string | null>(null)
 
   const remainingSlots = Math.max(0, freeSlots)
+  const occupied = new Set([...occupiedUserIds, ...invitedIds])
+  const eligibleFriends = (friends ?? []).filter((f) => !occupied.has(f.user_id))
 
   const handleInvite = async (friendId: string) => {
-    if (remainingSlots <= 0 || invitedIds.includes(friendId)) return
+    if (remainingSlots <= 0 || occupied.has(friendId)) return
     setInvitingId(friendId)
     try {
       await invite.mutateAsync({ matchId, inviteeId: friendId, team })
@@ -264,11 +273,18 @@ function InviteFriendsTab({
     )
   }
 
+  if (eligibleFriends.length === 0) {
+    return (
+      <Text style={styles.empty}>
+        Todos tus amigos ya están en esta partida o tienen una invitación pendiente.
+      </Text>
+    )
+  }
+
   return (
     <View style={styles.friendsList}>
       <Text style={styles.teamHint}>Invita a un amigo a unirse a {teamLabel}</Text>
-      {friends.map((f) => {
-        const alreadyInvited = invitedIds.includes(f.user_id)
+      {eligibleFriends.map((f) => {
         return (
           <View key={f.user_id} style={styles.friendRow}>
             <AvatarCircle uri={f.photo_url} name={f.display_name} size={40} />
@@ -283,10 +299,10 @@ function InviteFriendsTab({
               ) : null}
             </View>
             <Button
-              title={alreadyInvited ? 'Invitado' : 'Invitar'}
+              title="Invitar"
               onPress={() => void handleInvite(f.user_id)}
               loading={invitingId === f.user_id}
-              disabled={alreadyInvited || remainingSlots <= 0 || invitingId !== null}
+              disabled={remainingSlots <= 0 || invitingId !== null}
               style={styles.inviteBtn}
               textStyle={styles.inviteBtnText}
             />
@@ -304,6 +320,7 @@ export function EditMatchTeamModal({
   slots,
   matchId,
   team,
+  occupiedUserIds,
   freeSlots,
   matchTitle,
   onClose,
@@ -324,6 +341,7 @@ export function EditMatchTeamModal({
           slots={slots}
           matchId={matchId}
           team={team}
+          occupiedUserIds={occupiedUserIds}
           freeSlots={freeSlots}
           matchTitle={matchTitle}
           onClose={onClose}

@@ -30,7 +30,7 @@ Include as much detail as you can:
 
 In scope:
 
-- Authentication / session issues (including OAuth)
+- Authentication / session issues (including OAuth and CAPTCHA/Turnstile bypass)
 - Unauthorized data access (RLS / API / Edge Functions)
 - Injection, XSS, or similar client/server flaws
 - Secrets exposure in the repo or client builds

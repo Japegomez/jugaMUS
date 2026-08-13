@@ -82,7 +82,7 @@ export async function respondMatchInvitation(
   })
   if (error) throw new Error(mapInviteRpcError(error.message))
   if (accept) {
-    trackMatchInviteAccepted(meta?.matchId ?? invitationId, meta?.team ?? '')
+    trackMatchInviteAccepted(meta?.matchId, meta?.team ?? '')
   }
 }
 
