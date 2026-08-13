@@ -8,7 +8,8 @@ describe('useTurnstileCaptcha', () => {
   const prevKey = process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY
 
   afterEach(() => {
-    process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY = prevKey
+    if (prevKey === undefined) delete process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY
+    else process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY = prevKey
   })
 
   it('resolves immediately when Turnstile is disabled', async () => {
@@ -48,5 +49,23 @@ describe('useTurnstileCaptcha', () => {
       result.current.cancel()
     })
     await expect(solved).resolves.toEqual({ error: null, cancelled: true })
+  })
+
+  it('does not replace an in-flight solve resolver', async () => {
+    process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY = '0x4AAAA-test'
+    const { result } = renderHook(() => useTurnstileCaptcha())
+
+    let first: ReturnType<typeof result.current.solve> | undefined
+    let second: ReturnType<typeof result.current.solve> | undefined
+    act(() => {
+      first = result.current.solve()
+      second = result.current.solve()
+    })
+    await expect(second).resolves.toEqual({ error: null, cancelled: true })
+
+    act(() => {
+      result.current.complete('cf-token')
+    })
+    await expect(first).resolves.toEqual({ token: 'cf-token', error: null })
   })
 })

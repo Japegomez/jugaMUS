@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Modal,
   Platform,
   Pressable,
@@ -11,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
   type ViewStyle,
 } from 'react-native'
@@ -39,7 +39,6 @@ import { Fonts } from '@/theme/typography'
 
 const FAB_SIZE = 56
 const FAB_GAP_ABOVE_TAB_BAR = 6
-const PANEL_WIDTH = Math.min(360, Math.round(Dimensions.get('window').width * 0.86))
 const SEARCH_DEBOUNCE_MS = 300
 
 type FriendsSectionProps = {
@@ -53,11 +52,14 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const tabBarHeight = useBottomTabBarHeight()
+  const { width: windowWidth } = useWindowDimensions()
+  const panelWidth = Math.min(360, Math.round(windowWidth * 0.86))
   const [open, setOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [inviteTarget, setInviteTarget] = useState<InviteTarget>(null)
-  const [slide] = useState(() => new Animated.Value(PANEL_WIDTH))
+  const [slide] = useState(() => new Animated.Value(panelWidth))
+  const inviteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bottomOffset = bottom ?? tabBarHeight + FAB_GAP_ABOVE_TAB_BAR
 
   const { data: friends, isPending: friendsPending } = useMyFriends()
@@ -81,14 +83,23 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
   }, [searchText])
 
   useEffect(() => {
-    if (!open) return
-    slide.setValue(PANEL_WIDTH)
+    return () => {
+      if (inviteTimerRef.current) clearTimeout(inviteTimerRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) {
+      slide.setValue(panelWidth)
+      return
+    }
+    slide.setValue(panelWidth)
     Animated.timing(slide, {
       toValue: 0,
       duration: 240,
       useNativeDriver: true,
     }).start()
-  }, [open, slide])
+  }, [open, slide, panelWidth])
 
   const clearDrawerState = () => {
     setSearchText('')
@@ -97,7 +108,7 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
 
   const animateDrawerClosed = (onClosed?: () => void) => {
     Animated.timing(slide, {
-      toValue: PANEL_WIDTH,
+      toValue: panelWidth,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
@@ -118,7 +129,8 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
       const showInvite = () => setInviteTarget(target)
       // Give iOS time to dismiss the drawer Modal before presenting pageSheet.
       if (Platform.OS === 'ios') {
-        setTimeout(showInvite, 120)
+        if (inviteTimerRef.current) clearTimeout(inviteTimerRef.current)
+        inviteTimerRef.current = setTimeout(showInvite, 120)
       } else {
         showInvite()
       }
@@ -134,7 +146,12 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
 
   return (
     <>
-      <Modal visible={open} transparent animationType="fade" onRequestClose={closeDrawer}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={closeDrawer}
+        accessibilityViewIsModal>
         <View style={s.backdropContainer}>
           <Pressable
             style={s.backdrop}
@@ -146,7 +163,7 @@ export function FriendsSection({ bottom, right = 20 }: FriendsSectionProps) {
             style={[
               s.panel,
               {
-                width: PANEL_WIDTH,
+                width: panelWidth,
                 paddingTop: Math.max(insets.top, 16),
                 paddingBottom: Math.max(insets.bottom, 16),
                 transform: [{ translateX: slide }],

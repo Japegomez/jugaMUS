@@ -48,6 +48,7 @@ export function SendFriendRequestModal({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
+      onShow={() => setMessage('')}
       onRequestClose={() => {
         if (!send.isPending) close()
       }}>

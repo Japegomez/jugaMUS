@@ -83,8 +83,11 @@ export function trackMatchInviteSent(matchId: string, inviteeId: string, team: s
   })
 }
 
-export function trackMatchInviteAccepted(matchId: string, team: string): void {
-  captureEvent(AnalyticsEvents.MATCH_INVITE_ACCEPTED, { match_id: matchId, team })
+export function trackMatchInviteAccepted(matchId: string | undefined, team: string): void {
+  captureEvent(AnalyticsEvents.MATCH_INVITE_ACCEPTED, {
+    ...(matchId ? { match_id: matchId } : {}),
+    team,
+  })
 }
 
 async function loadCompletedMatchIds(): Promise<string[]> {

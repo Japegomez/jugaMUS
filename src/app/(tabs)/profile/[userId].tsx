@@ -268,16 +268,26 @@ function FriendActionButton({
           disabled={busy}
           accessibilityRole="button"
           accessibilityLabel="Aceptar solicitud"
+          accessibilityState={{ disabled: busy, busy }}
           style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
-          <Ionicons name="checkmark-outline" size={22} color={Colors.primary} />
+          {busy ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Ionicons name="checkmark-outline" size={22} color={Colors.primary} />
+          )}
         </Pressable>
         <Pressable
           onPress={onReject}
           disabled={busy}
           accessibilityRole="button"
           accessibilityLabel="Rechazar solicitud"
+          accessibilityState={{ disabled: busy, busy }}
           style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
-          <Ionicons name="close-outline" size={22} color={Colors.danger} />
+          {busy ? (
+            <ActivityIndicator size="small" color={Colors.danger} />
+          ) : (
+            <Ionicons name="close-outline" size={22} color={Colors.danger} />
+          )}
         </Pressable>
       </View>
     )
@@ -289,8 +299,13 @@ function FriendActionButton({
         disabled={busy}
         accessibilityRole="button"
         accessibilityLabel="Cancelar solicitud enviada"
+        accessibilityState={{ disabled: busy, busy }}
         style={({ pressed }) => [styles.friendBtn, pressed && styles.friendBtnPressed]}>
-        <Ionicons name="hourglass-outline" size={22} color={Colors.textSecondary} />
+        {busy ? (
+          <ActivityIndicator size="small" color={Colors.textSecondary} />
+        ) : (
+          <Ionicons name="hourglass-outline" size={22} color={Colors.textSecondary} />
+        )}
       </Pressable>
     )
   }

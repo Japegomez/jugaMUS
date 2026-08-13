@@ -13,6 +13,12 @@ describe('searchMunicipalities', () => {
     expect(results.every((m) => typeof m.code === 'string' && typeof m.name === 'string')).toBe(
       true
     )
-    expect(searchMunicipalities('MADRÍD', 3).length).toBeGreaterThan(0)
+    expect(results.some((m) => m.name.toLowerCase().includes('madrid'))).toBe(true)
+
+    const accented = searchMunicipalities('MADRÍD', 3)
+    expect(accented.length).toBeGreaterThan(0)
+    expect(
+      accented.some((m) => /madrid/i.test(m.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+    ).toBe(true)
   })
 })

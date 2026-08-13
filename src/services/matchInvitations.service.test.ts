@@ -77,6 +77,14 @@ describe('matchInvitations.service', () => {
     })
   })
 
+  it('respondMatchInvitation omits match_id when metadata is missing', async () => {
+    mockRpc({ data: null, error: null })
+    await respondMatchInvitation('inv-1', true)
+    expect(posthog.capture).toHaveBeenCalledWith('match_invite_accepted', {
+      team: '',
+    })
+  })
+
   it('respondMatchInvitation does not track on reject', async () => {
     mockRpc({ data: null, error: null })
     await respondMatchInvitation('inv-1', false)

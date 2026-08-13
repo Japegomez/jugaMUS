@@ -18,9 +18,12 @@ describe('turnstile', () => {
   const prevInvite = process.env.EXPO_PUBLIC_INVITE_HOST
 
   afterEach(() => {
-    process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY = prevKey
-    process.env.EXPO_PUBLIC_TURNSTILE_HOSTNAME = prevHost
-    process.env.EXPO_PUBLIC_INVITE_HOST = prevInvite
+    if (prevKey === undefined) delete process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY
+    else process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY = prevKey
+    if (prevHost === undefined) delete process.env.EXPO_PUBLIC_TURNSTILE_HOSTNAME
+    else process.env.EXPO_PUBLIC_TURNSTILE_HOSTNAME = prevHost
+    if (prevInvite === undefined) delete process.env.EXPO_PUBLIC_INVITE_HOST
+    else process.env.EXPO_PUBLIC_INVITE_HOST = prevInvite
   })
 
   it('reads the public site key from env', () => {

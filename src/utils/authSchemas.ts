@@ -4,13 +4,18 @@ import { z } from 'zod'
 export const AUTH_PASSWORD_HINT =
   'Mínimo 8 caracteres, con mayúscula, minúscula, un número y un símbolo.'
 
+/** Letters, digits, and the symbol set documented by Supabase Auth / GoTrue. */
+const AUTH_PASSWORD_ALLOWED = /^[A-Za-z0-9!@#$%^&*()_+\-=[\]{}|;:,.<>?]+$/
+const AUTH_PASSWORD_SYMBOL = /[!@#$%^&*()_+\-=[\]{}|;:,.<>?]/
+
 const authPasswordSchema = z
   .string()
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
   .regex(/[a-z]/, AUTH_PASSWORD_HINT)
   .regex(/[A-Z]/, AUTH_PASSWORD_HINT)
   .regex(/[0-9]/, AUTH_PASSWORD_HINT)
-  .regex(/[^A-Za-z0-9]/, AUTH_PASSWORD_HINT)
+  .regex(AUTH_PASSWORD_SYMBOL, AUTH_PASSWORD_HINT)
+  .regex(AUTH_PASSWORD_ALLOWED, AUTH_PASSWORD_HINT)
 
 export const loginSchema = z.object({
   email: z.string().trim().email('Email no válido'),

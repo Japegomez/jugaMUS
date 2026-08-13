@@ -79,6 +79,23 @@ describe('authSchemas', () => {
         }).success
       ).toBe(false)
     })
+
+    it('rejects trailing spaces and undocumented unicode symbols', () => {
+      expect(
+        registerSchema.safeParse({
+          ...base,
+          password: 'Password1 ',
+          confirmPassword: 'Password1 ',
+        }).success
+      ).toBe(false)
+      expect(
+        registerSchema.safeParse({
+          ...base,
+          password: 'Password1€',
+          confirmPassword: 'Password1€',
+        }).success
+      ).toBe(false)
+    })
   })
 
   describe('forgotPasswordSchema', () => {

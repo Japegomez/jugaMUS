@@ -808,9 +808,9 @@ export default function MatchDetailScreen() {
 
   const slotsA = freeTeamSlots(match, match.participants, TEAM.A)
   const slotsB = freeTeamSlots(match, match.participants, TEAM.B)
-  const pendingInvites = (matchInvitations ?? []).filter(
-    (inv) => inv.status === 'pending' && match.status !== MATCH_STATUS.CANCELLED
-  )
+  const pendingInvites = isCancelled
+    ? []
+    : (matchInvitations ?? []).filter((inv) => inv.status === 'pending')
   const pendingInvitesA = pendingInvites.filter((inv) => inv.team === TEAM.A)
   const pendingInvitesB = pendingInvites.filter((inv) => inv.team === TEAM.B)
   const displaySlotsA = Math.max(0, slotsA - pendingInvitesA.length)
@@ -925,13 +925,11 @@ export default function MatchDetailScreen() {
 
   const matchId = Array.isArray(id) ? id[0] : id
   // list_my_match_invitations only returns pending invites; `match_status` is match status.
-  const myPendingInvitation =
-    (myInvitations ?? []).find(
-      (inv) =>
-        inv.match_id === matchId &&
-        inv.match_status !== MATCH_STATUS.CANCELLED &&
-        match.status !== MATCH_STATUS.CANCELLED
-    ) ?? null
+  const myPendingInvitation = isCancelled
+    ? null
+    : ((myInvitations ?? []).find(
+        (inv) => inv.match_id === matchId && inv.match_status !== MATCH_STATUS.CANCELLED
+      ) ?? null)
 
   const handleAcceptInvitation = async () => {
     if (!myPendingInvitation) return
@@ -1619,6 +1617,10 @@ export default function MatchDetailScreen() {
             : undefined
         }
         team={editingTeam ?? undefined}
+        occupiedUserIds={[
+          ...activeParticipants.map((p) => p.user_id),
+          ...pendingInvites.map((inv) => inv.invitee_id),
+        ]}
         freeSlots={
           editingTeam === TEAM.A ? displaySlotsA : editingTeam === TEAM.B ? displaySlotsB : 0
         }

@@ -27,6 +27,18 @@ export type ProfileRow = {
   updated_at: string
 }
 
+export type OtherUserProfileRow = {
+  id: string
+  display_name: string
+  photo_url: string | null
+  city: string | null
+  badge_showcase: string[]
+  role: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
 export type PublicProfileRow = {
   id: string
   display_name: string
@@ -64,7 +76,11 @@ export type ProfileUpdate = Pick<
 
 const ALLOWED_AVATAR_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export async function getProfile(userId: string): Promise<ProfileRow> {
+export function isOwnProfile(row: ProfileRow | OtherUserProfileRow): row is ProfileRow {
+  return 'phone_e164' in row && 'notify_push' in row
+}
+
+export async function getProfile(userId: string): Promise<ProfileRow | OtherUserProfileRow> {
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -95,18 +111,6 @@ export async function getProfile(userId: string): Promise<ProfileRow> {
     status: data.status,
     created_at: data.created_at,
     updated_at: data.updated_at,
-    phone_e164: '',
-    notify_push: true,
-    notify_on_join: true,
-    notify_on_match_start: true,
-    notify_on_match_edit: true,
-    notify_on_match_cancel: true,
-    notify_on_result: true,
-    notify_on_reminder_24h: true,
-    notify_on_reminder_2h: true,
-    notify_on_reminder_in_progress: true,
-    notify_on_friend_request: true,
-    notify_on_match_invitation: true,
   }
 }
 
@@ -137,7 +141,9 @@ export async function updateProfile(userId: string, updates: ProfileUpdate): Pro
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
 
   if (error) throw new Error(error.message)
-  return getProfile(userId)
+  const row = await getProfile(userId)
+  if (!isOwnProfile(row)) throw new Error('Perfil no encontrado')
+  return row
 }
 
 /**

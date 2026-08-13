@@ -7,6 +7,7 @@ import { useAuthStore } from '@/hooks/useAuth'
 import {
   matchInvitationsQueryKey,
   myMatchInvitationsQueryKey,
+  useCancelMatchInvitation,
   useInviteFriendToMatch,
   useMatchInvitations,
   useMyMatchInvitations,
@@ -27,6 +28,7 @@ jest.mock('@/services/matchInvitations.service', () => ({
 
 import { invalidateMyMatchesDashboard } from '@/hooks/useMatches'
 import {
+  cancelMatchInvitation,
   inviteFriendToMatch,
   listMatchInvitations,
   listMyMatchInvitations,
@@ -37,6 +39,7 @@ const mockListMy = listMyMatchInvitations as jest.Mock
 const mockListMatch = listMatchInvitations as jest.Mock
 const mockInvite = inviteFriendToMatch as jest.Mock
 const mockRespond = respondMatchInvitation as jest.Mock
+const mockCancel = cancelMatchInvitation as jest.Mock
 const mockInvalidateDashboard = invalidateMyMatchesDashboard as jest.Mock
 
 describe('useMyMatchInvitations', () => {
@@ -128,6 +131,31 @@ describe('useRespondMatchInvitation', () => {
     })
 
     expect(mockRespond).toHaveBeenCalledWith('i1', true, { matchId: 'm1', team: 'b' })
+    expect(mockInvalidateDashboard).toHaveBeenCalled()
+  })
+})
+
+describe('useCancelMatchInvitation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    useAuthStore.setState({ session: { user: { id: 'user-1' } } as never })
+  })
+
+  afterEach(() => {
+    useAuthStore.setState({ session: null })
+  })
+
+  it('cancels and invalidates the match invitation query', async () => {
+    mockCancel.mockResolvedValue(undefined)
+    const { result, queryClient } = renderHookWithClient(() => useCancelMatchInvitation())
+    const spy = jest.spyOn(queryClient, 'invalidateQueries')
+
+    await act(async () => {
+      await result.current.mutateAsync({ invitationId: 'i1', matchId: 'm1' })
+    })
+
+    expect(mockCancel).toHaveBeenCalledWith('i1')
+    expect(spy).toHaveBeenCalledWith({ queryKey: matchInvitationsQueryKey('m1') })
     expect(mockInvalidateDashboard).toHaveBeenCalled()
   })
 })

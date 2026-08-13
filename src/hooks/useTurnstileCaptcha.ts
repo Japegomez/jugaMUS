@@ -23,6 +23,9 @@ export function useTurnstileCaptcha() {
 
   const solve = useCallback((): Promise<CaptchaSolveResult> => {
     if (!enabled) return Promise.resolve({ error: null })
+    if (pendingRef.current) {
+      return Promise.resolve({ error: null, cancelled: true })
+    }
     setResetNonce((n) => n + 1)
     setVisible(true)
     return new Promise((resolve) => {

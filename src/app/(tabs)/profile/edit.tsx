@@ -266,7 +266,7 @@ export default function EditProfileScreen() {
       />
 
       <View style={styles.passwordSection}>
-        <Text style={[styles.sectionTitle, { fontSize: font(18) }]}>Contraseña</Text>
+        <Text style={[styles.sectionTitle, { fontSize: font(18) }]}>Cambiar contraseña</Text>
         <Text style={styles.passwordHint}>{AUTH_PASSWORD_HINT}</Text>
 
         {passwordError ? (
