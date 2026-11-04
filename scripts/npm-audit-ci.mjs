@@ -14,16 +14,20 @@ import { fileURLToPath } from 'node:url'
 const ALLOWED_GHSA = new Set([
   'GHSA-w3rx-r6r6-pgpr', // image-size ICNS infinite loop
   'GHSA-5p2g-fcmc-qvqq', // image-size JXL/HEIF infinite loop
+  // minimatch DoS via globparts — only on eslint/jest/Metro paths; forcing
+  // minimatch@10 breaks minimatch@3 CJS default-export consumers (test-exclude).
+  'GHSA-g3hv-75wg-m249',
 ])
 
 /**
  * Check if an advisory hit is blocking (not allowlisted).
- * Only image-size advisories with specific GHSA ids are allowlisted.
+ * image-size + pinned minimatch advisories with specific GHSA ids are allowlisted.
  * @param {Object} hit - Advisory hit object with package, ghsa, etc.
  * @returns {boolean} - true if the hit should block the build
  */
 export function isBlocking(hit) {
-  return !(hit.package === 'image-size' && hit.ghsa && ALLOWED_GHSA.has(hit.ghsa))
+  if (!hit.ghsa || !ALLOWED_GHSA.has(hit.ghsa)) return true
+  return !(hit.package === 'image-size' || hit.package === 'minimatch')
 }
 
 function main() {

@@ -60,7 +60,7 @@ Please give us reasonable time to investigate and ship a fix before any public d
 This repository uses:
 
 - **Dependabot** alerts and version updates (see `.github/dependabot.yml`)
-- **`npm audit`** in CI (`quality` workflow, high severity and above), with an allowlist that only skips specific GHSA advisories for the `image-size` package (transitive via Metro/Expo SDK 54); the same GHSA id on any other package still blocks the build (`scripts/npm-audit-ci.mjs`)
+- **`npm audit`** in CI (`quality` workflow, high severity and above), with an allowlist that only skips specific GHSA advisories for `image-size` (transitive via Metro/Expo SDK 54) and `minimatch` GHSA-g3hv-75wg-m249 (eslint/jest/Metro toolchain; forcing minimatch@10 breaks minimatch@3 CJS consumers). The same GHSA id on any other package still blocks the build (`scripts/npm-audit-ci.mjs`)
 
 Security-related dependency fixes may land on the default branch (`main`); routine version updates are reviewed via Dependabot PRs.
 
