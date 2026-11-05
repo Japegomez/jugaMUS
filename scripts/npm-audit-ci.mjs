@@ -2,14 +2,17 @@
 /**
  * CI wrapper around `npm audit --audit-level=high`.
  *
- * `image-size` (via Metro / Expo SDK 54) has two high DoS advisories whose fix
- * (2.0.3+) breaks Metro: `metro@0.83.3` calls `imageSize(filePath)` with a
- * string, while image-size 2.x only accepts an ArrayBuffer/TypedArray and
- * throws `The "list" argument must be an instance of SharedArrayBuffer...`.
- * Forcing 2.x therefore trades a build-time-only DoS advisory for a broken
- * bundle, so it cannot be fixed without an Expo SDK bump that ships Metro 0.87+.
+ * Expo SDK 54 toolchain advisories (build-time DoS only) whose fixes break the
+ * current Metro / Expo CLI pin and cannot land without an SDK upgrade:
  *
- * Any other high/critical advisory still fails the job.
+ * - `image-size` (via Metro): fix 2.0.3+ breaks `metro@0.83.3` (string path vs
+ *   ArrayBuffer/TypedArray API). Needs Metro 0.87+.
+ * - `minimatch` (eslint/jest/Expo): fix 11.0.1+ breaks minimatch@3 CJS default
+ *   export consumers (`test-exclude`).
+ * - `glob` (Expo CLI/config): fix 14.0.2+ while Expo 54 pins `glob@13.x`.
+ *
+ * Allowlist is per GHSA id (not per package): a new advisory on the same
+ * package still fails the job. Any other high/critical advisory also fails.
  */
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -17,20 +20,21 @@ import { fileURLToPath } from 'node:url'
 const ALLOWED_GHSA = new Set([
   'GHSA-w3rx-r6r6-pgpr', // image-size ICNS infinite loop
   'GHSA-5p2g-fcmc-qvqq', // image-size JXL/HEIF infinite loop
-  // minimatch DoS via globparts — only on eslint/jest/Metro paths; forcing
-  // minimatch@10 breaks minimatch@3 CJS default-export consumers (test-exclude).
-  'GHSA-g3hv-75wg-m249',
+  'GHSA-g3hv-75wg-m249', // minimatch globparts amplification
+  'GHSA-3g3m-2fjr-6pw4', // glob AbortSignal cancellation bypass
 ])
+
+const ALLOWED_PACKAGES = new Set(['image-size', 'minimatch', 'glob'])
 
 /**
  * Check if an advisory hit is blocking (not allowlisted).
- * image-size + pinned minimatch advisories with specific GHSA ids are allowlisted.
+ * Only the GHSA ids above on their Expo-toolchain packages are skipped.
  * @param {Object} hit - Advisory hit object with package, ghsa, etc.
  * @returns {boolean} - true if the hit should block the build
  */
 export function isBlocking(hit) {
   if (!hit.ghsa || !ALLOWED_GHSA.has(hit.ghsa)) return true
-  return !(hit.package === 'image-size' || hit.package === 'minimatch')
+  return !ALLOWED_PACKAGES.has(hit.package)
 }
 
 function main() {
@@ -77,7 +81,7 @@ function main() {
   if (blocking.length === 0) {
     const allowed = [...new Set(advisoryHits.map((h) => h.ghsa).filter(Boolean))]
     console.log(
-      `npm audit: only allowlisted build-toolchain advisories remain (${allowed.join(', ')} via image-size/Metro; no upstream patch on Expo SDK 54).`,
+      `npm audit: only allowlisted build-toolchain advisories remain (${allowed.join(', ')}; no upstream patch on Expo SDK 54).`,
     )
     process.exit(0)
   }

@@ -40,6 +40,9 @@ updates:
       # Block all semver-major bumps (Expo SDK, RN, TypeScript, etc.) — use `npx expo upgrade` / manual
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Metro 0.83 (Expo SDK 54) calls imageSize(path); image-size 2.x only accepts buffers.
+      # Fix needs Metro 0.87+ / next Expo SDK. Allowlisted in scripts/npm-audit-ci.mjs.
+      - dependency-name: 'image-size'
       # Expo SDK pins these — use `npx expo install` / `npx expo upgrade` on SDK upgrades
       - dependency-name: 'react'
         update-types:
@@ -117,6 +120,9 @@ updates:
       # Block all semver-major bumps (Expo SDK, RN, TypeScript, etc.) — use `npx expo upgrade` / manual
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Metro 0.83 (Expo SDK 54) calls imageSize(path); image-size 2.x only accepts buffers.
+      # Fix needs Metro 0.87+ / next Expo SDK. Allowlisted in scripts/npm-audit-ci.mjs.
+      - dependency-name: 'image-size'
       # Expo SDK pins these — use `npx expo install` / `npx expo upgrade` on SDK upgrades
       - dependency-name: 'react'
         update-types:
