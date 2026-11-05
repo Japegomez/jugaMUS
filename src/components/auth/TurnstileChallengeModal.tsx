@@ -44,17 +44,15 @@ function ChallengeBody({
       <View style={styles.card} accessibilityViewIsModal>
         <Text style={styles.title}>Verificación de seguridad</Text>
         <Text style={styles.sub}>Confirma que no eres un robot para continuar.</Text>
-        {!error ? (
-          <TurnstileWidget
-            resetNonce={retryNonce}
-            onTokenChange={(token) => {
-              if (!token) return
-              setError(null)
-              onSuccess(token)
-            }}
-            onError={(message) => setError(message)}
-          />
-        ) : null}
+        <TurnstileWidget
+          resetNonce={retryNonce}
+          onTokenChange={(token) => {
+            if (!token) return
+            setError(null)
+            onSuccess(token)
+          }}
+          onError={(message) => setError(message)}
+        />
         {error ? (
           <Text style={styles.error} accessibilityRole="alert">
             {error}

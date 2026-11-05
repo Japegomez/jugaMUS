@@ -3,14 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-store" />
     <title>jugaMUS</title>
     <style>
       html,
       body {
         margin: 0;
-        padding: 16px 0;
+        padding: 16px 12px;
         background: #fff;
         font-family: system-ui, sans-serif;
+        color: #111;
+      }
+      #status {
+        text-align: center;
+        font-size: 14px;
+        line-height: 20px;
+        color: #555;
+        margin-bottom: 12px;
       }
       #cf-turnstile {
         display: flex;
@@ -24,28 +33,44 @@
           window.ReactNativeWebView.postMessage(JSON.stringify(payload))
         }
       }
+      function showStatus(text) {
+        var el = document.getElementById('status')
+        if (el) el.textContent = text
+      }
       window.onTurnstileLoad = function () {
         var params = new URLSearchParams(window.location.search)
         var sitekey = params.get('k') || ''
         if (!sitekey) {
+          showStatus(
+            'Abre esta página desde la app, o añade ?k=SITE_KEY. El widget no se muestra sin la clave pública de Turnstile.'
+          )
           post({ type: 'error', code: 'missing-sitekey' })
           return
         }
+        showStatus('')
         turnstile.render('#cf-turnstile', {
           sitekey: sitekey,
           theme: 'light',
           size: 'normal',
           language: 'es',
           callback: function (token) {
+            showStatus('Verificación completada.')
             post({ type: 'token', token: token })
           },
           'error-callback': function (code) {
+            showStatus(
+              'Turnstile error ' +
+                String(code || '') +
+                '. En Cloudflare, el hostname del widget debe incluir musapp-731e1.web.app'
+            )
             post({ type: 'error', code: String(code || '') })
           },
           'expired-callback': function () {
+            showStatus('La verificación caducó. Reinténtalo.')
             post({ type: 'expired' })
           },
           'timeout-callback': function () {
+            showStatus('La verificación caducó. Reinténtalo.')
             post({ type: 'expired' })
           },
         })
@@ -58,6 +83,7 @@
     ></script>
   </head>
   <body>
+    <p id="status">Cargando verificación…</p>
     <div id="cf-turnstile"></div>
   </body>
 </html>

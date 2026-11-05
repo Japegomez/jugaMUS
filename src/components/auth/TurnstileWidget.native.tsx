@@ -26,24 +26,31 @@ export function TurnstileWidget({ onTokenChange, onError, resetNonce = 0 }: Turn
     onError?.(CAPTCHA_WIDGET_ERROR_MESSAGE)
   }
 
+  const source = getTurnstileWebViewSource(siteKey)
+  const webSource = 'uri' in source ? { uri: `${source.uri}&v=${resetNonce + 1}` } : source
+
   return (
     <View style={styles.wrap} accessibilityLabel="Verificación de seguridad">
       <WebView
         key={resetNonce}
-        source={getTurnstileWebViewSource(siteKey)}
+        source={webSource}
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
+        cacheEnabled={false}
         startInLoadingState
         automaticallyAdjustContentInsets={false}
-        scrollEnabled={false}
+        scrollEnabled
         mixedContentMode="always"
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled
         setSupportMultipleWindows={false}
+        onShouldStartLoadWithRequest={() => true}
         onMessage={onMessage}
+        onHttpError={() => onError?.(CAPTCHA_WIDGET_ERROR_MESSAGE)}
+        onError={() => onError?.(CAPTCHA_WIDGET_ERROR_MESSAGE)}
         style={styles.webview}
       />
     </View>
@@ -53,13 +60,13 @@ export function TurnstileWidget({ onTokenChange, onError, resetNonce = 0 }: Turn
 const styles = StyleSheet.create({
   wrap: {
     width: '100%',
-    height: 140,
+    height: 220,
     marginVertical: 8,
     overflow: 'hidden',
   },
   webview: {
     backgroundColor: 'transparent',
-    height: 140,
+    height: 220,
     width: '100%',
   },
 })
