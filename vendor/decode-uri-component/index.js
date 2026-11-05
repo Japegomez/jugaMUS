@@ -1,0 +1,171 @@
+"use strict";
+
+// Verbatim port of decode-uri-component@0.5.1 (GHSA-vcc3-ghjq-m6fr fix:
+// linear-time decoding of malformed percent-encoded input), re-exported as a
+// CommonJS callable so `query-string@7` keeps working.
+//
+// Upstream 0.5.x is `"type": "module"` with a single `export default`. Consumers
+// on the Expo/React Native toolchain still do `const decode = require('decode-uri-component')`
+// and call `decode(...)` directly, which throws `decodeComponent is not a function`
+// against an ESM-only package. This shim keeps the patched algorithm and restores
+// the CJS callable shape.
+
+// Matches one or more consecutive percent-encoded bytes (e.g. `%C3%A5`).
+var token = '%[a-f0-9]{2}';
+var multiMatcher = new RegExp('(' + token + ')+', 'gi');
+
+var hexPair = /^[a-f\d]{2}$/i;
+
+// Read a `%XX` sequence at `position`, returning the byte value and where to continue scanning.
+function parsePercentByte(input, position) {
+	if (input.codePointAt(position) !== 37 || position + 3 > input.length) {
+		return;
+	}
+
+	var digits = input.slice(position + 1, position + 3);
+
+	if (!hexPair.test(digits)) {
+		return;
+	}
+
+	return { byte: Number.parseInt(digits, 16), next: position + 3 };
+}
+
+/**
+ * Return how many bytes a UTF-8 code point needs based on its lead byte.
+ * Returns 0 for continuation bytes and other invalid lead bytes.
+ */
+function utf8SequenceLength(byte) {
+	if (byte <= 0x7f) {
+		return 1;
+	}
+
+	// Start at 0xC2 to exclude overlong 2-byte encodings (0xC0/0xC1).
+	if (byte >= 0xc2 && byte <= 0xdf) {
+		return 2;
+	}
+
+	if (byte >= 0xe0 && byte <= 0xef) {
+		return 3;
+	}
+
+	if (byte >= 0xf0 && byte <= 0xf4) {
+		return 4;
+	}
+
+	return 0;
+}
+
+function isContinuationByte(byte) {
+	return byte >= 0x80 && byte <= 0xbf;
+}
+
+/**
+ * Decode as much of `input` as possible without throwing.
+ * Scans left-to-right in O(n), decoding valid UTF-8 runs and leaving the rest literal.
+ */
+function decode(input) {
+	try {
+		return decodeURIComponent(input);
+	} catch (_error) {
+		var output = '';
+		var position = 0;
+
+		while (position < input.length) {
+			if (input.codePointAt(position) !== 37) {
+				output += input.charAt(position);
+				position++;
+				continue;
+			}
+
+			var firstByte = parsePercentByte(input, position);
+
+			// `%` not followed by two hex digits (e.g. `%` or `%G`).
+			if (!firstByte) {
+				output += input.charAt(position);
+				position++;
+				continue;
+			}
+
+			var sequenceLength = utf8SequenceLength(firstByte.byte);
+
+			// Continuation byte or invalid lead byte — emit one `%XX` literally.
+			if (sequenceLength === 0) {
+				var pair = input.slice(position, position + 6);
+
+				// UTF-16 BOM byte pairs become two replacement characters.
+				if (pair === '%FE%FF' || pair === '%FF%FE') {
+					output += '\uFFFD\uFFFD';
+					position += 6;
+					continue;
+				}
+
+				output += input.slice(position, position + 3);
+				position += 3;
+				continue;
+			}
+
+			var end = firstByte.next;
+			var validSequence = true;
+
+			for (var index = 1; index < sequenceLength; index++) {
+				var nextByte = parsePercentByte(input, end);
+
+				if (!nextByte || !isContinuationByte(nextByte.byte)) {
+					validSequence = false;
+					break;
+				}
+
+				end = nextByte.next;
+			}
+
+			if (validSequence) {
+				var encodedSequence = input.slice(position, end);
+
+				try {
+					output += decodeURIComponent(encodedSequence);
+					position = end;
+					continue;
+				} catch (_decodeError) {
+					// Invalid UTF-8 despite correct structure — emit the first byte literally.
+				}
+			}
+
+			// Missing continuation bytes or decode failure — emit the first byte literally.
+			var literal = input.slice(position, position + 3);
+
+			// A truncated `%C2` becomes a replacement character.
+			output += literal === '%C2' ? '\uFFFD' : literal;
+			position += 3;
+		}
+
+		return output;
+	}
+}
+
+function customDecodeURIComponent(input) {
+	// Decode each percent-encoded run in place in a single pass. Decoded output is never rescanned.
+	return input.replace(multiMatcher, function (run) {
+		return decode(run);
+	});
+}
+
+function decodeUriComponent(encodedURI) {
+	if (typeof encodedURI !== 'string') {
+		throw new TypeError(
+			'Expected `encodedURI` to be of type `string`, got `' + typeof encodedURI + '`'
+		);
+	}
+
+	try {
+		// Try the built in decoder first
+		return decodeURIComponent(encodedURI);
+	} catch (_error) {
+		// Fallback to a more advanced decoder
+		return customDecodeURIComponent(encodedURI);
+	}
+}
+
+module.exports = decodeUriComponent;
+module.exports.default = decodeUriComponent;
+Object.defineProperty(module.exports, '__esModule', { value: true });

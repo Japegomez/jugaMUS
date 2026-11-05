@@ -2,9 +2,12 @@
 /**
  * CI wrapper around `npm audit --audit-level=high`.
  *
- * `image-size` (via Metro / Expo SDK 54) has high DoS advisories with no
- * patched release (package archived; all versions <=2.0.2). Those are
- * build-time only and cannot be fixed without an Expo SDK bump.
+ * `image-size` (via Metro / Expo SDK 54) has two high DoS advisories whose fix
+ * (2.0.3+) breaks Metro: `metro@0.83.3` calls `imageSize(filePath)` with a
+ * string, while image-size 2.x only accepts an ArrayBuffer/TypedArray and
+ * throws `The "list" argument must be an instance of SharedArrayBuffer...`.
+ * Forcing 2.x therefore trades a build-time-only DoS advisory for a broken
+ * bundle, so it cannot be fixed without an Expo SDK bump that ships Metro 0.87+.
  *
  * Any other high/critical advisory still fails the job.
  */

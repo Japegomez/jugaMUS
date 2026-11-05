@@ -1,0 +1,12 @@
+{
+  "name": "decode-uri-component",
+  "version": "0.5.1",
+  "description": "Compat shim: decode-uri-component 0.5.1 linear-time decoder with a CJS export for query-string 7.x",
+  "license": "MIT",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  }
+}
