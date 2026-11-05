@@ -7,6 +7,7 @@
  * someone drops the override, restores the unpatched package, or loses the
  * `__proto__`/`constructor`/`prototype` filtering.
  */
+
 import deepmerge from 'deepmerge'
 
 describe('deepmerge shim', () => {
@@ -24,6 +25,32 @@ describe('deepmerge shim', () => {
     const merged = deepmerge({}, tainted)
 
     expect(merged).toEqual({ nested: {} })
+  })
+
+  it('omits constructor and prototype keys from the target', () => {
+    const target = Object.assign(Object.create(null), {
+      keep: 1,
+      constructor: { polluted: true },
+      prototype: { polluted: true },
+    }) as Record<string, unknown>
+    const merged = deepmerge(target, { keep: 2 })
+
+    expect(merged.keep).toBe(2)
+    expect(Object.prototype.hasOwnProperty.call(merged, 'constructor')).toBe(false)
+    expect(Object.prototype.hasOwnProperty.call(merged, 'prototype')).toBe(false)
+  })
+
+  it('omits constructor and prototype keys from the source', () => {
+    const source = Object.assign(Object.create(null), {
+      keep: 1,
+      constructor: { polluted: true },
+      prototype: { polluted: true },
+    }) as Record<string, unknown>
+    const merged = deepmerge({ keep: 0 }, source)
+
+    expect(merged.keep).toBe(1)
+    expect(Object.prototype.hasOwnProperty.call(merged, 'constructor')).toBe(false)
+    expect(Object.prototype.hasOwnProperty.call(merged, 'prototype')).toBe(false)
   })
 
   it('does not pollute Object.prototype', () => {

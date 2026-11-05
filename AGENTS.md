@@ -8,7 +8,11 @@ App móvil (Expo / React Native) para organizar partidas, torneos y ligas de mus
 - **Backend:** Supabase (Auth, Postgres + RLS, Storage, Edge Functions, Realtime, pg_cron).
 - **Calidad / release:** GitHub Actions (`quality.yml`, `secret-scan.yml`, `eas.yml`), EAS Build/Submit, Sentry, PostHog, Turnstile.
 - Comandos: `npm start` · `npm run lint` · `npm run type-check` · `npm test` · `npm run test:ci` · `npm run audit:ci`.
-- Secretos locales: gitleaks en pre-commit (`gitleaks protect --staged`). CI: TruffleHog en `secret-scan.yml`. No mezclar ambos en el mismo job.
+- Secretos locales: gitleaks en pre-commit (`gitleaks protect --staged`). **Requisito del hook:** el binario `gitleaks` debe estar en el `PATH` (Husky no lo instala).
+  - macOS / Linux: `brew install gitleaks`
+  - Windows: `winget install --id Gitleaks.Gitleaks -e` (o binario en [releases](https://github.com/gitleaks/gitleaks/releases))
+  - Comprobar: `gitleaks version`
+- CI: TruffleHog en `secret-scan.yml`. No mezclar gitleaks + TruffleHog en el mismo job. Exigir el check **TruffleHog** en el ruleset de **`main`** (junto a `quality / Quality`); no hacerlo obligatorio en `develop`.
 
 ## Estructura
 

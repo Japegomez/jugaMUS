@@ -79,14 +79,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(17, 17, 17, 0.45)',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    // Keep horizontal inset low so Turnstile (~300px) fits a 360px WebView.
+    paddingHorizontal: 12,
   },
   card: {
     zIndex: 1,
     elevation: 4,
     backgroundColor: Colors.background,
     borderRadius: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingTop: 20,
     paddingBottom: 16,
   },
