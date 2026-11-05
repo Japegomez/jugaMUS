@@ -50,7 +50,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # eas-cli@latest (via @oclif/plugin-autocomplete) requires Node >=22
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -60,6 +61,7 @@ jobs:
         uses: expo/expo-github-action@v9
         with:
           eas-version: latest
+          packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build Android (production)
@@ -75,7 +77,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # eas-cli@latest (via @oclif/plugin-autocomplete) requires Node >=22
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -85,6 +88,7 @@ jobs:
         uses: expo/expo-github-action@v9
         with:
           eas-version: latest
+          packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Build iOS (production)
@@ -100,7 +104,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # eas-cli@latest (via @oclif/plugin-autocomplete) requires Node >=22
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -110,6 +115,7 @@ jobs:
         uses: expo/expo-github-action@v9
         with:
           eas-version: latest
+          packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
 
       # eas.json → submit.production.android.serviceAccountKeyPath
@@ -132,7 +138,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 20
+          # eas-cli@latest (via @oclif/plugin-autocomplete) requires Node >=22
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -142,6 +149,7 @@ jobs:
         uses: expo/expo-github-action@v9
         with:
           eas-version: latest
+          packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
 
       # ASC API key stored in EAS (from eas submit / --auto-submit). Requires EXPO_TOKEN only.
