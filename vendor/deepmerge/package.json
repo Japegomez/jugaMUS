@@ -1,6 +1,6 @@
 {
   "name": "deepmerge",
-  "version": "4.3.2",
+  "version": "4.3.1",
   "description": "Compat shim: deepmerge 4.3.1 with the GHSA-gcqx-w48m-w2h4 prototype-poisoning guard applied to the target copy loop",
   "license": "MIT",
   "main": "index.js",
