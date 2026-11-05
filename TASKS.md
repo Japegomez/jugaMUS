@@ -268,13 +268,14 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
   - PR #59 mergeado en `develop`: jobs `build-ios` + `submit-ios`; submit iOS vía ASC API key en EAS (`EXPO_TOKEN`).
   - Release en `main` validado (PR #86); tags en `https://github.com/Japegomez/jugaMUS/tags`.
 - [x] Pipeline completo: lint → type-check → tests → EAS Build → EAS Submit
-  - Workflow reutilizable `.github/workflows/quality.yml` (job `Quality`: Gitleaks, `expo-doctor`, lint, `tsc`, `jest --ci`). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → release-tag → build Android/iOS → submit Play + TestFlight.
+  - Workflow reutilizable `.github/workflows/quality.yml` (job `Quality`: `expo-doctor`, lint, `tsc`, `jest --ci` + cobertura). Escaneo de secretos en workflow aparte (ver hardening). `ci.yml` en PRs/`develop`; `eas.yml` en `main` encadena quality → release-tag → build Android/iOS → submit Play + TestFlight.
 
 ### CI/CD hardening (checklist Nana — jun. 2026)
 
 - [x] **Cobertura Jest con umbral ≥60% líneas** — `coverageThreshold` en `jest.config.js` sobre `src/{utils,lib,services,hooks}`; artefacto `coverage/` en `quality.yml`.
 - [x] **Auditoría de dependencias** — `npm audit --audit-level=high` en `quality.yml`; `.github/dependabot.yml` (npm + github-actions, semanal).
-- [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): Gitleaks + `expo-doctor` + lint + type-check + tests + cobertura. Eliminado `secret-scan.yml`.
+- [x] **Quality gate unificado** — workflow `quality.yml` (job `Quality`): `expo-doctor` + lint + type-check + tests + cobertura + `npm audit`.
+- [x] **Secretos: gitleaks local + TruffleHog en CI (nov. 2026)** — CLI gitleaks en pre-commit Husky (`gitleaks protect --verbose --redact --staged`); workflow `.github/workflows/secret-scan.yml` con TruffleHog (`--results=verified,unknown`) en push/PR a `develop` y `main`. Quitado `gitleaks-action` de `quality.yml` (no duplicar herramientas en el mismo job). Pendiente opcional: marcar el check **TruffleHog** como obligatorio en protección de ramas / ruleset de `main`.
 - [x] **GitHub Actions Node 24** — `checkout`/`setup-node` v6, `upload-artifact` v7.
 - [x] **Dependabot Expo-safe** — ignora majors + patch/minor del stack Expo/RN; grupos prod/dev + security; PRs a `develop`; cooldown; assignee `Japegomez`; `exclude-paths: vendor/**`.
 - [x] **Fix deps Expo SDK 54 en `main`** — `async-storage` 2.2.0, `expo-splash-screen` ~31.0.13 (PR #85/#86).
@@ -585,6 +586,13 @@ Las notificaciones push **no** funcionan en Expo Go; hace falta un build con cre
 - [x] Security RLS/RPC lockdown mig. `118`; `search_path` helpers de torneo mig. `119`
 - [x] Versión app → **1.8.1** (`app.json`, `package.json`)
 - [x] README: Turnstile en autenticación, stack y seguridad
+
+### Hotfix v1.8.2 — secret scan y audit allowlist (nov. 2026)
+
+- [x] Secretos: gitleaks en pre-commit Husky + TruffleHog en `.github/workflows/secret-scan.yml` (quitado `gitleaks-action` de `quality.yml`)
+- [x] Dependabot: ignore `image-size` (fix 2.x rompe Metro 0.83 / Expo SDK 54)
+- [x] `npm-audit-ci.mjs`: allowlist por GHSA (`image-size`, `minimatch` `GHSA-g3hv-75wg-m249`, `glob` `GHSA-3g3m-2fjr-6pw4`); un GHSA nuevo en esos paquetes sigue bloqueando CI
+- [x] Versión app → **1.8.2** (`app.json`, `package.json`)
 
 ---
 

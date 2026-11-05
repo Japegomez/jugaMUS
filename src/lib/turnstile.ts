@@ -82,8 +82,8 @@ export function buildTurnstileWidgetHtml(siteKey: string): string {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <style>
-    html, body { margin: 0; padding: 16px 0; background: #fff; }
-    #cf-turnstile { display: flex; justify-content: center; min-height: 65px; }
+    html, body { margin: 0; padding: 16px 0; background: #fff; overflow-x: hidden; }
+    #cf-turnstile { display: flex; justify-content: center; width: 100%; max-width: 100%; min-height: 65px; overflow: hidden; }
   </style>
   <script>
     function post(payload) {
@@ -91,11 +91,14 @@ export function buildTurnstileWidgetHtml(siteKey: string): string {
         window.ReactNativeWebView.postMessage(JSON.stringify(payload));
       }
     }
+    function onTurnstileScriptError() {
+      post({ type: 'error', code: 'script-load-failed' });
+    }
     window.onTurnstileLoad = function () {
       turnstile.render('#cf-turnstile', {
         sitekey: '${key}',
         theme: 'light',
-        size: 'normal',
+        size: 'flexible',
         language: 'es',
         callback: function (token) { post({ type: 'token', token: token }); },
         'error-callback': function (code) {
@@ -106,7 +109,7 @@ export function buildTurnstileWidgetHtml(siteKey: string): string {
       });
     };
   </script>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad" async defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad" async defer onerror="onTurnstileScriptError()"></script>
 </head>
 <body>
   <div id="cf-turnstile"></div>

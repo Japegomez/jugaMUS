@@ -92,9 +92,10 @@ function decode(input) {
 			// Continuation byte or invalid lead byte — emit one `%XX` literally.
 			if (sequenceLength === 0) {
 				var pair = input.slice(position, position + 6);
+				var pairNormalized = pair.toUpperCase();
 
 				// UTF-16 BOM byte pairs become two replacement characters.
-				if (pair === '%FE%FF' || pair === '%FF%FE') {
+				if (pairNormalized === '%FE%FF' || pairNormalized === '%FF%FE') {
 					output += '\uFFFD\uFFFD';
 					position += 6;
 					continue;
@@ -134,8 +135,8 @@ function decode(input) {
 			// Missing continuation bytes or decode failure — emit the first byte literally.
 			var literal = input.slice(position, position + 3);
 
-			// A truncated `%C2` becomes a replacement character.
-			output += literal === '%C2' ? '\uFFFD' : literal;
+			// A truncated `%C2` becomes a replacement character (case-insensitive).
+			output += literal.toUpperCase() === '%C2' ? '\uFFFD' : literal;
 			position += 3;
 		}
 

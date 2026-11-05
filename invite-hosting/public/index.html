@@ -9,25 +9,34 @@
       html,
       body {
         margin: 0;
-        padding: 16px 12px;
+        padding: 16px 0;
         background: #fff;
         font-family: system-ui, sans-serif;
         color: #111;
+        overflow-x: hidden;
       }
       #status {
         text-align: center;
         font-size: 14px;
         line-height: 20px;
         color: #555;
-        margin-bottom: 12px;
+        margin: 0 12px 12px;
       }
       #cf-turnstile {
         display: flex;
         justify-content: center;
+        width: 100%;
+        max-width: 100%;
         min-height: 65px;
+        overflow: hidden;
       }
     </style>
     <script>
+      var MISSING_SITEKEY_MSG =
+        'Abre esta página desde la app, o añade ?k=SITE_KEY. El widget no se muestra sin la clave pública de Turnstile.'
+      var SCRIPT_LOAD_MSG =
+        'No se pudo cargar Turnstile. Comprueba la conexión e inténtalo de nuevo.'
+
       function post(payload) {
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify(payload))
@@ -37,13 +46,15 @@
         var el = document.getElementById('status')
         if (el) el.textContent = text
       }
+      function onTurnstileScriptError() {
+        showStatus(SCRIPT_LOAD_MSG)
+        post({ type: 'error', code: 'script-load-failed' })
+      }
       window.onTurnstileLoad = function () {
         var params = new URLSearchParams(window.location.search)
         var sitekey = params.get('k') || ''
         if (!sitekey) {
-          showStatus(
-            'Abre esta página desde la app, o añade ?k=SITE_KEY. El widget no se muestra sin la clave pública de Turnstile.'
-          )
+          showStatus(MISSING_SITEKEY_MSG)
           post({ type: 'error', code: 'missing-sitekey' })
           return
         }
@@ -51,7 +62,7 @@
         turnstile.render('#cf-turnstile', {
           sitekey: sitekey,
           theme: 'light',
-          size: 'normal',
+          size: 'flexible',
           language: 'es',
           callback: function (token) {
             showStatus('Verificación completada.')
@@ -80,6 +91,7 @@
       src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad"
       async
       defer
+      onerror="onTurnstileScriptError()"
     ></script>
   </head>
   <body>

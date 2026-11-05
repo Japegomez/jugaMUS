@@ -15,6 +15,7 @@ AS $$
 DECLARE
   v_match     RECORD;
   v_part      RECORD;
+  v_updated   integer;
 BEGIN
 
   -- 1a. in_progress -> cancelled (standalone, roster no longer full)
@@ -47,11 +48,14 @@ BEGIN
   -- 1b. planned -> in_progress (start_at reached AND roster full)
   --     Solo partidas sueltas. Los fixtures de liga se quedan "planned"
   --     hasta que alguien los inicia o envia un resultado.
+  --     Exclude matches already past the standalone 12h no-result window so
+  --     this run does not emit match_started before step 2 closes them.
   FOR v_match IN
     SELECT m.id, m.title, m.start_at
     FROM public.matches m
     WHERE m.status = 'planned'
       AND m.start_at <= NOW()
+      AND m.start_at + INTERVAL '12 hours' > NOW()
       AND m.tournament_id IS NULL
       AND m.league_id IS NULL
       AND public.match_effective_roster_filled(m.id) >= 4
@@ -107,32 +111,48 @@ BEGIN
     );
   END LOOP;
 
-  -- 2. in_progress -> finished_no_result
-  --    - Partidas sueltas: 12h
-  --    - Torneos: 24h
+  -- 2. in_progress|planned(overdue standalone) -> finished_no_result
+  --    - Partidas sueltas: 12h (also closes planned that skipped 1b)
+  --    - Torneos: 24h (in_progress only)
   --    - Ligas: sin timeout automatico (se excluyen)
   FOR v_match IN
-    SELECT id, title, start_at, tournament_id FROM public.matches
-    WHERE status   = 'in_progress'
-      AND league_id IS NULL
+    SELECT id, title, start_at, tournament_id, status AS from_status
+    FROM public.matches
+    WHERE league_id IS NULL
       AND (
-        (tournament_id IS NOT NULL AND start_at + INTERVAL '24 hours' <= NOW())
-        OR
-        (tournament_id IS NULL     AND start_at + INTERVAL '12 hours' <= NOW())
+        (
+          status = 'in_progress'
+          AND (
+            (tournament_id IS NOT NULL AND start_at + INTERVAL '24 hours' <= NOW())
+            OR
+            (tournament_id IS NULL     AND start_at + INTERVAL '12 hours' <= NOW())
+          )
+        )
+        OR (
+          status = 'planned'
+          AND tournament_id IS NULL
+          AND start_at + INTERVAL '12 hours' <= NOW()
+          AND public.match_effective_roster_filled(id) >= 4
+        )
       )
       AND NOT EXISTS (
         SELECT 1 FROM public.match_results mr
         WHERE mr.match_id = matches.id
-          AND mr.status   = 'confirmed'
+          AND mr.status IN ('confirmed', 'pending_validation')
       )
   LOOP
     UPDATE public.matches SET status = 'finished_no_result', updated_at = NOW()
-    WHERE id = v_match.id;
+    WHERE id = v_match.id
+      AND status = v_match.from_status;
+    GET DIAGNOSTICS v_updated = ROW_COUNT;
+    IF v_updated = 0 THEN
+      CONTINUE;
+    END IF;
 
     INSERT INTO public.match_state_transitions
       (match_id, from_status, to_status, triggered_by, reason)
     VALUES
-      (v_match.id, 'in_progress', 'finished_no_result', 'system',
+      (v_match.id, v_match.from_status, 'finished_no_result', 'system',
        CASE WHEN v_match.tournament_id IS NOT NULL
             THEN '24h without confirmed result (tournament)'
             ELSE '12h without confirmed result' END);
@@ -169,13 +189,17 @@ BEGIN
         WHERE nq.user_id = v_part.user_id
           AND nq.type    = 'reminder_24h'
           AND nq.payload_json->>'match_id' = v_match.id::text
+          AND nq.payload_json->>'start_at' = v_match.start_at::text
       ) THEN
         PERFORM public.enqueue_notification(
           p_user_id       := v_part.user_id,
           p_type          := 'reminder_24h',
           p_title         := 'Tu partida es mañana',
           p_body          := 'Recuerda que mañana tienes la partida «' || v_match.title || '».',
-          p_payload_json  := jsonb_build_object('match_id', v_match.id)
+          p_payload_json  := jsonb_build_object(
+            'match_id', v_match.id,
+            'start_at', v_match.start_at
+          )
         );
       END IF;
     END LOOP;
@@ -199,13 +223,17 @@ BEGIN
         WHERE nq.user_id = v_part.user_id
           AND nq.type    = 'reminder_2h'
           AND nq.payload_json->>'match_id' = v_match.id::text
+          AND nq.payload_json->>'start_at' = v_match.start_at::text
       ) THEN
         PERFORM public.enqueue_notification(
           p_user_id       := v_part.user_id,
           p_type          := 'reminder_2h',
           p_title         := 'Tu partida empieza en 2 horas',
           p_body          := '¡Prepárate! La partida «' || v_match.title || '» empieza en 2 horas.',
-          p_payload_json  := jsonb_build_object('match_id', v_match.id)
+          p_payload_json  := jsonb_build_object(
+            'match_id', v_match.id,
+            'start_at', v_match.start_at
+          )
         );
       END IF;
     END LOOP;
