@@ -214,6 +214,14 @@ BEGIN
     RAISE EXCEPTION 'match_id_immutable' USING ERRCODE = '42501';
   END IF;
 
+  -- An active, confirmed participant must not be able to switch sides: an
+  -- empty rival team makes submit_match_result skip validation entirely.
+  IF OLD.state = 'confirmed'
+     AND OLD.left_at IS NULL
+     AND NEW.team IS DISTINCT FROM OLD.team THEN
+    RAISE EXCEPTION 'team_immutable' USING ERRCODE = '42501';
+  END IF;
+
   RETURN NEW;
 END;
 $$;
