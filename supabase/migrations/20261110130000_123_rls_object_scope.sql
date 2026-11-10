@@ -382,14 +382,13 @@ REVOKE INSERT, UPDATE ON TABLE public.league_pairs FROM PUBLIC;
 REVOKE INSERT, UPDATE ON TABLE public.league_pairs FROM anon;
 REVOKE INSERT, UPDATE ON TABLE public.league_pairs FROM authenticated;
 
+-- Player identity columns are written only by SECURITY DEFINER RPCs.
 GRANT INSERT (
   id,
   league_id,
   name,
   name_is_custom,
-  player_a_user_id,
   player_a_text,
-  player_b_user_id,
   player_b_text,
   created_by_user_id,
   joined_at,
