@@ -1,19 +1,75 @@
-import { emailFromAccessToken } from '@/lib/authDeepLinkIdentity'
+import { peekSessionFromAuthCode, verifiedEmailFromAccessToken } from '@/lib/authDeepLinkIdentity'
 
-function makeJwt(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url')
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
-  return `${header}.${body}.sig`
-}
+const mockGetUser = jest.fn()
+const mockExchangeCodeForSession = jest.fn()
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => ({
+    auth: {
+      getUser: (...args: unknown[]) => mockGetUser(...args),
+      exchangeCodeForSession: (...args: unknown[]) => mockExchangeCodeForSession(...args),
+    },
+  })),
+}))
 
 describe('authDeepLinkIdentity', () => {
-  it('reads email from access token payload', () => {
-    const token = makeJwt({ email: 'player@example.com', sub: 'u1' })
-    expect(emailFromAccessToken(token)).toBe('player@example.com')
+  beforeEach(() => {
+    jest.clearAllMocks()
+    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co'
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'anon-key'
   })
 
-  it('returns null for malformed tokens', () => {
-    expect(emailFromAccessToken('not-a-jwt')).toBeNull()
-    expect(emailFromAccessToken(makeJwt({ sub: 'u1' }))).toBeNull()
+  it('returns email after the auth server validates the access token', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: { email: 'player@example.com' } },
+      error: null,
+    })
+
+    await expect(verifiedEmailFromAccessToken('access-token')).resolves.toBe('player@example.com')
+    expect(mockGetUser).toHaveBeenCalledWith('access-token')
+  })
+
+  it('returns null when token validation fails', async () => {
+    mockGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'invalid' },
+    })
+
+    await expect(verifiedEmailFromAccessToken('bad-token')).resolves.toBeNull()
+  })
+
+  it('peeks session email from a PKCE code without adopting it globally', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { email: 'player@example.com' },
+          access_token: 'at',
+          refresh_token: 'rt',
+        },
+      },
+      error: null,
+    })
+
+    await expect(peekSessionFromAuthCode('pkce-code')).resolves.toEqual({
+      email: 'player@example.com',
+      access_token: 'at',
+      refresh_token: 'rt',
+      error: null,
+    })
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('pkce-code')
+  })
+
+  it('returns an error when PKCE exchange fails', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'exchange failed' },
+    })
+
+    await expect(peekSessionFromAuthCode('bad-code')).resolves.toEqual({
+      email: null,
+      access_token: null,
+      refresh_token: null,
+      error: expect.objectContaining({ message: 'exchange failed' }),
+    })
   })
 })
