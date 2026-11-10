@@ -2,7 +2,7 @@
 
 <img src="assets/icon.png" alt="Icono de jugaMUS" width="128" height="128" />
 
-# 🃏 jugaMUS
+# jugaMUS
 
 ### Encuentra contrincantes. Organiza partidas. Vive el mus.
 
@@ -14,6 +14,13 @@ _Aplicación móvil multiplataforma para la comunidad de jugadores de mus en Esp
 [![Expo](https://img.shields.io/badge/Expo_SDK-54-000020?style=flat-square&logo=expo&logoColor=white)](https://expo.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3FCF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com/)
+[![CI](https://img.shields.io/github/actions/workflow/status/Japegomez/jugaMUS/ci.yml?branch=develop&style=flat-square&logo=github&label=CI)](https://github.com/Japegomez/jugaMUS/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/actions/workflow/status/Japegomez/jugaMUS/eas.yml?branch=main&style=flat-square&logo=github&label=Release)](https://github.com/Japegomez/jugaMUS/actions/workflows/eas.yml)
+
+<br />
+
+[![forthebadge](https://forthebadge.com/badges/open-source.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/badges/built-with-love.svg)](https://forthebadge.com)
 
 <br />
 
