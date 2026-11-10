@@ -181,6 +181,33 @@ $$;
 REVOKE ALL ON FUNCTION public.join_private_match(UUID, TEXT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.join_private_match(UUID, TEXT, TEXT) TO authenticated;
 
+-- Direct writes must not bypass the password check performed above.
+DROP POLICY IF EXISTS participants_insert_self ON public.match_participants;
+CREATE POLICY participants_insert_self ON public.match_participants
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1
+      FROM public.matches m
+      WHERE m.id = match_participants.match_id
+        AND m.status IN ('planned', 'in_progress')
+        AND m.tournament_id IS NULL
+        AND m.league_id IS NULL
+        AND (
+          m.visibility IN ('public', 'link')
+          OR m.creator_id = auth.uid()
+          OR (
+            m.visibility = 'private'
+            AND EXISTS (
+              SELECT 1 FROM public.match_password_grants g
+              WHERE g.match_id = m.id AND g.user_id = auth.uid()
+            )
+          )
+        )
+    )
+  );
+
 -- ── grant_match_password_access ──────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.grant_match_password_access(
   p_match_id UUID,
