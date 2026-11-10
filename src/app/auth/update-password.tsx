@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@/constants/app'
 import { useAuthStore } from '@/hooks/useAuth'
-import { emailFromAccessToken, peekSessionFromAuthCode } from '@/lib/authDeepLinkIdentity'
+import { peekSessionFromAuthCode, verifiedEmailFromAccessToken } from '@/lib/authDeepLinkIdentity'
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 import { supabase } from '@/lib/supabase'
 import {
