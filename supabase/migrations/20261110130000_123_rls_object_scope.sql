@@ -119,6 +119,54 @@ REVOKE INSERT, UPDATE ON TABLE public.matches FROM PUBLIC;
 REVOKE INSERT, UPDATE ON TABLE public.matches FROM anon;
 REVOKE INSERT, UPDATE ON TABLE public.matches FROM authenticated;
 
+-- place_text is masked for location_privacy = 'participants_only' by
+-- list_public_matches; a direct table read must not bypass that mask.
+REVOKE SELECT ON TABLE public.matches FROM authenticated;
+
+DO $$
+DECLARE
+  v_cols TEXT;
+BEGIN
+  SELECT string_agg(quote_ident(a.attname), ', ')
+    INTO v_cols
+    FROM pg_attribute a
+   WHERE a.attrelid = 'public.matches'::regclass
+     AND a.attnum > 0
+     AND NOT a.attisdropped
+     AND a.attname <> 'place_text';
+
+  EXECUTE format('GRANT SELECT (%s) ON TABLE public.matches TO authenticated', v_cols);
+END;
+$$;
+
+-- Venue for the caller only; mirrors the mask already applied in list_public_matches.
+CREATE OR REPLACE FUNCTION public.get_match_place_text(p_match_id UUID)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN m.location_privacy = 'participants_only'
+      AND m.creator_id <> auth.uid()
+      AND NOT public.auth_is_confirmed_in_match(m.id)
+      THEN NULL
+    ELSE m.place_text
+  END
+  FROM public.matches m
+  WHERE m.id = p_match_id
+    AND (
+      m.visibility IN ('public', 'link')
+      OR m.creator_id = auth.uid()
+      OR public.auth_is_confirmed_in_match(m.id)
+    );
+$$;
+
+REVOKE ALL ON FUNCTION public.get_match_place_text(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_match_place_text(UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_match_place_text(UUID) TO authenticated;
+
 GRANT INSERT (
   id,
   title,
