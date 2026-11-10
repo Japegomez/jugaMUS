@@ -50,7 +50,14 @@ BEGIN
   IF NOT FOUND THEN
     RETURN;
   END IF;
-  IF v_result.elo_applied_at IS NOT NULL THEN
+  -- Idempotency must be per match: a match can hold more than one confirmed
+  -- result row, so a single stamped row cannot gate re-application.
+  IF EXISTS (
+    SELECT 1
+    FROM public.match_results
+    WHERE match_id = p_match_id
+      AND elo_applied_at IS NOT NULL
+  ) THEN
     RETURN;
   END IF;
   IF v_result.team_a_games = v_result.team_b_games THEN
