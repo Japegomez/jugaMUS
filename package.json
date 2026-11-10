@@ -1,6 +1,6 @@
 {
   "name": "jugamus",
-  "version": "1.8.3",
+  "version": "1.8.4",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -107,7 +107,7 @@
     "node-forge": "1.4.3",
     "shell-quote": "1.12.0",
     "source-map-js": "1.2.2",
-    "@xmldom/xmldom": "0.9.12",
+    "@xmldom/xmldom": "0.8.15",
     "js-yaml@3": "3.15.2",
     "js-yaml@4": "4.3.2"
   },

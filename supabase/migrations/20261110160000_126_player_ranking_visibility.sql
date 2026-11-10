@@ -145,4 +145,11 @@ REVOKE ALL ON FUNCTION public.get_leaderboard(TEXT, INT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_leaderboard(TEXT, INT) FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_leaderboard(TEXT, INT) TO authenticated, service_role;
 
+-- get_match_player_insights returns the same per-player ELO / win-loss data
+-- for every confirmed match participant, so it must not stay reachable by
+-- anonymous callers either.
+REVOKE ALL ON FUNCTION public.get_match_player_insights(UUID, UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_match_player_insights(UUID, UUID) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_match_player_insights(UUID, UUID) TO authenticated, service_role;
+
 NOTIFY pgrst, 'reload schema';

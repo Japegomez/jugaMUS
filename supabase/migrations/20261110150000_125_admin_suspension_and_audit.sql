@@ -1,6 +1,25 @@
 -- 125: Real suspension (banned_until) + restore audit_logs INSERT + rotate sentinel.
 -- Closes vuln-0003 / 0001.
 
+-- Suspended admins must not retain admin authority: re-define auth_is_admin() so
+-- every admin gate (RLS policies, guard trigger, admin_assert_is_admin) requires
+-- an active profile.
+CREATE OR REPLACE FUNCTION public.auth_is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'admin'
+      AND status = 'active'
+  );
+$$;
+
 -- ── admin_set_user_status ─────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.admin_set_user_status(
   p_user_id UUID,

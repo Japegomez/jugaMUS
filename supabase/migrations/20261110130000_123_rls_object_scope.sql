@@ -167,6 +167,21 @@ REVOKE ALL ON FUNCTION public.get_match_place_text(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_match_place_text(UUID) FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_match_place_text(UUID) TO authenticated;
 
+-- list_public_matches retains default PUBLIC EXECUTE and its venue mask is
+-- NULL-unsafe: auth.uid() is NULL for anonymous callers, so
+-- "m.creator_id <> auth.uid()" evaluates to NULL and the ELSE branch returns
+-- place_text. Close the sibling read path. (Only the 9-arg overload exists in
+-- production; the historical 8-arg signature was never deployed.)
+REVOKE ALL ON FUNCTION public.list_public_matches(
+  text, text, text, timestamptz, timestamptz, integer, integer, integer, text
+) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.list_public_matches(
+  text, text, text, timestamptz, timestamptz, integer, integer, integer, text
+) FROM anon;
+GRANT EXECUTE ON FUNCTION public.list_public_matches(
+  text, text, text, timestamptz, timestamptz, integer, integer, integer, text
+) TO authenticated;
+
 GRANT INSERT (
   id,
   title,
