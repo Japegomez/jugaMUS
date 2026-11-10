@@ -1,5 +1,6 @@
 import * as QueryParams from 'expo-auth-session/build/QueryParams'
 
+import { consumeAuthFlowNonce } from '@/lib/authFlowNonce'
 import { parseAuthCallbackUrl } from '@/lib/parseAuthCallbackUrl'
 import { supabase } from '@/lib/supabase'
 
@@ -15,6 +16,16 @@ function getQueryParamsFromCallbackUrl(url: string): {
     if (parsed.code) params.code = parsed.code
     if (parsed.access_token) params.access_token = parsed.access_token
     if (parsed.refresh_token) params.refresh_token = parsed.refresh_token
+    try {
+      const queryIdx = url.indexOf('?')
+      if (queryIdx >= 0) {
+        const beforeHash = url.split('#')[0] ?? url
+        const n = new URLSearchParams(beforeHash.slice(queryIdx + 1)).get('n')
+        if (n) params.n = n
+      }
+    } catch {
+      /* ignore */
+    }
     return { params, errorCode: null }
   }
 }
@@ -57,6 +68,15 @@ export async function completeOAuthSessionFromCallbackUrl(
   }
 
   if (access_token && refresh_token) {
+    const nonceOk = await consumeAuthFlowNonce(params.n)
+    if (!nonceOk) {
+      return {
+        error: new Error(
+          'No se pudo verificar el enlace de inicio de sesión. Solicita uno nuevo desde la app.'
+        ),
+      }
+    }
+
     const { error } = await supabase.auth.setSession({
       access_token,
       refresh_token,

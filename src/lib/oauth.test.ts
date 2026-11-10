@@ -24,7 +24,7 @@ jest.mock('expo-linking', () => ({
 }))
 
 jest.mock('@/lib/authRedirect', () => ({
-  getOAuthRedirectUrl: jest.fn(() => 'jugamus://auth/callback'),
+  getOAuthRedirectUrl: jest.fn(async () => 'jugamus://auth/callback?n=test-nonce'),
   NATIVE_OAUTH_REDIRECT_EXAMPLE: 'jugamus://auth/callback',
 }))
 

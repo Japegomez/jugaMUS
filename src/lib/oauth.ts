@@ -76,7 +76,7 @@ export async function signInWithOAuthProvider(
     return { error: error ? new Error(error.message) : null }
   }
 
-  const redirectTo = getOAuthRedirectUrl()
+  const redirectTo = await getOAuthRedirectUrl()
 
   const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
     provider,

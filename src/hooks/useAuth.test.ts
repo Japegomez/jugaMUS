@@ -8,8 +8,8 @@ jest.mock('@/lib/analytics', () => ({
 }))
 
 jest.mock('@/lib/authRedirect', () => ({
-  getOAuthRedirectUrl: jest.fn(() => 'jugamus://auth/callback'),
-  getPasswordResetRedirectUrl: jest.fn(() => 'jugamus://auth/update-password'),
+  getOAuthRedirectUrl: jest.fn(async () => 'jugamus://auth/callback?n=test-nonce'),
+  getPasswordResetRedirectUrl: jest.fn(async () => 'jugamus://auth/update-password?n=test-nonce'),
 }))
 
 jest.mock('@/lib/oauth', () => ({
@@ -189,7 +189,7 @@ describe('useAuthStore', () => {
 
       expect(error).toBeNull()
       expect(mockSupabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('a@b.com', {
-        redirectTo: 'jugamus://auth/update-password',
+        redirectTo: 'jugamus://auth/update-password?n=test-nonce',
         captchaToken: 'cf-token',
       })
     })

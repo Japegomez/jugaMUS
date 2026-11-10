@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@/constants/app'
 import { useAuthStore } from '@/hooks/useAuth'
+import { emailFromAccessToken, peekSessionFromAuthCode } from '@/lib/authDeepLinkIdentity'
 import { completeOAuthSessionFromCallbackUrl, waitForAuthSession } from '@/lib/completeOAuthSession'
 import { supabase } from '@/lib/supabase'
 import {
@@ -34,6 +35,13 @@ function firstParam(value: string | string[] | undefined): string | null {
   return value ?? null
 }
 
+type BootstrapPhase =
+  | { kind: 'loading' }
+  | { kind: 'confirm'; email: string; callbackUrl: string }
+  | { kind: 'adopting' }
+  | { kind: 'ready' }
+  | { kind: 'error'; message: string }
+
 export default function UpdatePasswordScreen() {
   const router = useRouter()
   const { authTopPadding, font } = useResponsiveLayout()
@@ -41,8 +49,7 @@ export default function UpdatePasswordScreen() {
   const updatePassword = useAuthStore((s) => s.updatePassword)
   const signOut = useAuthStore((s) => s.signOut)
   const setPasswordRecoveryPending = useAuthStore((s) => s.setPasswordRecoveryPending)
-  const [bootstrapping, setBootstrapping] = useState(true)
-  const [bootstrapError, setBootstrapError] = useState<string | null>(null)
+  const [bootstrap, setBootstrap] = useState<BootstrapPhase>({ kind: 'loading' })
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [dismissing, setDismissing] = useState(false)
@@ -72,8 +79,7 @@ export default function UpdatePasswordScreen() {
 
       if (linkError) {
         if (!cancelled) {
-          setBootstrapError(linkError)
-          setBootstrapping(false)
+          setBootstrap({ kind: 'error', message: linkError })
         }
         return
       }
@@ -81,57 +87,96 @@ export default function UpdatePasswordScreen() {
       const code = firstParam(params.code)
       const accessToken = firstParam(params.access_token)
       const refreshToken = firstParam(params.refresh_token)
+      const nonce = firstParam(params.n)
       const type = firstParam(params.type)
-      const hasRecoveryParams = Boolean(
-        code || (accessToken && refreshToken) || type === 'recovery'
-      )
+      const hasDeepLinkCreds = Boolean(code || (accessToken && refreshToken))
+      const hasRecoveryParams = Boolean(hasDeepLinkCreds || type === 'recovery')
       const alreadyPending = useAuthStore.getState().passwordRecoveryPending
 
-      if (hasRecoveryParams) {
-        markRecoveryPending()
+      const { data: existing } = await supabase.auth.getSession()
+      if (existing.session) {
+        if (hasDeepLinkCreds) {
+          // Never replace an existing session from a deep link.
+          if (!cancelled) {
+            setBootstrap({
+              kind: 'error',
+              message:
+                'Ya hay una sesión activa. Cierra sesión antes de usar el enlace de recuperación.',
+            })
+          }
+          return
+        }
+        if (hasRecoveryParams || alreadyPending) {
+          markRecoveryPending()
+          if (!cancelled) setBootstrap({ kind: 'ready' })
+          return
+        }
+        if (!cancelled) router.replace('/(tabs)/matches')
+        return
       }
 
       if (await waitForAuthSession(1500)) {
         if (hasRecoveryParams || alreadyPending) {
           markRecoveryPending()
-          if (!cancelled) setBootstrapping(false)
+          if (!cancelled) setBootstrap({ kind: 'ready' })
           return
         }
-        // Sesión normal en esta ruta (p. ej. URL pegada): no reactivar el gate de recovery.
         if (!cancelled) router.replace('/(tabs)/matches')
         return
       }
 
-      if (code || (accessToken && refreshToken)) {
-        const query = new URLSearchParams()
-        if (code) query.set('code', code)
-        if (accessToken) query.set('access_token', accessToken)
-        if (refreshToken) query.set('refresh_token', refreshToken)
-        const callbackUrl = `${APP_SCHEME}://${APP_PASSWORD_UPDATE_PATH}?${query.toString()}`
-        const { error } = await completeOAuthSessionFromCallbackUrl(callbackUrl)
-        if (error) {
-          if (!cancelled) {
-            setBootstrapError(error.message)
-            setBootstrapping(false)
-          }
-          return
+      if (!hasDeepLinkCreds) {
+        if (!cancelled) {
+          setBootstrap({
+            kind: 'error',
+            message: 'El enlace de recuperación no es válido o ha caducado.',
+          })
         }
-        markRecoveryPending()
-        if (!cancelled) setBootstrapping(false)
         return
       }
 
-      const { data } = await supabase.auth.getSession()
-      if (!cancelled) {
-        if (data.session && (hasRecoveryParams || alreadyPending)) {
-          markRecoveryPending()
-          setBootstrapping(false)
-        } else if (data.session) {
-          router.replace('/(tabs)/matches')
-        } else {
-          setBootstrapError('El enlace de recuperación no es válido o ha caducado.')
-          setBootstrapping(false)
+      markRecoveryPending()
+
+      let email: string | null = null
+      let adoptAccess = accessToken
+      let adoptRefresh = refreshToken
+
+      if (code && !(accessToken && refreshToken)) {
+        const peeked = await peekSessionFromAuthCode(code)
+        if (peeked.error || !peeked.access_token || !peeked.refresh_token) {
+          if (!cancelled) {
+            setBootstrap({
+              kind: 'error',
+              message: peeked.error?.message ?? 'No se pudo leer la cuenta del enlace.',
+            })
+          }
+          return
         }
+        email = peeked.email
+        adoptAccess = peeked.access_token
+        adoptRefresh = peeked.refresh_token
+      } else if (accessToken) {
+        email = emailFromAccessToken(accessToken)
+      }
+
+      if (!email || !adoptAccess || !adoptRefresh) {
+        if (!cancelled) {
+          setBootstrap({
+            kind: 'error',
+            message: 'No se pudo identificar la cuenta del enlace. Solicita uno nuevo.',
+          })
+        }
+        return
+      }
+
+      const query = new URLSearchParams()
+      query.set('access_token', adoptAccess)
+      query.set('refresh_token', adoptRefresh)
+      if (nonce) query.set('n', nonce)
+      const callbackUrl = `${APP_SCHEME}://${APP_PASSWORD_UPDATE_PATH}?${query.toString()}`
+
+      if (!cancelled) {
+        setBootstrap({ kind: 'confirm', email, callbackUrl })
       }
     }
 
@@ -141,6 +186,18 @@ export default function UpdatePasswordScreen() {
       cancelled = true
     }
   }, [params, setPasswordRecoveryPending, router])
+
+  const confirmAdopt = useCallback(async () => {
+    if (bootstrap.kind !== 'confirm') return
+    setBootstrap({ kind: 'adopting' })
+    const { error } = await completeOAuthSessionFromCallbackUrl(bootstrap.callbackUrl)
+    if (error) {
+      setBootstrap({ kind: 'error', message: error.message })
+      return
+    }
+    setPasswordRecoveryPending(true)
+    setBootstrap({ kind: 'ready' })
+  }, [bootstrap, setPasswordRecoveryPending])
 
   const goToLogin = () => {
     setPasswordRecoveryPending(false)
@@ -174,11 +231,37 @@ export default function UpdatePasswordScreen() {
     }
   })
 
-  if (bootstrapping) {
+  if (bootstrap.kind === 'loading' || bootstrap.kind === 'adopting') {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Preparando restablecimiento...</Text>
+        <Text style={styles.loadingText}>
+          {bootstrap.kind === 'adopting'
+            ? 'Confirmando sesión...'
+            : 'Preparando restablecimiento...'}
+        </Text>
+      </View>
+    )
+  }
+
+  if (bootstrap.kind === 'confirm') {
+    return (
+      <View style={styles.centered}>
+        <Text style={[styles.heading, styles.centeredText, { fontSize: font(26) }]}>
+          Confirmar restablecimiento
+        </Text>
+        <Text style={[styles.sub, styles.centeredText]}>
+          Vas a restablecer la contraseña de{'\n'}
+          <Text style={styles.email}>{bootstrap.email}</Text>
+        </Text>
+        <Button title="Continuar" onPress={confirmAdopt} style={styles.successBtn} />
+        <Button
+          title="Cancelar"
+          variant="outline"
+          onPress={dismissToLogin}
+          loading={dismissing}
+          style={styles.successBtn}
+        />
       </View>
     )
   }
@@ -201,7 +284,7 @@ export default function UpdatePasswordScreen() {
     )
   }
 
-  if (bootstrapError) {
+  if (bootstrap.kind === 'error') {
     return (
       <View style={styles.centered}>
         <Pressable
@@ -215,7 +298,7 @@ export default function UpdatePasswordScreen() {
         <Text style={[styles.heading, styles.centeredText, { fontSize: font(26) }]}>
           Enlace no válido
         </Text>
-        <Text style={[styles.sub, styles.centeredText]}>{bootstrapError}</Text>
+        <Text style={[styles.sub, styles.centeredText]}>{bootstrap.message}</Text>
         <Button title="Volver al inicio de sesión" onPress={dismissToLogin} loading={dismissing} />
       </View>
     )
@@ -349,6 +432,10 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginBottom: 24,
     lineHeight: 22,
+  },
+  email: {
+    fontFamily: Fonts.bold,
+    color: Colors.textPrimary,
   },
   formError: {
     backgroundColor: Colors.surface,

@@ -1,5 +1,12 @@
 jest.mock('expo-linking', () => ({
-  createURL: jest.fn((path: string) => `jugamus://${path}`),
+  createURL: jest.fn((path: string, opts?: { queryParams?: Record<string, string> }) => {
+    const qs = opts?.queryParams ? `?${new URLSearchParams(opts.queryParams).toString()}` : ''
+    return `jugamus://${path}${qs}`
+  }),
+}))
+
+jest.mock('@/lib/authFlowNonce', () => ({
+  createAndPersistAuthFlowNonce: jest.fn(async () => 'test-nonce'),
 }))
 
 import * as Linking from 'expo-linking'
@@ -9,20 +16,29 @@ import {
   getPasswordResetRedirectUrl,
   NATIVE_OAUTH_REDIRECT_EXAMPLE,
 } from '@/lib/authRedirect'
+import { createAndPersistAuthFlowNonce } from '@/lib/authFlowNonce'
 import { APP_OAUTH_CALLBACK_PATH, APP_PASSWORD_UPDATE_PATH } from '@/constants/app'
 
 describe('authRedirect', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.mocked(createAndPersistAuthFlowNonce).mockResolvedValue('test-nonce')
   })
 
-  it('builds OAuth redirect via Linking.createURL', () => {
-    expect(getOAuthRedirectUrl()).toBe(`jugamus://${APP_OAUTH_CALLBACK_PATH}`)
-    expect(Linking.createURL).toHaveBeenCalledWith(APP_OAUTH_CALLBACK_PATH)
+  it('builds OAuth redirect via Linking.createURL with nonce', async () => {
+    await expect(getOAuthRedirectUrl()).resolves.toBe(
+      `jugamus://${APP_OAUTH_CALLBACK_PATH}?n=test-nonce`
+    )
+    expect(createAndPersistAuthFlowNonce).toHaveBeenCalled()
+    expect(Linking.createURL).toHaveBeenCalledWith(APP_OAUTH_CALLBACK_PATH, {
+      queryParams: { n: 'test-nonce' },
+    })
   })
 
-  it('builds password reset redirect', () => {
-    expect(getPasswordResetRedirectUrl()).toBe(`jugamus://${APP_PASSWORD_UPDATE_PATH}`)
+  it('builds password reset redirect with nonce', async () => {
+    await expect(getPasswordResetRedirectUrl()).resolves.toBe(
+      `jugamus://${APP_PASSWORD_UPDATE_PATH}?n=test-nonce`
+    )
   })
 
   it('documents native redirect example', () => {

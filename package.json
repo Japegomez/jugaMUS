@@ -12,6 +12,7 @@
     "test": "jest",
     "test:ci": "jest --ci --coverage --coverageReporters=text-summary --coverageReporters=lcov",
     "audit:ci": "node scripts/npm-audit-ci.mjs",
+    "verify:security": "node scripts/security/db-harness.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "prepare": "husky",
     "sync:municipalities": "node scripts/sync-municipalities.mjs"
