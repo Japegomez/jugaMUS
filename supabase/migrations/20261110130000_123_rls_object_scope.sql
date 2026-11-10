@@ -296,7 +296,7 @@ CREATE TRIGGER trg_guard_tournament_pair_ownership
 
 DROP TRIGGER IF EXISTS trg_guard_tournament_pair_entry_fee_paid ON public.tournament_pairs;
 CREATE TRIGGER trg_guard_tournament_pair_entry_fee_paid
-  BEFORE UPDATE ON public.tournament_pairs
+  BEFORE INSERT OR UPDATE ON public.tournament_pairs
   FOR EACH ROW
   EXECUTE FUNCTION public.guard_tournament_pair_entry_fee_paid();
 
