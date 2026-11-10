@@ -105,6 +105,16 @@ CREATE TABLE IF NOT EXISTS auth.users (
 );
 
 GRANT SELECT ON TABLE auth.users TO postgres, service_role;
+
+-- Minimal auth.sessions so session revocation inside admin_set_user_status runs.
+CREATE TABLE IF NOT EXISTS auth.sessions (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+
+GRANT ALL ON TABLE auth.sessions TO postgres, service_role;
 -- SECURITY DEFINER RPCs (admin_set_user_status) run as owner and UPDATE this table.
 
 -- ── storage stubs ─────────────────────────────────────────────────────────────
