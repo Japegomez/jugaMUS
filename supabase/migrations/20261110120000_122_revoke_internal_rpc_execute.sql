@@ -566,4 +566,12 @@ REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM anon;
 REVOKE ALL ON FUNCTION public.set_updated_at() FROM authenticated;
 
+-- Account erasure helper: service_role only (called from the delete-account Edge
+-- Function with the service key). It takes an arbitrary user id and performs no
+-- caller check, so the API roles must not be able to invoke it.
+REVOKE ALL ON FUNCTION public.delete_user_account_data(UUID) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.delete_user_account_data(UUID) FROM anon;
+REVOKE ALL ON FUNCTION public.delete_user_account_data(UUID) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_user_account_data(UUID) TO service_role;
+
 NOTIFY pgrst, 'reload schema';
