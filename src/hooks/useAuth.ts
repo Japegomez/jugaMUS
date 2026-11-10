@@ -254,7 +254,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       email,
       password,
       options: {
-        emailRedirectTo: getOAuthRedirectUrl(),
+        emailRedirectTo: await getOAuthRedirectUrl(),
         data: {
           display_name: displayName,
           phone_e164: '+34000000000',
@@ -299,7 +299,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email, captchaToken) => {
-    const redirectTo = getPasswordResetRedirectUrl()
+    const redirectTo = await getPasswordResetRedirectUrl()
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
       ...(captchaToken ? { captchaToken } : {}),

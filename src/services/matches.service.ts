@@ -57,7 +57,6 @@ export type MatchRow = {
   duration_target_games: number
   visibility: string
   location_privacy: string
-  password_hash: string | null
   status: string
   creator_id: string
   team_a_name: string

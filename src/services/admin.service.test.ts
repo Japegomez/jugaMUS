@@ -158,19 +158,20 @@ describe('admin.service', () => {
   })
 
   describe('blockUser', () => {
-    it('suspends user and writes audit log', async () => {
-      const profilesChain = mockFromChain({ data: null, error: null })
+    it('suspends user via RPC and writes audit log', async () => {
       const auditChain = mockFromChain({ data: null, error: null })
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: null })
       mockSupabase.from.mockImplementation((table: string) => {
-        if (table === 'profiles') return profilesChain
         if (table === 'audit_logs') return auditChain
         return mockFromChain({ data: null, error: null })
       })
 
       await blockUser('admin1', 'u2')
 
-      expect(profilesChain.update).toHaveBeenCalledWith({ status: 'suspended' })
-      expect(profilesChain.eq).toHaveBeenCalledWith('id', 'u2')
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('admin_set_user_status', {
+        p_user_id: 'u2',
+        p_status: 'suspended',
+      })
       expect(auditChain.insert).toHaveBeenCalledWith(
         expect.objectContaining({
           admin_id: 'admin1',
@@ -181,10 +182,8 @@ describe('admin.service', () => {
       )
     })
 
-    it('throws when profile update fails', async () => {
-      mockSupabase.from.mockReturnValue(
-        mockFromChain({ data: null, error: { message: 'block failed' } })
-      )
+    it('throws when RPC fails', async () => {
+      mockSupabase.rpc.mockResolvedValue({ data: null, error: { message: 'block failed' } })
 
       await expect(blockUser('admin1', 'u2')).rejects.toThrow('block failed')
     })

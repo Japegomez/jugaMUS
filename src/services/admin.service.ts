@@ -233,7 +233,10 @@ export async function resolveReport(
 }
 
 export async function blockUser(adminId: string, userId: string, reportId?: string): Promise<void> {
-  const { error } = await supabase.from('profiles').update({ status: 'suspended' }).eq('id', userId)
+  const { error } = await supabase.rpc('admin_set_user_status', {
+    p_user_id: userId,
+    p_status: 'suspended',
+  })
 
   if (error) {
     throw new Error(error.message || 'No se pudo bloquear al usuario')

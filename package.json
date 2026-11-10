@@ -1,6 +1,6 @@
 {
   "name": "jugamus",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -12,6 +12,7 @@
     "test": "jest",
     "test:ci": "jest --ci --coverage --coverageReporters=text-summary --coverageReporters=lcov",
     "audit:ci": "node scripts/npm-audit-ci.mjs",
+    "verify:security": "node scripts/security/db-harness.mjs",
     "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
     "prepare": "husky",
     "sync:municipalities": "node scripts/sync-municipalities.mjs"
@@ -26,7 +27,7 @@
     "@react-native-community/slider": "5.0.1",
     "@sentry/react-native": "~7.2.0",
     "@supabase/supabase-js": "^2.113.0",
-    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-query": "^5.106.1",
     "expo": "~54.0.37",
     "expo-apple-authentication": "~8.0.8",
     "expo-application": "~7.0.8",

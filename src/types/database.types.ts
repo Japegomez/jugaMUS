@@ -230,7 +230,6 @@ export type Database = {
           duration_target_games: number
           id: string
           location_privacy: string
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -271,7 +270,6 @@ export type Database = {
           league_pair_b_id?: string | null
           league_round_number?: number | null
           location_privacy?: string
-          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at: string
@@ -307,7 +305,6 @@ export type Database = {
           league_pair_b_id?: string | null
           league_round_number?: number | null
           location_privacy?: string
-          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at?: string
@@ -966,7 +963,6 @@ export type Database = {
           id: string
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -989,7 +985,6 @@ export type Database = {
           id?: string
           location_privacy?: string
           notes?: string | null
-          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at: string
@@ -1012,7 +1007,6 @@ export type Database = {
           id?: string
           location_privacy?: string
           notes?: string | null
-          password_hash?: string | null
           place_defined?: boolean
           place_text?: string | null
           start_at?: string
@@ -1143,7 +1137,6 @@ export type Database = {
           include_third_place: boolean
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -1420,6 +1413,10 @@ export type Database = {
         }
       }
       admin_assert_is_admin: { Args: never; Returns: undefined }
+      admin_set_user_status: {
+        Args: { p_status: string; p_user_id: string }
+        Returns: undefined
+      }
       admin_get_analytics: {
         Args: never
         Returns: {
@@ -1483,7 +1480,6 @@ export type Database = {
           id: string
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -1514,7 +1510,6 @@ export type Database = {
           include_third_place: boolean
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -1561,7 +1556,6 @@ export type Database = {
           id: string
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string
@@ -1755,7 +1749,6 @@ export type Database = {
           include_third_place: boolean
           location_privacy: string
           notes: string | null
-          password_hash: string | null
           place_defined: boolean
           place_text: string | null
           start_at: string

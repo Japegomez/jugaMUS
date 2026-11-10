@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking'
 
 import { APP_OAUTH_CALLBACK_PATH, APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@/constants/app'
+import { createAndPersistAuthFlowNonce } from '@/lib/authFlowNonce'
 
 /**
  * URL de retorno OAuth (debe coincidir con "Redirect URLs" en Supabase Auth).
@@ -16,14 +17,18 @@ import { APP_OAUTH_CALLBACK_PATH, APP_PASSWORD_UPDATE_PATH, APP_SCHEME } from '@
  *
  * Site URL no debe ser la raíz del API de Supabase (p. ej. https://xxx.supabase.co),
  * o un redirect fallido muestra "No API key found in request".
+ *
+ * Incluye `n=<nonce>` (one-time) para atar el deep link de tokens a este dispositivo.
  */
-export function getOAuthRedirectUrl(): string {
-  return Linking.createURL(APP_OAUTH_CALLBACK_PATH)
+export async function getOAuthRedirectUrl(): Promise<string> {
+  const nonce = await createAndPersistAuthFlowNonce()
+  return Linking.createURL(APP_OAUTH_CALLBACK_PATH, { queryParams: { n: nonce } })
 }
 
 /** Redirect tras el email de recuperación (pantalla de nueva contraseña). */
-export function getPasswordResetRedirectUrl(): string {
-  return Linking.createURL(APP_PASSWORD_UPDATE_PATH)
+export async function getPasswordResetRedirectUrl(): Promise<string> {
+  const nonce = await createAndPersistAuthFlowNonce()
+  return Linking.createURL(APP_PASSWORD_UPDATE_PATH, { queryParams: { n: nonce } })
 }
 
 /** Ejemplo de redirect nativa (documentación / mensajes de error). */
