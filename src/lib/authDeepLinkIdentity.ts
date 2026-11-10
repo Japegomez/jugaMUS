@@ -3,21 +3,30 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
 
 /**
- * Reads `email` from a Supabase JWT access token without persisting a session.
+ * Resolves the account email for an implicit-flow access token by asking the auth
+ * server to validate the token; the JWT payload is never trusted on its own.
  */
-export function emailFromAccessToken(accessToken: string): string | null {
-  try {
-    const payloadPart = accessToken.split('.')[1]
-    if (!payloadPart) return null
+export async function verifiedEmailFromAccessToken(
+  accessToken: string
+): Promise<string | null> {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
+  const client = createClient<Database>(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storage: {
+        getItem: async () => null,
+        setItem: async () => undefined,
+        removeItem: async () => undefined,
+      },
+    },
+  })
 
-    const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/')
-    const pad = base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4))
-    const json = atob(base64 + pad)
-    const payload = JSON.parse(json) as { email?: unknown }
-    return typeof payload.email === 'string' && payload.email.length > 0 ? payload.email : null
-  } catch {
-    return null
-  }
+  const { data, error } = await client.auth.getUser(accessToken)
+  if (error) return null
+  return data.user?.email ?? null
 }
 
 /**
