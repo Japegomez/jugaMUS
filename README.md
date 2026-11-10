@@ -20,7 +20,7 @@ _Aplicación móvil multiplataforma para la comunidad de jugadores de mus en Esp
 <br />
 
 [![forthebadge](https://forthebadge.com/badges/open-source.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/api/badges/community/019b4b6c-a55a-74d3-997a-8cdb89f5d7d6.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/badges/built-with-love.svg)](https://forthebadge.com)
 
 <br />
 
