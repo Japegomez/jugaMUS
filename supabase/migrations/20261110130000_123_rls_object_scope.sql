@@ -337,9 +337,7 @@ GRANT INSERT (
 GRANT UPDATE (
   name,
   name_is_custom,
-  player_a_user_id,
   player_a_text,
-  player_b_user_id,
   player_b_text,
   updated_at
 ) ON TABLE public.tournament_pairs TO authenticated;
