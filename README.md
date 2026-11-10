@@ -29,10 +29,6 @@ _Aplicación móvil multiplataforma para la comunidad de jugadores de mus en Esp
 [![App Store](https://img.shields.io/badge/App_Store-Descargar-0D96F6?style=for-the-badge&logo=app-store&logoColor=white)](https://apps.apple.com/es/app/jugamus/id6775626292)
 [![Google Play](https://img.shields.io/badge/Google_Play-Descargar-414141?style=for-the-badge&logo=google-play&logoColor=white)](https://play.google.com/store/apps/details?id=com.javiwacho.musapp)
 
-<br />
-
-![Repobeats analytics](https://repobeats.axiom.co/api/embed/Japegomez/jugaMUS.svg)
-
 </div>
 
 ---
