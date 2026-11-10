@@ -41,6 +41,11 @@ BEGIN
     UPDATE auth.users
     SET banned_until = 'infinity'
     WHERE id = p_user_id;
+
+    -- Drop the live session so no further refresh tokens can be minted. Access
+    -- tokens already issued stay valid until exp, so keep the JWT lifetime
+    -- short and keep sensitive writes gated on profiles.status.
+    DELETE FROM auth.sessions WHERE user_id = p_user_id;
   ELSE
     UPDATE auth.users
     SET banned_until = NULL
