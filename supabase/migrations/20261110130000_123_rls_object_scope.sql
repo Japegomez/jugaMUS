@@ -259,7 +259,19 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
-  IF auth.uid() IS NULL OR current_user NOT IN ('authenticated', 'anon') THEN
+  IF auth.uid() IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'INSERT' THEN
+    IF COALESCE(NEW.entry_fee_paid, FALSE) THEN
+      IF NOT EXISTS (
+        SELECT 1 FROM public.tournaments t
+        WHERE t.id = NEW.tournament_id AND t.creator_id = auth.uid()
+      ) THEN
+        RAISE EXCEPTION 'forbidden_entry_fee_paid' USING ERRCODE = '42501';
+      END IF;
+    END IF;
     RETURN NEW;
   END IF;
 
