@@ -156,7 +156,7 @@ export default function UpdatePasswordScreen() {
         adoptAccess = peeked.access_token
         adoptRefresh = peeked.refresh_token
       } else if (accessToken) {
-        email = emailFromAccessToken(accessToken)
+        email = await verifiedEmailFromAccessToken(accessToken)
       }
 
       if (!email || !adoptAccess || !adoptRefresh) {
