@@ -139,7 +139,10 @@ REVOKE ALL ON FUNCTION public.get_player_ranking(UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_player_ranking(UUID) FROM anon;
 GRANT EXECUTE ON FUNCTION public.get_player_ranking(UUID) TO authenticated, service_role;
 
--- Keep get_leaderboard publicly readable (unchanged).
--- REVOKE/GRANT left as previously configured for get_leaderboard.
+-- get_leaderboard returns the same per-player city / ELO / win-loss data as
+-- get_player_ranking, so it must not stay reachable by anonymous callers.
+REVOKE ALL ON FUNCTION public.get_leaderboard(TEXT, INT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_leaderboard(TEXT, INT) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_leaderboard(TEXT, INT) TO authenticated, service_role;
 
 NOTIFY pgrst, 'reload schema';
